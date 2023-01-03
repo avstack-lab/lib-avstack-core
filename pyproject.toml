@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "lib-avstack-core"
+version = "0.1.0-alpha.1"
+description = "Core library for autonomous vehicle development"
+authors = ["Spencer Hallyburton <spencer.hallyburton@duke.edu>"]
+readme = "README.md"
+license = "Apache-2.0"
+homepage = "https://avstack.org"
+repository = "https://github.com/avstack-lab/lib-avstack-core"
+keywords = ["self-driving", "autonomy", "perception", "planning", "control"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+]
+packages = [{include = "avstack"}]
+include = ["CHANGELOG.md"]
+
+[tool.poetry.dependencies]
+python = "~3.8"
+numpy = ">=1.19, <1.24"
+filterpy = "^1"
+scipy = "^1.9"
+cython = "^0.29"
+numpy-quaternion = "^2022.4"
+numba = "~0.53.0"
+Pillow = "^9"
+opencv-python = "^4.5.5"
+tqdm = "^4"
+scikit-learn = "^1.1"
+torch = { url = "https://download.pytorch.org/whl/cu113/torch-1.10.0%2Bcu113-cp38-cp38-linux_x86_64.whl" }
+torchvision = { url = "https://download.pytorch.org/whl/cu113/torchvision-0.11.0%2Bcu113-cp38-cp38-linux_x86_64.whl" }
+mmsegmentation = "~0.29.1"
+mmcv-full = { url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/mmcv_full-1.7.0-cp38-cp38-manylinux1_x86_64.whl" }
+mmdet = { path = "./third_party/mmdetection/", develop = true }
+mmdet3d = { path = "./third_party/mmdetection3d/", develop = true }
+# lanenet = { path = "./third_party/lanenet/", develop = true }
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7"
+pytest-cov = "^4"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q -s"
+testpaths = [
+    "tests",
+    "integration",
+]
+
+[build-system]
+requires = [
+    "poetry-core",
+    "torch"
+]
+build-backend = "poetry.core.masonry.api"

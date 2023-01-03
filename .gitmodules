@@ -1,0 +1,9 @@
+[submodule "third_party/lanenet"]
+	path = third_party/lanenet
+	url = https://github.com/MaybeShewill-CV/lanenet-lane-detection.git
+[submodule "third_party/mmdetection"]
+	path = third_party/mmdetection
+	url = https://github.com/avstack-lab/mmdetection.git
+[submodule "third_party/mmdetection3d"]
+	path = third_party/mmdetection3d
+	url = https://github.com/avstack-lab/mmdetection3d.git
