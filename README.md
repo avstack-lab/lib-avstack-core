@@ -1,6 +1,6 @@
 # AVstack CORE
 
-This is the core library of `AVstack`. It is independent of any dataset or simulator. This accompanies the preprint [HERE][avstack-preprint].
+This is the core library of `AVstack`. It is independent of any dataset or simulator. [This preprint][avstack-preprint] accompanies the repository.
 
 ## Philosophy
 
@@ -73,7 +73,7 @@ limitations under the License.
 Logo by [Sydney Jeffs](https://twitter.com/sydney_jeffs).
 
 
-[avstack-preprint]: todo
+[avstack-preprint]: https://arxiv.org/pdf/2212.13857.pdf
 [poetry]: https://github.com/python-poetry/poetry
 [mmdet-modelzoo]: https://mmdetection.readthedocs.io/en/stable/model_zoo.html
 [mmdet3d-modelzoo]: https://mmdetection3d.readthedocs.io/en/stable/model_zoo.html
