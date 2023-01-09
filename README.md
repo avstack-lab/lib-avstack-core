@@ -41,6 +41,16 @@ cd models
 ```
 This will download the models to the `models` folder and will *attempt* to establish a symbolic link for `mmdet` and `mmdet3d`. We provide some error checking, but it is up to you to verify that the symbolic link worked.
 
+
+### RSS w/ Python Bindings (optional)
+
+To use the safety library, build `ad-lib-rss` with python bindings. Follow the instructions [HERE](https://intel.github.io/ad-rss-lib/BUILDING/) and [HERE](https://intel.github.io/ad-rss-lib/ad_rss/ad_rss_python/index.html). Make sure to build with a python version that `poetry` is using for this project (check `pyproject.toml`.). To verify your installation is compatible with `avstack`, once installed, try running
+```
+poetry run pytest tests/modules/safety
+```
+and observe the output.
+
+
 ## Running Tests
 
 Since we are using `poetry`, run:
