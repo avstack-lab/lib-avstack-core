@@ -83,6 +83,8 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
                 t2 = tracks3d_2[col]
                 if not t1.origin == t2.origin:
                     raise RuntimeError('Origins must be the same before this!')
+                if not (t1.box3d.where_is_t == t2.box3d.where_is_t):
+                    raise RuntimeError('Check the process of handling different box center origins first')
                 x_f, P_f = ci_fusion(t1.x, t1.P, t2.x, t2.P)
                 x, y, z, h, w, l, vx, vy, vz = x_f
                 v_f = [vx, vy, vz]
@@ -91,7 +93,7 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
                 q = t2.q
                 origin = t2.origin
                 framerate = t2.framerate
-                box_f = bbox.Box3D([h, w, l, x, y, z, q], origin)
+                box_f = bbox.Box3D([h, w, l, x, y, z, q], origin, where_is_t=t2.box3d.where_is_t)
                 ID = None
                 if t1.ID in self.ID_registry:
                     ID = self.ID_registry[t1.ID].get(t2.ID, None)
