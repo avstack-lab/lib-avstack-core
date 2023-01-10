@@ -50,6 +50,5 @@ testpaths = [
 [build-system]
 requires = [
     "poetry-core",
-    "torch"
 ]
 build-backend = "poetry.core.masonry.api"
