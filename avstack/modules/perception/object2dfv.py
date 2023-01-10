@@ -9,6 +9,7 @@
 """
 import os
 import numpy as np
+import tempfile
 from cv2 import imwrite
 import hashlib, time
 import avstack
@@ -100,18 +101,15 @@ class MMDetObjectDetector2D(_MMObjectDetector):
     @staticmethod
     def run_mm_inference(inference_detector, model, data, is_rgb, eval_method):
         if eval_method == 'file':
-            hash_id = int(abs(hash(time.time())) % 1e8)
-            temp_dir = 'temp'
-            os.makedirs(temp_dir, exist_ok=True)
-            file = os.path.join(temp_dir, f'temp_image_{hash_id}.png')
-            if is_rgb:
-                imwrite(file, data.data[:,:,::-1])
-            else:
-                imwrite(file, data.data)
-            try:
-                result_ = inference_detector(model, file)
-            finally:
-                os.remove(file)
+            with tempfile.TemporaryDirectory() as temp_dir:
+                fd_data, data_file = tempfile.mkstemp(suffix='.png', dir=temp_dir)
+                os.close(fd_data)  # need to start with the file closed...
+                if is_rgb:
+                    imwrite(data_file, data.data[:,:,::-1])
+                else:
+                    imwrite(data_file, data.data)
+                result_ = inference_detector(model, data_file)
+
         elif eval_method == 'data':
             result_ = inference_detector(model, data.data if not is_rgb else data.data[:,:,::-1])
         else:

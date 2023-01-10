@@ -10,6 +10,7 @@
 
 import os
 import numpy as np
+import tempfile
 import json
 from avstack.modules.perception.base import _PerceptionAlgorithm, _MMObjectDetector
 from avstack.modules.perception import detections, utils
@@ -78,33 +79,26 @@ class MMDetObjectDetector3D(_MMObjectDetector):
     @staticmethod
     def run_mm_inference(inference_detector, model, data, input_data, eval_method):
         if eval_method == 'file':
-            hash_id = int(abs(hash(time.time())) % 1e8)
-            temp_dir = 'temp'
-            os.makedirs(temp_dir, exist_ok=True)
-            if input_data == 'lidar':
-                file = os.path.join(temp_dir, f'temp_lidar_{hash_id}.bin')
-                data.data.tofile(file)
-                try:
-                    result_, _ = inference_detector(model, file)
-                finally:
-                    os.remove(file)
-            elif input_data == 'camera':
-                file = os.path.join(temp_dir, f'temp_image_{hash_id}.png')
-                imwrite(file, data.data)
-                P = data.calibration.P.tolist()
-                if (len(P)==3) and (len(P[0])==4):
-                    P.append([0,0,0,1.])
-                json_file = os.path.join(temp_dir, f'temp_intrinsics_{hash_id}.json')
-                json_data = {'images':[{'file_name':file, 'cam_intrinsic':P}]}
-                with open(json_file, 'w') as f:
-                    json.dump(json_data, f)
-                try:
-                    result_, _ = inference_detector(model, file, json_file)
-                finally:
-                    os.remove(file)
-                    os.remove(json_file)
-            else:
-                raise NotImplementedError(input_data)
+            with tempfile.TemporaryDirectory() as temp_dir:
+                suffix = '.bin' if input_data=='lidar' else '.png'
+                fd_data, data_file = tempfile.mkstemp(suffix=suffix, dir=temp_dir)
+                os.close(fd_data)  # need to start with the file closed...
+                if input_data == 'lidar':
+                    data.data.tofile(data_file)
+                    result_, _ = inference_detector(model, data_file)
+                elif input_data == 'camera':
+                    imwrite(data_file, data.data)
+                    P = data.calibration.P.tolist()
+                    if (len(P)==3) and (len(P[0])==4):
+                        P.append([0,0,0,1.])
+                    fd_json, json_file = tempfile.mkstemp(suffix='.json', dir=temp_dir)
+                    os.close(fd_json)
+                    json_data = {'images':[{'file_name':data_file, 'cam_intrinsic':P}]}
+                    with open(json_file, 'w') as f:
+                        json.dump(json_data, f)
+                    result_, _ = inference_detector(model, data_file, json_file)
+                else:
+                    raise NotImplementedError(input_data)
         elif eval_method == 'data':
             if input_data == 'lidar':
                 raise NotImplementedError(eval_method + ' ' + input_data)

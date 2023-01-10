@@ -285,7 +285,7 @@ class RssEvaluator():
         pos_2d_rel = pos_oth - pos_ego
         vel_2d_rel = vel_oth - vel_ego
         if obj.obj_type.lower() in ['car', 'construction_vehicle',
-            'none', 'cyclist', 'bus', 'truck', 'motorcycle']:
+            'none', 'cyclist', 'bicycle', 'bus', 'truck', 'motorcycle']:
             obj_type = ad.rss.world.ObjectType.OtherVehicle
         elif obj.obj_type.lower() in ['pedestrian', 'person']:
             obj_type = ad.rss.world.ObjectType.Pedestrian
