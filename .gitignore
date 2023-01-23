@@ -1,3 +1,4 @@
+.install.stamp
 
 models/mmdet
 models/mmdet3d
