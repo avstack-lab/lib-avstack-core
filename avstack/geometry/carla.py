@@ -24,11 +24,7 @@ def carla_location_to_numpy_vector(carla_location):
     :return: a numpy.array with 3 elements
     :rtype: numpy.array
     """
-    return np.array([
-        carla_location.x,
-        -carla_location.y,
-        carla_location.z
-    ])
+    return np.array([carla_location.x, -carla_location.y, carla_location.z])
 
 
 def carla_rotation_to_RPY(carla_rotation):
@@ -59,7 +55,7 @@ def carla_rotation_to_rotation_matrix(carla_rotation):
     :rtype: numpy.array
     """
     roll, pitch, yaw = carla_rotation_to_RPY(carla_rotation)
-    return tforms.transform_orientation(np.array([roll, pitch, yaw]), 'euler', 'DCM')
+    return tforms.transform_orientation(np.array([roll, pitch, yaw]), "euler", "DCM")
 
 
 def carla_rotation_to_quaternion(carla_rotation):
@@ -74,4 +70,4 @@ def carla_rotation_to_quaternion(carla_rotation):
     :rtype: numpy.array
     """
     roll, pitch, yaw = carla_rotation_to_RPY(carla_rotation)
-    return tforms.transform_orientation(np.array([roll, pitch, yaw]), 'euler', 'quat')
+    return tforms.transform_orientation(np.array([roll, pitch, yaw]), "euler", "quat")

@@ -7,18 +7,21 @@
 """
 
 """
-import os, shutil
-from multiprocessing import Pool
-import numpy as np
+import os
+import shutil
 from functools import partial
+from multiprocessing import Pool
 
-n_procs_max = max(1, os.cpu_count()//2)
+import numpy as np
 
 
-class _PredictionAlgorithm():
-    def __init__(self, save_output=False, save_folder='', **kwargs):
+n_procs_max = max(1, os.cpu_count() // 2)
+
+
+class _PredictionAlgorithm:
+    def __init__(self, save_output=False, save_folder="", **kwargs):
         self.save = save_output
-        self.save_folder = os.path.join(save_folder, 'prediction')
+        self.save_folder = os.path.join(save_folder, "prediction")
         if save_output:
             if os.path.exists(self.save_folder):
                 shutil.rmtree(self.save_folder)
@@ -33,10 +36,10 @@ class _PredictionAlgorithm():
             pred_strs = []
             for obj_ID in predictions:
                 for dt in predictions[obj_ID]:
-                    pred_strs.append(predictions[obj_ID][dt].format_as('avstack'))
-            fname = os.path.join(self.save_folder, '%06i.txt' % frame)
-            with open(fname, 'w') as f:
-                f.write('\n'.join(pred_strs))
+                    pred_strs.append(predictions[obj_ID][dt].format_as("avstack"))
+            fname = os.path.join(self.save_folder, "%06i.txt" % frame)
+            with open(fname, "w") as f:
+                f.write("\n".join(pred_strs))
         return predictions
 
 
@@ -55,7 +58,7 @@ class KinematicPrediction(_PredictionAlgorithm):
                 pred_objs = p.map(part_func, objects)
         else:
             pred_objs = [part_func(obj) for obj in objects]
-        return {obj.ID:pred for obj, pred in zip(objects, pred_objs)}
+        return {obj.ID: pred for obj, pred in zip(objects, pred_objs)}
 
     @staticmethod
     def _predict_per_object(dt_predicts, obj):

@@ -6,9 +6,10 @@
 
 
 import numpy as np
+
 from avstack import transformations as tforms
 
 
 def test_rotation_conversion():
-    D = tforms.transform_orientation([0,0,0], 'euler', 'DCM')
+    D = tforms.transform_orientation([0, 0, 0], "euler", "DCM")
     assert np.all(D == np.eye(3))

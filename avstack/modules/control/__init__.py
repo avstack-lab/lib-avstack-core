@@ -9,5 +9,6 @@
 """
 
 
-from .pid import PIDBase, PIDLongitudinalController, PIDLateralController
 import avstack.modules.control.vehicle
+
+from .pid import PIDBase, PIDLateralController, PIDLongitudinalController

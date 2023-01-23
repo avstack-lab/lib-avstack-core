@@ -10,7 +10,7 @@ Binary classification statistics utilities
 import numpy as np
 
 
-class ConfusionMatrix():
+class ConfusionMatrix:
     def __init__(self, TP, TN, FP, FN, thresh=None):
         self.TP = TP
         self.TN = TN
@@ -25,4 +25,4 @@ class ConfusionMatrix():
         return self.__str__()
 
     def __str__(self):
-        return 'Confusion Matrix:\n' + str(self.matrix)
+        return "Confusion Matrix:\n" + str(self.matrix)

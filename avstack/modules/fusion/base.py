@@ -8,16 +8,17 @@
 
 """
 
-import os, shutil
+import os
+import shutil
 
 
-class _FusionAlgorithm():
-    def __init__(self, save_output=False, save_folder='', **kwargs):
+class _FusionAlgorithm:
+    def __init__(self, save_output=False, save_folder="", **kwargs):
         self.iframe = -1
         self.save = save_output
         self.save_folder = save_folder
         self.save = save_output
-        self.save_folder = os.path.join(save_folder, 'fusion')
+        self.save_folder = os.path.join(save_folder, "fusion")
         if save_output:
             if os.path.exists(self.save_folder):
                 shutil.rmtree(self.save_folder)
@@ -27,8 +28,8 @@ class _FusionAlgorithm():
         self.iframe += 1
         tracks = self.fuse(*args, **kwargs)
         if self.save:
-            trk_str = '\n'.join([trk.format_as('avstack') for trk in tracks])
-            fname = os.path.join(self.save_folder, '%06d.txt' % frame)
-            with open(fname, 'w') as f:
+            trk_str = "\n".join([trk.format_as("avstack") for trk in tracks])
+            fname = os.path.join(self.save_folder, "%06d.txt" % frame)
+            with open(fname, "w") as f:
                 f.write(trk_str)
         return tracks

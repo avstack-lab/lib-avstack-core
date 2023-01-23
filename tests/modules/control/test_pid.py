@@ -10,10 +10,18 @@
 
 import numpy as np
 import quaternion
-from avstack.geometry import bbox, Transform, Translation, Vector, Rotation, NominalOriginStandard
-from avstack.modules import control
-from avstack.modules.planning import WaypointPlan, Waypoint
+
 import avstack.transformations as tforms
+from avstack.geometry import (
+    NominalOriginStandard,
+    Rotation,
+    Transform,
+    Translation,
+    Vector,
+    bbox,
+)
+from avstack.modules import control
+from avstack.modules.planning import Waypoint, WaypointPlan
 from avstack.objects import VehicleState
 
 
@@ -29,10 +37,12 @@ def test_pid_base():
 
 
 def test_vehicle_pid_control():
-    box_obj = bbox.Box3D([2,2,5,[0,0,0],np.quaternion(1)], NominalOriginStandard)  # box in local coordinates
-    ego_state = VehicleState('car')
-    lat = {'K_P':1.5, 'K_D':0.02, 'K_I':0.01}
-    lon = {'K_P':1.0, 'K_D':0.01, 'K_I':0.05}
+    box_obj = bbox.Box3D(
+        [2, 2, 5, [0, 0, 0], np.quaternion(1)], NominalOriginStandard
+    )  # box in local coordinates
+    ego_state = VehicleState("car")
+    lat = {"K_P": 1.5, "K_D": 0.02, "K_I": 0.01}
+    lon = {"K_P": 1.0, "K_D": 0.01, "K_I": 0.05}
     controller = control.vehicle.VehiclePIDController(lat, lon)
 
     # Initialize
@@ -40,14 +50,17 @@ def test_vehicle_pid_control():
     tmax = 10
     dt = 0.1
     speed_target = 20
-    imsize = [200,200]
+    imsize = [200, 200]
     lane_width = 3.7
-    yaw = lambda t: 1/4 * np.sin(t/3)
+    yaw = lambda t: 1 / 4 * np.sin(t / 3)
 
     pos = Translation(np.zeros(3), origin=NominalOriginStandard)
-    rot = Rotation(tforms.transform_orientation([0, 0, yaw(t)], 'euler', 'dcm'), origin=NominalOriginStandard)
+    rot = Rotation(
+        tforms.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
+        origin=NominalOriginStandard,
+    )
     v = 10
-    vel = v*rot.forward_vector
+    vel = v * rot.forward_vector
     acc = Vector(np.zeros(3), origin=NominalOriginStandard)
     ang_vel = Vector(np.zeros(3), origin=NominalOriginStandard)
 
@@ -57,24 +70,34 @@ def test_vehicle_pid_control():
     while t < tmax:
         t += dt
         # -- reference
-        rot = Rotation(tforms.transform_orientation([0, 0, yaw(t)], 'euler', 'dcm'), origin=NominalOriginStandard)
-        vel_new = v*rot.forward_vector
-        pos = pos + Translation(dt*(vel+vel_new)/2, origin=NominalOriginStandard)
+        rot = Rotation(
+            tforms.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
+            origin=NominalOriginStandard,
+        )
+        vel_new = v * rot.forward_vector
+        pos = pos + Translation(dt * (vel + vel_new) / 2, origin=NominalOriginStandard)
         vel = vel_new
 
         # -- ego state
         pos_ego = pos + np.random.randn(3)
         vel_ego = vel + np.random.randn(3)
         acc_ego = acc
-        rot_ego = Rotation(tforms.transform_orientation([0,0,yaw(t)+np.random.randn(1)], 'euler','dcm'), origin=NominalOriginStandard)
+        rot_ego = Rotation(
+            tforms.transform_orientation(
+                [0, 0, yaw(t) + np.random.randn(1)], "euler", "dcm"
+            ),
+            origin=NominalOriginStandard,
+        )
         ego_state.set(t, pos_ego, box_obj, vel_ego, acc_ego, rot_ego, ang_vel)
-        
+
         # -- control
         WP.update(ego_state)
         if WP.needs_waypoint():
             w = Waypoint(Transform(rot, pos), speed_target)
             d = pos.distance(pos_ego)
             WP.push(d, w)
-        ctrl = controller(ego_state, WP) 
-        assert np.sign(ctrl.throttle - ctrl.brake) == np.sign(speed_target - np.linalg.norm(vel_ego))
+        ctrl = controller(ego_state, WP)
+        assert np.sign(ctrl.throttle - ctrl.brake) == np.sign(
+            speed_target - np.linalg.norm(vel_ego)
+        )
         assert (ctrl.throttle + ctrl.brake) > 0

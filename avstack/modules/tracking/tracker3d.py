@@ -8,16 +8,19 @@
 
 """
 
-import numpy as np
 from copy import deepcopy
-from avstack.objects import VehicleState
-from avstack.modules.perception.detections import BoxDetection
-from avstack.geometry import Box2D, Box3D
+
+import numpy as np
+from filterpy.kalman import KalmanFilter
+
 from avstack import transformations as tforms
+from avstack.geometry import Box2D, Box3D
+from avstack.modules.perception.detections import BoxDetection
+from avstack.objects import VehicleState
+
+from ..assignment import build_A_from_iou, gnn_single_frame_assign, greedy_assignment
 from . import libraries
 from .base import _TrackingAlgorithm
-from ..assignment import gnn_single_frame_assign, greedy_assignment, build_A_from_iou
-from filterpy.kalman import KalmanFilter
 
 
 class GroundTruthTracker(_TrackingAlgorithm):
@@ -33,14 +36,23 @@ class GroundTruthTracker(_TrackingAlgorithm):
 # BASIC BOX TRACKER
 # ==============================================================
 
+
 class BasicBoxTracker(_TrackingAlgorithm):
-    def __init__(self, framerate, threshold_confirmed=3, threshold_coast=3,
-            v_max=60, assign_metric='center_dist', assign_radius=4, **kwargs):
+    def __init__(
+        self,
+        framerate,
+        threshold_confirmed=3,
+        threshold_coast=3,
+        v_max=60,
+        assign_metric="center_dist",
+        assign_radius=4,
+        **kwargs,
+    ):
         self.tracks = []
         self.threshold_confirmed = threshold_confirmed
         self.threshold_coast = threshold_coast
         self.framerate = framerate
-        self.dt = 1./self.framerate
+        self.dt = 1.0 / self.framerate
         self.v_max = v_max
         super().__init__(assign_metric, assign_radius, **kwargs)
 
@@ -52,7 +64,7 @@ class BasicBoxTracker(_TrackingAlgorithm):
     def tracks_active(self):
         return [trk for trk in self.tracks if trk.active]
 
-    def track(self, detections_3d, *args, metric='center_dist', **kwargs):
+    def track(self, detections_3d, *args, metric="center_dist", **kwargs):
         """
         :detections_3d
 
@@ -62,7 +74,7 @@ class BasicBoxTracker(_TrackingAlgorithm):
         so we need to run over assignment and update for each one
         """
         # -- propagation
-        self.t = self.frame*self.dt
+        self.t = self.frame * self.dt
         for trk in self.tracks:
             trk.predict()
             if np.linalg.norm(trk.velocity) > self.v_max:
@@ -70,7 +82,7 @@ class BasicBoxTracker(_TrackingAlgorithm):
 
         # -- loop over each sensor providing detections
         if not isinstance(detections_3d, dict):
-            detections_3d = {'sensor_1':detections_3d}
+            detections_3d = {"sensor_1": detections_3d}
         for sensor, detections in detections_3d.items():
             # -- assignment with active tracks
             trks_active = self.tracks_active
@@ -87,19 +99,36 @@ class BasicBoxTracker(_TrackingAlgorithm):
             # -- unassigned dets for new tracks
             for i_det in assign_sol.unassigned_rows:
                 self.tracks.append(
-                    BasicBoxTrack3D(self.t, detections[i_det].box3d,
-                    detections[i_det].obj_type, self.framerate))
+                    BasicBoxTrack3D(
+                        self.t,
+                        detections[i_det].box3d,
+                        detections[i_det].obj_type,
+                        self.framerate,
+                    )
+                )
 
         # -- prune dead tracks
-        self.tracks = [trk for trk in self.tracks if (trk.coast < self.threshold_coast) and trk.active]
+        self.tracks = [
+            trk
+            for trk in self.tracks
+            if (trk.coast < self.threshold_coast) and trk.active
+        ]
 
         return self.tracks_confirmed
 
 
 class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
-    def __init__(self, framerate, threshold_confirmed_3d=3, threshold_confirmed_2d=3,
-            threshold_coast_3d=3, threshold_coast_2d=3, threshold_assoc_2=3,
-            threshold_assoc_3=-0.2, **kwargs):
+    def __init__(
+        self,
+        framerate,
+        threshold_confirmed_3d=3,
+        threshold_confirmed_2d=3,
+        threshold_coast_3d=3,
+        threshold_coast_2d=3,
+        threshold_assoc_2=3,
+        threshold_assoc_3=-0.2,
+        **kwargs,
+    ):
         self.tracks = []
         self.threshold_confirmed_3d = threshold_confirmed_3d
         self.threshold_confirmed_2d = threshold_confirmed_2d
@@ -108,16 +137,19 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
         self.threshold_assoc_2 = threshold_assoc_2
         self.threshold_assoc_3 = threshold_assoc_3
         self.framerate = framerate
-        self.dt = 1./self.framerate
+        self.dt = 1.0 / self.framerate
 
         self.calib_cam = None
         super().__init__(**kwargs)
 
     @property
     def tracks_confirmed(self):
-        return [trk for trk in self.tracks if
-            (trk.n_updates_3d >= self.threshold_confirmed_3d) and
-            (trk.n_updates_2d >= self.threshold_confirmed_2d)]
+        return [
+            trk
+            for trk in self.tracks
+            if (trk.n_updates_3d >= self.threshold_confirmed_3d)
+            and (trk.n_updates_2d >= self.threshold_confirmed_2d)
+        ]
 
     def track(self, detections_2d, detections_3d, *args, **kwargs):
         """
@@ -142,26 +174,36 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
         if len(detections_2d) > 0:
             if self.calib_cam is None:
                 self.calib_cam = detections_2d[0].box.calibration
-            boxes_3d_in_2d = [box.project_to_2d_bbox(calib=self.calib_cam) for box in boxes_3d]
+            boxes_3d_in_2d = [
+                box.project_to_2d_bbox(calib=self.calib_cam) for box in boxes_3d
+            ]
             A = build_A_from_iou(boxes_2d, boxes_3d_in_2d)
             assign_sol_1 = gnn_single_frame_assign(A, cost_threshold=-0.10)
             lone_2d = [boxes_2d[i_2d] for i_2d in assign_sol_1.unassigned_rows]
-            lone_2d_to_det_map = {i:k for i, k in enumerate(assign_sol_1.unassigned_rows)}
+            lone_2d_to_det_map = {
+                i: k for i, k in enumerate(assign_sol_1.unassigned_rows)
+            }
             lone_3d = [boxes_3d[i_3d] for i_3d in assign_sol_1.unassigned_cols]
-            lone_3d_to_det_map = {i:k for i, k in enumerate(assign_sol_1.unassigned_cols)}
-            fused_detections = [(boxes_2d[i], boxes_3d[j]) for i, j in assign_sol_1.assignment_tuples]
-            fused_to_det_map = {i:(k1, k2) for i, (k1, k2) in enumerate(assign_sol_1.assignment_tuples)}
+            lone_3d_to_det_map = {
+                i: k for i, k in enumerate(assign_sol_1.unassigned_cols)
+            }
+            fused_detections = [
+                (boxes_2d[i], boxes_3d[j]) for i, j in assign_sol_1.assignment_tuples
+            ]
+            fused_to_det_map = {
+                i: (k1, k2) for i, (k1, k2) in enumerate(assign_sol_1.assignment_tuples)
+            }
         else:
             lone_2d = []
             lone_3d = boxes_3d
             lone_2d_to_det_map = {}
-            lone_3d_to_det_map = {i:i for i in range(len(boxes_3d))}
+            lone_3d_to_det_map = {i: i for i in range(len(boxes_3d))}
             fused_detections = []
             fused_to_det_map = {}
 
         # -- STAGE 2: assignment between fused and lone 3d to tracks
         i = 0
-        A = np.inf * np.ones((len(fused_detections)+len(lone_3d), len(self.tracks)))
+        A = np.inf * np.ones((len(fused_detections) + len(lone_3d), len(self.tracks)))
         for ds in (fused_detections, lone_3d):
             for d_ in ds:
                 if i < len(fused_detections):
@@ -169,20 +211,39 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
                 for j, t in enumerate(self.tracks):
                     if t.box3d is None:
                         continue
-                    Bi = np.array([t.box3d.t[0], t.box3d.t[1], t.box3d.t[2], t.box3d.h, t.box3d.w, t.box3d.l])
+                    Bi = np.array(
+                        [
+                            t.box3d.t[0],
+                            t.box3d.t[1],
+                            t.box3d.t[2],
+                            t.box3d.h,
+                            t.box3d.w,
+                            t.box3d.l,
+                        ]
+                    )
                     Bj = np.array([d_.t[0], d_.t[1], d_.t[2], d_.h, d_.w, d_.l])
-                    alpha = 2 - np.cos((t.yaw - d_.yaw) % (np.pi/2))
-                    A[i,j] = np.linalg.norm(Bi-Bj) * alpha
+                    alpha = 2 - np.cos((t.yaw - d_.yaw) % (np.pi / 2))
+                    A[i, j] = np.linalg.norm(Bi - Bj) * alpha
                 i += 1
         assign_sol_2 = greedy_assignment(A, threshold=self.threshold_assoc_2)
-        lone_fused = [fused_detections[j] for j in assign_sol_2.unassigned_rows if j < len(fused_detections)]
-        lone_fused_to_det_map = {i:fused_to_det_map[k] for i, k in enumerate(assign_sol_2.unassigned_rows) if k < len(fused_detections)}
+        lone_fused = [
+            fused_detections[j]
+            for j in assign_sol_2.unassigned_rows
+            if j < len(fused_detections)
+        ]
+        lone_fused_to_det_map = {
+            i: fused_to_det_map[k]
+            for i, k in enumerate(assign_sol_2.unassigned_rows)
+            if k < len(fused_detections)
+        }
         lone_tracks = [self.tracks[k] for k in assign_sol_2.unassigned_cols]
-        lone_track_to_track_map = {i:k for i, k in enumerate(assign_sol_2.unassigned_cols)}
+        lone_track_to_track_map = {
+            i: k for i, k in enumerate(assign_sol_2.unassigned_cols)
+        }
 
         # -- STAGE 3: assignment between lone fused and lone 2d to tracks via 2D
         i = 0
-        A = np.zeros((len(lone_fused)+len(lone_2d), len(lone_tracks)))
+        A = np.zeros((len(lone_fused) + len(lone_2d), len(lone_tracks)))
         for ds in (lone_fused, lone_2d):
             for d_ in ds:
                 if i < len(lone_fused):
@@ -192,7 +253,7 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
                         t_box = t.box3d.project_to_2d_bbox(self.calib_cam)
                     else:
                         t_box = t.box2d
-                    A[i,j] = -d_.IoU(t_box)
+                    A[i, j] = -d_.IoU(t_box)
                 i += 1
         assign_sol_3 = greedy_assignment(A, threshold=self.threshold_assoc_3)
 
@@ -226,32 +287,44 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
             else:
                 d3d = lone_3d[i_det - len(fused_detections)]
                 o3d = obj_types_3d[lone_3d_to_det_map[i_det - len(fused_detections)]]
-                self.tracks.append(BasicJointBoxTrack(self.t, None, d3d, o3d, self.framerate))
+                self.tracks.append(
+                    BasicJointBoxTrack(self.t, None, d3d, o3d, self.framerate)
+                )
         # ----- unassigned from the 2D to 2D step
         for i_det in assign_sol_3.unassigned_rows:
             if i_det < len(lone_fused):
                 d2d, d3d = lone_fused[i_det]
-                o2d, o3d = obj_types_2d[lone_fused_to_det_map[i_det][0]], obj_types_3d[lone_fused_to_det_map[i_det][1]]
-                self.tracks.append(BasicJointBoxTrack(self.t, d2d, d3d, o2d, self.framerate))
+                o2d, o3d = (
+                    obj_types_2d[lone_fused_to_det_map[i_det][0]],
+                    obj_types_3d[lone_fused_to_det_map[i_det][1]],
+                )
+                self.tracks.append(
+                    BasicJointBoxTrack(self.t, d2d, d3d, o2d, self.framerate)
+                )
             else:
                 d2d = lone_2d[i_det - len(lone_fused)]
                 o2d = obj_types_2d[lone_2d_to_det_map[i_det - len(lone_fused)]]
-                self.tracks.append(BasicJointBoxTrack(self.t, d2d, None, o2d, self.framerate))
+                self.tracks.append(
+                    BasicJointBoxTrack(self.t, d2d, None, o2d, self.framerate)
+                )
 
         # -- prune dead tracks
-        self.tracks = [trk for trk in self.tracks if
-            (trk.coast_2d < self.threshold_coast_2d) and
-            (trk.coast_3d < self.threshold_coast_3d)]
+        self.tracks = [
+            trk
+            for trk in self.tracks
+            if (trk.coast_2d < self.threshold_coast_2d)
+            and (trk.coast_3d < self.threshold_coast_3d)
+        ]
 
         return self.tracks_confirmed
 
 
-class BasicBoxTrack3D():
+class BasicBoxTrack3D:
     ID_counter = 0
-    def __init__(self, t0, box3d, obj_type, framerate,
-            ID_force=None, v=None, P=None):
+
+    def __init__(self, t0, box3d, obj_type, framerate, ID_force=None, v=None, P=None):
         """Box state is: [x, y, z, h, w, l, vx, vy, vz] w/ yaw as attribute"""
-        dt = 1./framerate
+        dt = 1.0 / framerate
         self.dt = dt
         self.framerate = framerate
         if ID_force is None:
@@ -266,17 +339,29 @@ class BasicBoxTrack3D():
         # -- initialize filter
         self.kf = KalmanFilter(dim_x=9, dim_z=6)
         if P is None:
-            P = np.diag([5, 5, 5, 2, 2, 2, 10, 10, 10])**2
+            P = np.diag([5, 5, 5, 2, 2, 2, 10, 10, 10]) ** 2
         self.kf.P = P
         self.kf.F = np.eye(9)
-        self.kf.F[:3, 6:9] = dt*np.eye(3)
-        self.kf.H = np.zeros((6,9))
+        self.kf.F[:3, 6:9] = dt * np.eye(3)
+        self.kf.H = np.zeros((6, 9))
         self.kf.H[:6, :6] = np.eye(6)
-        self.kf.R = np.diag([1, 1, 1, 0.5, 0.5, 0.5])**2
-        self.kf.Q = (np.diag([2, 2, 2, 0.5, 0.5, 0.5, 3, 3, 3])*dt)**2
+        self.kf.R = np.diag([1, 1, 1, 0.5, 0.5, 0.5]) ** 2
+        self.kf.Q = (np.diag([2, 2, 2, 0.5, 0.5, 0.5, 3, 3, 3]) * dt) ** 2
         if v is None:
-            v = np.array([0,0,0])
-        self.kf.x = np.array([box3d.t[0], box3d.t[1], box3d.t[2], box3d.h, box3d.w, box3d.l, v[0], v[1], v[2]])
+            v = np.array([0, 0, 0])
+        self.kf.x = np.array(
+            [
+                box3d.t[0],
+                box3d.t[1],
+                box3d.t[2],
+                box3d.h,
+                box3d.w,
+                box3d.l,
+                v[0],
+                v[1],
+                v[2],
+            ]
+        )
         self.q = box3d.q
 
         # -- initialize parameters
@@ -318,14 +403,17 @@ class BasicBoxTrack3D():
         return self.__str__()
 
     def __str__(self):
-        return f'BasicBoxTrack w/ {self.n_updates} updates: {self.as_object()}'
+        return f"BasicBoxTrack w/ {self.n_updates} updates: {self.as_object()}"
 
     def update(self, box3d):
         if box3d.origin != self.origin:
             box3d.change_origin(self.origin)
         if self.where_is_t != box3d.where_is_t:
-            raise NotImplementedError('Differing t locations not implemented: {}, {}'.format(
-                self.where_is_t, box3d.where_is_t))
+            raise NotImplementedError(
+                "Differing t locations not implemented: {}, {}".format(
+                    self.where_is_t, box3d.where_is_t
+                )
+            )
         self.coast = 0
         self.n_updates += 1
         det = np.array([box3d.t[0], box3d.t[1], box3d.t[2], box3d.h, box3d.w, box3d.l])
@@ -340,19 +428,27 @@ class BasicBoxTrack3D():
 
     def as_object(self):
         vs = VehicleState(obj_type=self.obj_type, ID=self.ID)
-        vs.set(t=self.t, position=self.position, box=self.box3d, velocity=self.velocity,
-            acceleration=None, attitude=self.q, angular_velocity=None,
-            origin=self.origin)
+        vs.set(
+            t=self.t,
+            position=self.position,
+            box=self.box3d,
+            velocity=self.velocity,
+            acceleration=None,
+            attitude=self.q,
+            angular_velocity=None,
+            origin=self.origin,
+        )
         return vs
 
-    def format_as(self, format='avstack'):
+    def format_as(self, format="avstack"):
         return self.as_object().format_as(format)
 
 
-class BasicBoxTrack2D():
+class BasicBoxTrack2D:
     ID_counter = 0
+
     def __init__(self, t0, box2d, obj_type, framerate):
-        dt = 1./framerate
+        dt = 1.0 / framerate
         self.dt = dt
         self.t0 = t0
         self.t = t0
@@ -378,11 +474,19 @@ class BasicBoxTrack2D():
         self.t += self.dt
 
 
-class BasicJointBoxTrack():
+class BasicJointBoxTrack:
     def __init__(self, t0, box2d, box3d, obj_type, framerate):
         self.framerate = framerate
-        self.track_2d = BasicBoxTrack2D(t0, box2d, obj_type, framerate) if box2d is not None else None
-        self.track_3d = BasicBoxTrack3D(t0, box3d, obj_type, framerate) if box3d is not None else None
+        self.track_2d = (
+            BasicBoxTrack2D(t0, box2d, obj_type, framerate)
+            if box2d is not None
+            else None
+        )
+        self.track_3d = (
+            BasicBoxTrack3D(t0, box3d, obj_type, framerate)
+            if box3d is not None
+            else None
+        )
 
     @property
     def ID(self):
@@ -424,7 +528,7 @@ class BasicJointBoxTrack():
         return self.__str__()
 
     def __str__(self):
-        return f'BasicJointBoxTrack w/ {self.track_2d.n_updates} 2D n_updates: {self.box2d}; {self.track_3d.n_updates} 3D n_updates: {self.box3d}'
+        return f"BasicJointBoxTrack w/ {self.track_2d.n_updates} 2D n_updates: {self.box2d}; {self.track_3d.n_updates} 3D n_updates: {self.box3d}"
 
     def update(self, box, obj_type):
         if isinstance(box, tuple):
@@ -441,13 +545,17 @@ class BasicJointBoxTrack():
 
         # -- update 2d
         if self.track_2d is None and b2 is not None:
-            self.track_2d = BasicBoxTrack2D(self.track_3d.t, b2, obj_type, self.framerate)
+            self.track_2d = BasicBoxTrack2D(
+                self.track_3d.t, b2, obj_type, self.framerate
+            )
         elif b2 is not None:
             self.track_2d.update(b2)
 
         # -- update 3d
         if self.track_3d is None and b3 is not None:
-            self.track_3d = BasicBoxTrack3D(self.track_2d.t, b3, obj_type, self.framerate)
+            self.track_3d = BasicBoxTrack3D(
+                self.track_2d.t, b3, obj_type, self.framerate
+            )
         elif b3 is not None:
             self.track_3d.update(b3)
 
@@ -461,7 +569,7 @@ class BasicJointBoxTrack():
         if self.track_3d is not None:
             return self.track_3d.as_object()
         else:
-            raise RuntimeError('No 3d track to convert to object')
+            raise RuntimeError("No 3d track to convert to object")
 
     def format_as(self, format_):
         return self.as_object().format_as(format_)
@@ -470,6 +578,7 @@ class BasicJointBoxTrack():
 # ==============================================================
 # EXTERNALS
 # ==============================================================
+
 
 class Ab3dmotTracker(_TrackingAlgorithm):
     def __init__(self, framerate, **kwargs):
@@ -502,23 +611,39 @@ class Ab3dmotTracker(_TrackingAlgorithm):
         """
         if (len(detections_3d) > 0) and (self.origin is None):
             self.origin = detections_3d[0].box.origin
-            self.z_up = np.all(np.round(self.origin.rotation.up_vector) == np.array([0,0,1]))
-        ts = self.iframe * 1./self.framerate
+            self.z_up = np.all(
+                np.round(self.origin.rotation.up_vector) == np.array([0, 0, 1])
+            )
+        ts = self.iframe * 1.0 / self.framerate
 
         # -- get information on the object
-        ori_array = np.asarray([d.box.yaw for d in detections_3d]).reshape((-1,1))
+        ori_array = np.asarray([d.box.yaw for d in detections_3d]).reshape((-1, 1))
         score = 1
-        other_array = np.asarray([[d.obj_type, None, None, None, None, None] for d in detections_3d])
+        other_array = np.asarray(
+            [[d.obj_type, None, None, None, None, None] for d in detections_3d]
+        )
         if len(other_array.shape) == 1:
-            other_array = other_array[:,None]
+            other_array = other_array[:, None]
         additional_info = np.concatenate((ori_array, other_array), axis=1)
 
         # --- make detections format
-        dets = np.asarray([[d.box.h, d.box.w, d.box.l, d.box.t[0],
-            d.box.t[1], d.box.t[2], d.box.yaw] for d in detections_3d])
+        dets = np.asarray(
+            [
+                [
+                    d.box.h,
+                    d.box.w,
+                    d.box.l,
+                    d.box.t[0],
+                    d.box.t[1],
+                    d.box.t[2],
+                    d.box.yaw,
+                ]
+                for d in detections_3d
+            ]
+        )
         if len(dets.shape) == 1:
-            dets = dets[:,None]
-        dets_all = {'dets':dets, 'info':additional_info}
+            dets = dets[:, None]
+        dets_all = {"dets": dets, "info": additional_info}
 
         # --- update
         tracks = self.tracker.update(dets_all, self.z_up)
@@ -531,21 +656,23 @@ class Ab3dmotTracker(_TrackingAlgorithm):
             ID = d[7]
             pos = d[3:6]
             vel = d[15:18]
-            acc = np.nan*np.ones((3,))
+            acc = np.nan * np.ones((3,))
             h, w, l, yaw = d[0], d[1], d[2], d[6]
-            q = tforms.transform_orientation([0,0,yaw], 'euler', 'quat')
+            q = tforms.transform_orientation([0, 0, yaw], "euler", "quat")
             vs = VehicleState(obj_type=d[9], ID=ID)
-            vs.set(t=ts,
-                   position=pos,
-                   box=Box3D([h,w,l,pos,q], self.origin),
-                   velocity=vel,
-                   acceleration=acc,
-                   attitude=q,
-                   angular_velocity=None,
-                   origin=self.origin)
+            vs.set(
+                t=ts,
+                position=pos,
+                box=Box3D([h, w, l, pos, q], self.origin),
+                velocity=vel,
+                acceleration=acc,
+                attitude=q,
+                angular_velocity=None,
+                origin=self.origin,
+            )
             tracks_format.append(vs)
-             # n_updates=d[18],
-             # score=(d[14] if d[14] is not None else 1.0))
+            # n_updates=d[18],
+            # score=(d[14] if d[14] is not None else 1.0))
         self._ID_set = self._ID_set.union(set([t.ID for t in tracks_format]))
         self.n_tracks_total = len(self._ID_set)
         self.n_tracks_last = len(tracks_format)
@@ -553,8 +680,12 @@ class Ab3dmotTracker(_TrackingAlgorithm):
 
 
 class EagermotTracker(_TrackingAlgorithm):
-    def __init__(self, framerate, plus=False, n_box_confirmed=0, n_joint_coast=np.inf, **kwargs):
-        self.tracker = libraries.EagerMOT.model.EagerMOT(framerate, plus, n_box_confirmed, n_joint_coast)
+    def __init__(
+        self, framerate, plus=False, n_box_confirmed=0, n_joint_coast=np.inf, **kwargs
+    ):
+        self.tracker = libraries.EagerMOT.model.EagerMOT(
+            framerate, plus, n_box_confirmed, n_joint_coast
+        )
         super().__init__(**kwargs)
 
     def track(self, detections_2d, detections_3d, *args, **kwargs):
@@ -578,56 +709,73 @@ class EagermotTracker(_TrackingAlgorithm):
             frame = detections_2d.frame
             timestamp = detections_2d.frame
         for ID, trk in tracks.items():
-            x, y, z, yaw, h, w, l, vx, vy, vz = trk.kf.x[:,0]
+            x, y, z, yaw, h, w, l, vx, vy, vz = trk.kf.x[:, 0]
             origin = trk.box3d.origin
             vs = VehicleState(obj_type=None, ID=ID)
-            pos = np.array([x,y,z])
-            q = tforms.transform_orientation([0,0,yaw], 'euler', 'quat')
-            vs.set(t=timestamp,
-                   position=pos,
-                   box=Box3D([h,w,l,pos,q], origin),
-                   velocity=np.array([vx,vy,vz]),
-                   acceleration=None,
-                   attitude=q,
-                   angular_velocity=None,
-                   origin=origin)
+            pos = np.array([x, y, z])
+            q = tforms.transform_orientation([0, 0, yaw], "euler", "quat")
+            vs.set(
+                t=timestamp,
+                position=pos,
+                box=Box3D([h, w, l, pos, q], origin),
+                velocity=np.array([vx, vy, vz]),
+                acceleration=None,
+                attitude=q,
+                angular_velocity=None,
+                origin=origin,
+            )
             tracks_format.append(vs)
         return tracks_format
 
 
 class Chaser3DBoxTracker(_TrackingAlgorithm):
     def __init__(self, **kwargs):
-        self.tracker = chaser.get_tracker(association='gnn', dim=3, model='cv',
-            maneuver='low', use_box=True)
+        self.tracker = chaser.get_tracker(
+            association="gnn", dim=3, model="cv", maneuver="low", use_box=True
+        )
         super().__init__(**kwargs)
 
     def track(self, detections, *args, **kwargs):
-        detections_3d = detections['object_3d']
+        detections_3d = detections["object_3d"]
         msmts = self._convert_dets_to_msmts(detections_3d)
         self.tracker.process_msmts(msmts)
         return self._format_tracks(self.tracker.confirmed_tracks, detections_3d)
 
     @property
     def tracks(self):
-        return {trk.ID:trk for trk in self.tracker.confirmed_tracks}
+        return {trk.ID: trk for trk in self.tracker.confirmed_tracks}
 
     def _convert_dets_to_msmts(self, dets):
         msmts = []
         for d in dets:
             if isinstance(d, BoxDetection):
                 if isinstance(d.box, Box3D):
-                    r = np.array([1,1,1,0.5,0.5,0.5,0.1])
+                    r = np.array([1, 1, 1, 0.5, 0.5, 0.5, 0.1])
                     m = estimators.measurements.BoxMeasurement_3D_XYZHWLYaw(
-                        source_ID=d.source_ID, t=dets.timestamp, r=r, x=d.box.t[0],
-                        y=d.box.t[1], z=d.box.t[2], h=d.box.h, w=d.box.w,
-                        l=d.box.l, yaw=d.box.yaw)
+                        source_ID=d.source_ID,
+                        t=dets.timestamp,
+                        r=r,
+                        x=d.box.t[0],
+                        y=d.box.t[1],
+                        z=d.box.t[2],
+                        h=d.box.h,
+                        w=d.box.w,
+                        l=d.box.l,
+                        yaw=d.box.yaw,
+                    )
                     msmts.append(m)
                 elif isinstance(d.box, Box2D):
                     raise NotImplementedError
-                    r = np.array([5,5,5,5])
+                    r = np.array([5, 5, 5, 5])
                     m = estimators.measurements.BoxMeasurement_2D_XYXY(
-                        source_ID=d.source_ID, t=dets.timestamp, r=r, x_min=d.box.xmin,
-                        y_min=d.box.ymin, x_max=d.box.xmax, y_max=d.box.ymax)
+                        source_ID=d.source_ID,
+                        t=dets.timestamp,
+                        r=r,
+                        x_min=d.box.xmin,
+                        y_min=d.box.ymin,
+                        x_max=d.box.xmax,
+                        y_max=d.box.ymax,
+                    )
                     msmts.append(m)
                 else:
                     raise NotImplementedError(type(d))
@@ -648,12 +796,14 @@ class Chaser3DBoxTracker(_TrackingAlgorithm):
             q = None
             raise
             vs = VehicleState(obj_type=None, ID=ID)
-            vs.set(t=timestamp,
-                   position=np.array([x,y,z]),
-                   box=Box3D([h,w,l,np.zeros((3,)),q], StandardCoordinates),
-                   velocity=np.array([vx,vy,vz]),
-                   acceleration=None,
-                   angular_velocity=None,
-                   origin=NominalOriginStandard)
+            vs.set(
+                t=timestamp,
+                position=np.array([x, y, z]),
+                box=Box3D([h, w, l, np.zeros((3,)), q], StandardCoordinates),
+                velocity=np.array([vx, vy, vz]),
+                acceleration=None,
+                angular_velocity=None,
+                origin=NominalOriginStandard,
+            )
             tracks_format.append(vs)
         return tracks_format

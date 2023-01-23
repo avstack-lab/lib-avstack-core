@@ -8,9 +8,18 @@
 
 """
 from typing import List
+
 import numpy as np
 from scipy.interpolate import interp1d
-from avstack.geometry import bbox, Box2D, Box3D, SegMask2D, Translation, NominalOriginStandard
+
+from avstack.geometry import (
+    Box2D,
+    Box3D,
+    NominalOriginStandard,
+    SegMask2D,
+    Translation,
+    bbox,
+)
 
 
 # detection_map = {'vehicle':'car', 'car':'car', 'pedestrian':'pedestrian', 'cyclist':'cyclist',
@@ -20,7 +29,7 @@ from avstack.geometry import bbox, Box2D, Box3D, SegMask2D, Translation, Nominal
 
 
 def get_detections_from_file(det_file_path):
-    with open(det_file_path, 'r') as f:
+    with open(det_file_path, "r") as f:
         lines = [l.strip() for l in f.readlines()]
     dets = []
     for line in lines:
@@ -31,21 +40,21 @@ def get_detections_from_file(det_file_path):
 def get_detection_from_line(line):
     items = line.split()
     det_type = items[0]
-    if det_type == 'box-detection':
+    if det_type == "box-detection":
         sID, obj_type, score = items[1:4]
-        box = bbox.get_box_from_line(' '.join(items[4:]))
+        box = bbox.get_box_from_line(" ".join(items[4:]))
         det = BoxDetection(sID, box, obj_type, score)
-    elif det_type == 'mask-detection':
+    elif det_type == "mask-detection":
         sID, obj_type, score = items[1:4]
-        box = bbox.get_box_from_line(' '.join(items[4:34]))
-        mask = bbox.get_segmask_from_line(' '.join(items[34:]))
+        box = bbox.get_box_from_line(" ".join(items[4:34]))
+        mask = bbox.get_segmask_from_line(" ".join(items[34:]))
         det = MaskDetection(sID, box, mask, obj_type, score)
     else:
         raise NotImplementedError(det_type)
     return det
 
 
-class Detection_():
+class Detection_:
     def __init__(self, source_identifier, obj_type, score, check_type):
         self.source_identifier = source_identifier
         self.obj_type = obj_type
@@ -74,15 +83,16 @@ class Detection_():
         self.data.change_origin(origin)
 
     def __str__(self):
-        return f'{self.obj_type} detection from sensor {self.source_identifier}\n{self.data}'
+        return f"{self.obj_type} detection from sensor {self.source_identifier}\n{self.data}"
 
     def __repr__(self):
         return self.__str__()
 
 
 class CentroidDetection(Detection_):
-    def __init__(self, source_identifier, centroid, obj_type=None,
-            score=None, check_type=False):
+    def __init__(
+        self, source_identifier, centroid, obj_type=None, score=None, check_type=False
+    ):
         super().__init__(source_identifier, obj_type, score, check_type)
         self.centroid = centroid
 
@@ -98,13 +108,22 @@ class CentroidDetection(Detection_):
     def centroid(self, centroid):
         if self.check_type:
             if not isinstance(centroid, np.ndarray):
-                raise TypeError(f'Input centroid of type {type(centroid)} is not of an acceptable type')
+                raise TypeError(
+                    f"Input centroid of type {type(centroid)} is not of an acceptable type"
+                )
         self._centroid = centroid
 
 
 class JointBoxDetection(Detection_):
-    def __init__(self, source_identifier, box2d, box3d,
-            obj_type=None, score=None, check_type=False):
+    def __init__(
+        self,
+        source_identifier,
+        box2d,
+        box3d,
+        obj_type=None,
+        score=None,
+        check_type=False,
+    ):
         super().__init__(source_identifier, obj_type, score, check_type)
         self.box2d = box2d
         self.box3d = box3d
@@ -132,7 +151,9 @@ class JointBoxDetection(Detection_):
     def box_2d(self, box2d):
         if self.check_type:
             if not isinstance(box2d, Box2D):
-                raise TypeError(f'Input box of type {type(box2d)} is not of an acceptable type')
+                raise TypeError(
+                    f"Input box of type {type(box2d)} is not of an acceptable type"
+                )
         self._box2d = box2d
 
     @property
@@ -143,7 +164,9 @@ class JointBoxDetection(Detection_):
     def box_3d(self, box3d):
         if self.check_type:
             if not isinstance(box3d, Box3D):
-                raise TypeError(f'Input box of type {type(box3d)} is not of an acceptable type')
+                raise TypeError(
+                    f"Input box of type {type(box3d)} is not of an acceptable type"
+                )
         self._box_3d = box3d
 
 
@@ -152,7 +175,9 @@ class JointBoxDetectionAndOther(JointBoxDetection):
 
 
 class BoxDetection(Detection_):
-    def __init__(self, source_identifier, box, obj_type=None, score=None, check_type=False):
+    def __init__(
+        self, source_identifier, box, obj_type=None, score=None, check_type=False
+    ):
         super().__init__(source_identifier, obj_type, score, check_type)
         self.box = box
 
@@ -168,7 +193,9 @@ class BoxDetection(Detection_):
     def box(self, box):
         if self.check_type:
             if not (isinstance(box, Box2D) or isinstance(box, Box3D)):
-                raise TypeError(f'Input box of type {type(box)} is not of an acceptable type')
+                raise TypeError(
+                    f"Input box of type {type(box)} is not of an acceptable type"
+                )
         self._box = box
 
     @property
@@ -187,15 +214,17 @@ class BoxDetection(Detection_):
 
     def format_as_string(self):
         """Convert to vehicle state and format"""
-        return f'box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}'
+        return f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"
 
 
 class MaskDetection(Detection_):
-    def __init__(self, source_identifier, box, mask, obj_type=None, score=None, check_type=False):
+    def __init__(
+        self, source_identifier, box, mask, obj_type=None, score=None, check_type=False
+    ):
         super().__init__(source_identifier, obj_type, score, check_type)
         self.box = box
         self.mask = mask
-    
+
     @property
     def data(self):
         return (self.box, self.mask)
@@ -203,23 +232,27 @@ class MaskDetection(Detection_):
     @property
     def box(self):
         return self._box
-        
+
     @box.setter
     def box(self, box):
         if self.check_type:
             if not (isinstance(box, Box2D)):
-                raise TypeError(f'Input box of type {type(box)} is not of an acceptable type')
+                raise TypeError(
+                    f"Input box of type {type(box)} is not of an acceptable type"
+                )
         self._box = box
 
     @property
     def mask(self):
         return self._mask
-    
+
     @mask.setter
     def mask(self, mask):
         if self.check_type:
             if not (isinstance(mask, SegMask2D)):
-                raise TypeError(f'Input mask of type {type(mask)} is not of an acceptable type')
+                raise TypeError(
+                    f"Input mask of type {type(mask)} is not of an acceptable type"
+                )
         self._mask = mask
 
     @property
@@ -231,8 +264,10 @@ class MaskDetection(Detection_):
 
     def format_as_string(self):
         """Convert to vehicle state and format"""
-        return f'mask-detection {self.source_identifier} {self.obj_type} {self.score} ' + \
-               f'{self.box.format_as_string()} {self.mask.format_as_string()}'
+        return (
+            f"mask-detection {self.source_identifier} {self.obj_type} {self.score} "
+            + f"{self.box.format_as_string()} {self.mask.format_as_string()}"
+        )
 
 
 class OtherDetection(Detection_):
@@ -241,8 +276,9 @@ class OtherDetection(Detection_):
         self.data = data
 
 
-class LaneLineInSpace():
+class LaneLineInSpace:
     """Lane line in terms of cartesian space"""
+
     def __init__(self, points: List[Translation]):
         self._points = points
 
@@ -256,7 +292,7 @@ class LaneLineInSpace():
         return self.__str__()
 
     def __str__(self):
-        return f'Lane line with x:{self.x}, y:{self.y}'
+        return f"Lane line with x:{self.x}, y:{self.y}"
 
     @property
     def x(self):
@@ -272,14 +308,14 @@ class LaneLineInSpace():
 
     def object_between_lanes(self, other, obj):
         center_lane, lane_width = self.compute_center_lane(other)
-        if (center_lane) and (center_lane.distance_closest(obj) < lane_width/2):
+        if (center_lane) and (center_lane.distance_closest(obj) < lane_width / 2):
             return True
         else:
             return False
 
     def object_between_lanes_projected(self, other, obj):
         """Assumes forward, left, up coordinates"""
-        #left = obj.y
+        # left = obj.y
         # if np.any([left <= p.y for p in self._points]) and \
         #     np.any([left >= p.y for p in other._points]):
         #     return True
@@ -289,12 +325,20 @@ class LaneLineInSpace():
         # else:
         #     return False
         for i in range(0, len(self._points)):
-            #print(obj.y <= self._points[i].y, obj.y >= other._points[i].y, obj.x >= self._points[i].x - 2)
-            if obj.y <= self._points[i].y and obj.y >= other._points[i].y and \
-                obj.x >= self._points[i].x - 2 and obj.x <= self._points[i].x + 2:
+            # print(obj.y <= self._points[i].y, obj.y >= other._points[i].y, obj.x >= self._points[i].x - 2)
+            if (
+                obj.y <= self._points[i].y
+                and obj.y >= other._points[i].y
+                and obj.x >= self._points[i].x - 2
+                and obj.x <= self._points[i].x + 2
+            ):
                 return True
-            elif obj.y >= self._points[i].y and obj.y <= other._points[i].y and \
-                obj.x >= self._points[i].x - 2 and obj.x <= self._points[i].x + 2:
+            elif (
+                obj.y >= self._points[i].y
+                and obj.y <= other._points[i].y
+                and obj.x >= self._points[i].x - 2
+                and obj.x <= self._points[i].x + 2
+            ):
                 return True
         return False
 
@@ -303,21 +347,28 @@ class LaneLineInSpace():
         lane_left = self if np.mean(self.y) >= np.mean(other.y) else other
         lane_right = self if lane_left == other else other
         # compute center lane
-        min_fwd, max_fwd = max(lane_left[0].x, lane_right[0].x), min(lane_left[-1].x, lane_right[-1].x)
+        min_fwd, max_fwd = max(lane_left[0].x, lane_right[0].x), min(
+            lane_left[-1].x, lane_right[-1].x
+        )
         if not (max_fwd > min_fwd >= 0):
             # try to cut lane in half...
             min_fwd = max(lane_left[0].x, lane_right[0].x)
-            max_fwd = min(lane_left[len(lane_left)//2].x, lane_right[len(lane_right)//2].x)
+            max_fwd = min(
+                lane_left[len(lane_left) // 2].x, lane_right[len(lane_right) // 2].x
+            )
             if not (max_fwd > min_fwd >= 0):
-                print('Invalid lane detection...')
+                print("Invalid lane detection...")
                 return None, None
         delta = 0.5
-        x_pts = np.linspace(min_fwd, max_fwd, int((max_fwd-min_fwd)/delta))
+        x_pts = np.linspace(min_fwd, max_fwd, int((max_fwd - min_fwd) / delta))
         left_y = interp1d(lane_left.x, lane_left.y)(x_pts)
         right_y = interp1d(lane_right.x, lane_right.y)(x_pts)
         lane_width = np.mean(left_y - right_y)
         center_y = (left_y + right_y) / 2
-        center_points = [Translation([x, y, 0], origin=NominalOriginStandard) for x, y in zip(x_pts, center_y)]
+        center_points = [
+            Translation([x, y, 0], origin=NominalOriginStandard)
+            for x, y in zip(x_pts, center_y)
+        ]
         return LaneLineInSpace(center_points), lane_width
 
     def compute_center_lane_and_offset(self, other):
@@ -332,13 +383,16 @@ class LaneLineInSpace():
             return None, 0, 0
 
 
-class LaneLineInPixels():
+class LaneLineInPixels:
     """Lane line in terms of pixels"""
+
     def __init__(self, lane_points, image_size):
         """Coordinates are in (row, col) pairs"""
         self._points = np.array(sorted(lane_points))
-        assert len(np.unique(self._points[:,0])) == self._points.shape[0], 'Must have unique rows'
-        self._points_map = {r:c for r, c in self._points}
+        assert (
+            len(np.unique(self._points[:, 0])) == self._points.shape[0]
+        ), "Must have unique rows"
+        self._points_map = {r: c for r, c in self._points}
         self.image_size = image_size
 
     def __len__(self):
@@ -356,7 +410,7 @@ class LaneLineInPixels():
         return np.array([p[1] for p in self._points])
 
     def coordinate_by_index(self, index):
-        return self._points[index,:]
+        return self._points[index, :]
 
     def col_by_row(self, row_index):
         return self._points[row_index]
@@ -364,17 +418,26 @@ class LaneLineInPixels():
     def compute_center_lane(self, other, lane_width):
         # determine which is right and left lanes
         lane_left = self if np.mean(self.y) <= np.mean(other.y) else other
-        lane_right = self if lane_left==other else other
+        lane_right = self if lane_left == other else other
 
         # compute center lane
-        r_l_dict = dict((k[0],i) for i, k in enumerate(lane_left))
-        r_r_dict = dict((k[0],i) for i, k in enumerate(lane_right))
+        r_l_dict = dict((k[0], i) for i, k in enumerate(lane_left))
+        r_r_dict = dict((k[0], i) for i, k in enumerate(lane_right))
         inter = set(r_l_dict).intersection(set(r_r_dict))
         idx_left = [r_l_dict[x] for x in inter]
         idx_right = [r_r_dict[x] for x in inter]
-        center_pairs = [(idx, (lane_left[r_l_dict[idx]][1]+lane_right[r_r_dict[idx]][1])/2) for idx in inter]
+        center_pairs = [
+            (idx, (lane_left[r_l_dict[idx]][1] + lane_right[r_r_dict[idx]][1]) / 2)
+            for idx in inter
+        ]
         # meters/pixel at each row
-        center_scaling = np.array([lane_width/(lane_right[r_l_dict[idx]][1]-lane_left[r_r_dict[idx]][1]) for idx in inter])
+        center_scaling = np.array(
+            [
+                lane_width
+                / (lane_right[r_l_dict[idx]][1] - lane_left[r_r_dict[idx]][1])
+                for idx in inter
+            ]
+        )
         return LaneLineInPixels(center_pairs, lane_left.image_size), center_scaling
 
     def compute_center_lane_and_offset(self, other, lane_width=3.7):
@@ -385,7 +448,7 @@ class LaneLineInPixels():
         """
         center_lane, center_scaling = self.compute_center_lane(other, lane_width)
         offset = np.zeros_like(center_lane._points)
-        offset[:,1] = self.image_size[1]/2
+        offset[:, 1] = self.image_size[1] / 2
         cc = center_lane._points - offset
         cs = center_scaling
         nrows_offset = 5

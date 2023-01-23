@@ -8,17 +8,20 @@
 
 """
 
-import numpy as np
 from copy import copy, deepcopy
+
+import numpy as np
+
 from avstack import transformations as tforms
-from avstack.geometry import Transform, Rotation
+from avstack.geometry import Rotation, Transform
 
 from . import components
-from .base import WaypointPlan, Waypoint, _PlanningAlgorithm
+from .base import Waypoint, WaypointPlan, _PlanningAlgorithm
 
 
 class AdaptiveCruiseControl(_PlanningAlgorithm):
     """Follow an object in a lane within a suitable distance"""
+
     def __init__(self, dt_target=3, dt_max=20, object_ID=1, verbose=False):
         self.dt_target = dt_target
         self.dt_max = dt_max
@@ -27,7 +30,9 @@ class AdaptiveCruiseControl(_PlanningAlgorithm):
         self.verbose = verbose
         self.following = False
 
-    def __call__(self, plan, ego_state, environment, objects_3d, objects_2d, lane_lines, **kwargs):
+    def __call__(
+        self, plan, ego_state, environment, objects_3d, objects_2d, lane_lines, **kwargs
+    ):
         ############################################
         # TODO: IMPROVE THIS LOGIC
         # --- USE PREDICTIONS
@@ -44,14 +49,14 @@ class AdaptiveCruiseControl(_PlanningAlgorithm):
         obj_follow = components.get_object_to_follow(ego_state, objects_3d, lane_lines)
         if obj_follow is not None:
             if self.verbose:
-                print('::Planning - found object to follow')
+                print("::Planning - found object to follow")
             pos_rel = obj_follow.position
             vel_rel = obj_follow.velocity
             range_rel = pos_rel.norm()
             speed_rel = vel_rel.norm()
             speed_ego = ego_state.velocity.norm()
             t_behind_track = range_rel / speed_ego if speed_ego > 0 else np.inf
-            t_to_catch = np.inf if speed_rel <= 0 else range_rel/speed_rel
+            t_to_catch = np.inf if speed_rel <= 0 else range_rel / speed_rel
 
         # -- default to lane keeping, otherwise follow obj
         if (obj_follow is None) or ((t_behind_track >= self.dt_max) and speed_ego > 0):
@@ -59,14 +64,13 @@ class AdaptiveCruiseControl(_PlanningAlgorithm):
                 plan.clear()
                 self.following = False
             if self.verbose:
-                print('::Planning - defaulting to lane keeping planner')
-            plan = self.lane_keeping_planner(
-                plan, ego_state, lane_lines, environment)
+                print("::Planning - defaulting to lane keeping planner")
+            plan = self.lane_keeping_planner(plan, ego_state, lane_lines, environment)
         else:
             self.following = True
             forward = ego_state.attitude.forward_vector
             vel_global = ego_state.attitude.T @ obj_follow.velocity + ego_state.velocity
-            loc_rel = obj_follow.position - 4*forward
+            loc_rel = obj_follow.position - 4 * forward
             loc = ego_state.attitude.T @ loc_rel + ego_state.position
             dist = (loc - ego_state.position).norm()
             low = 7
@@ -84,14 +88,17 @@ class AdaptiveCruiseControl(_PlanningAlgorithm):
 
 class LaneKeepingPlanner(_PlanningAlgorithm):
     """Keep the lane and follow traffic signals"""
+
     def __init__(self, verbose=False):
         self.verbose = verbose
 
     def __call__(self, plan, ego_state, lane_lines, environment, **kwargs):
-        """Execute planning logic to get next set of waypoints""" 
+        """Execute planning logic to get next set of waypoints"""
         plan.update(ego_state)
         if plan.needs_waypoint():
-            distance, waypoint = self._get_waypoint(ego_state, lane_lines, environment.speed_limit)
+            distance, waypoint = self._get_waypoint(
+                ego_state, lane_lines, environment.speed_limit
+            )
             plan.push(distance, waypoint)
         return plan
 
@@ -108,15 +115,19 @@ class LaneKeepingPlanner(_PlanningAlgorithm):
         # Process lane lines
         if len(lane_lines) < 2:
             target_speed = speed_target - 5
-            target_loc = ego_state.position + d_forward*forward_vec
+            target_loc = ego_state.position + d_forward * forward_vec
             target_rot = ego_state.attitude
-            print('Lanes not found...going forward')
+            print("Lanes not found...going forward")
         elif len(lane_lines) == 2:
-            _, lateral_offset, yaw_offset = lane_lines[0].compute_center_lane_and_offset(lane_lines[1])
-            target_loc = ego_state.position + \
-                         lateral_offset*left_vec + \
-                         d_forward*forward_vec
-            R_b2way = Rotation(tforms.get_rot_yaw_matrix(-yaw_offset, '+z'), target_loc.origin)
+            _, lateral_offset, yaw_offset = lane_lines[
+                0
+            ].compute_center_lane_and_offset(lane_lines[1])
+            target_loc = (
+                ego_state.position + lateral_offset * left_vec + d_forward * forward_vec
+            )
+            R_b2way = Rotation(
+                tforms.get_rot_yaw_matrix(-yaw_offset, "+z"), target_loc.origin
+            )
             R_world2b = ego_state.attitude
             target_rot = R_b2way @ R_world2b
             target_speed = speed_target
@@ -129,7 +140,15 @@ class LaneKeepingPlanner(_PlanningAlgorithm):
 
 class RandomPlanner(_PlanningAlgorithm):
     """Finds random waypoints to go to"""
-    def __init__(self, max_lateral_dist=2, min_forward_dist=5, max_forward_dist=10, max_speed=20, verbose=False):
+
+    def __init__(
+        self,
+        max_lateral_dist=2,
+        min_forward_dist=5,
+        max_forward_dist=10,
+        max_speed=20,
+        verbose=False,
+    ):
         self.min_forward_dist = min_forward_dist
         self.max_forward_dist = max_forward_dist
         self.max_lateral_dist = max_lateral_dist
@@ -143,22 +162,23 @@ class RandomPlanner(_PlanningAlgorithm):
         return plan
 
     def _get_waypoint(self, ego_state):
-        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, '+z')[:,0]
+        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
         d1 = self.min_forward_dist
         d2 = self.max_forward_dist
-        da = ((d2-d1) * np.random.rand() + d1) * forward_vec
-        db = self.max_lateral_dist*(2*(np.random.rand(3)-1/2))
+        da = ((d2 - d1) * np.random.rand() + d1) * forward_vec
+        db = self.max_lateral_dist * (2 * (np.random.rand(3) - 1 / 2))
         d_pos = da + db
         target_loc = ego_state.position + d_pos
         target_rot = deepcopy(ego_state.attitude)
         target_point = Transform(target_rot, target_loc)
-        target_speed = ((1-0.2)*np.random.rand() + 0.2) * self.max_speed
+        target_speed = ((1 - 0.2) * np.random.rand() + 0.2) * self.max_speed
         dist_wpt = ego_state.position.distance(target_point)
         return dist_wpt, Waypoint(target_point, target_speed)
 
 
 class StationaryPlanner(_PlanningAlgorithm):
     """Stays in the same spot"""
+
     def __init__(self, verbose=False, *args, **kwargs):
         self.init_state = None
         self.verbose = verbose
@@ -177,6 +197,7 @@ class StationaryPlanner(_PlanningAlgorithm):
 
 class GoStraightPlanner(_PlanningAlgorithm):
     """Moves forward"""
+
     def __init__(self, *args, d_forward=3, target_speed=20, verbose=False, **kwargs):
         self.d_forward = d_forward
         self.target_speed = target_speed
@@ -189,8 +210,8 @@ class GoStraightPlanner(_PlanningAlgorithm):
         return plan
 
     def _get_waypoint(self, ego_state):
-        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, '+z')[:,0]
-        target_loc = ego_state.position + self.d_forward*forward_vec
+        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
+        target_loc = ego_state.position + self.d_forward * forward_vec
         target_point = Transform(ego_state.attitude, target_loc)
         dist_wpt = ego_state.position.distance(target_point)
         return dist_wpt, Waypoint(target_point, self.target_speed)
@@ -199,6 +220,7 @@ class GoStraightPlanner(_PlanningAlgorithm):
 # ===========================================================
 # MAP-BASED PLANNER -- BASED ON THE CARLA EXAMPLES FILES
 # ===========================================================
+
 
 class MapBasedPlanningAndControl(_PlanningAlgorithm):
     """Uses map information to get to destination
@@ -218,36 +240,47 @@ class MapBasedPlanningAndControl(_PlanningAlgorithm):
     Finally, different sets of behaviors are encoded in the agent, from cautious
     to a more aggressive ones.
     """
+
     def __init__(self, ego_state, map_data, ignore_traffic_light=True, verbose=False):
-        information = {'vehicles':'objects_3d',
-                        'pedestrians':'objects_3d',
-                        'traffic_lights':None}
+        information = {
+            "vehicles": "objects_3d",
+            "pedestrians": "objects_3d",
+            "traffic_lights": None,
+        }
         # deferred import to here for path reasons
         self.destination = None
-        raise NotImplementedError('Have not implemented and validated behavior agent')
-        self.agent = carla_components.behavior_agent.BehaviorAgent(ego_state=ego_state,
-            map_data=map_data, information=information,
-            ignore_traffic_light=ignore_traffic_light, behavior='normal')
+        raise NotImplementedError("Have not implemented and validated behavior agent")
+        self.agent = carla_components.behavior_agent.BehaviorAgent(
+            ego_state=ego_state,
+            map_data=map_data,
+            information=information,
+            ignore_traffic_light=ignore_traffic_light,
+            behavior="normal",
+        )
 
-    def set_destination(self, destination, coordinates='avstack', clean=True):
+    def set_destination(self, destination, coordinates="avstack", clean=True):
         """
         input in standard coordinates becomes carla coordinates
         """
         self.destination = destination
-        if coordinates == 'avstack':
+        if coordinates == "avstack":
             dest = [destination[0], -destination[1], destination[2]]
-        elif coordinates == 'carla':
+        elif coordinates == "carla":
             dest = destination
         else:
             raise NotImplementedError(coordinates)
-        e_loc = self.agent.ego_state.get_location(format_as='carla')
-        dest_true_avstack = self.agent.set_destination(e_loc, dest, clean=clean)        
+        e_loc = self.agent.ego_state.get_location(format_as="carla")
+        dest_true_avstack = self.agent.set_destination(e_loc, dest, clean=clean)
         return dest_true_avstack
 
     def __call__(self, ego_state, environment, objects_3d, objects_2d):
         if self.destination is None:
-            raise RuntimeError('Must set destination first')
-        self.agent.update_information(ego_state, environment.speed_limit,
-            objects_3d=objects_3d, objects_2d=objects_2d)
+            raise RuntimeError("Must set destination first")
+        self.agent.update_information(
+            ego_state,
+            environment.speed_limit,
+            objects_3d=objects_3d,
+            objects_2d=objects_2d,
+        )
         ctrl = self.agent.run_step()
         return ctrl

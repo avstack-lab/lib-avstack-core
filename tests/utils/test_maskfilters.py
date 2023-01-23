@@ -5,19 +5,35 @@
 # @Last modified time: 2021-08-03
 
 
-import os, sys
-import numpy as np
+import os
+import sys
 from copy import copy, deepcopy
+
+import numpy as np
+
 import avstack.utils.maskfilters as maskfilters
 
 
-sys.path.append('tests/')
+sys.path.append("tests/")
 from utilities import get_test_sensor_data
-obj, box_calib, lidar_calib, pc, camera_calib, img, box_2d, box_3d = get_test_sensor_data()
+
+
+(
+    obj,
+    box_calib,
+    lidar_calib,
+    pc,
+    camera_calib,
+    img,
+    box_2d,
+    box_3d,
+) = get_test_sensor_data()
 
 
 def test_filter_frustum():
-    frustum_filter = maskfilters.filter_points_in_image_frustum(pc, box_2d, camera_calib)
+    frustum_filter = maskfilters.filter_points_in_image_frustum(
+        pc, box_2d, camera_calib
+    )
     assert sum(frustum_filter) > 0
     assert max(np.where(frustum_filter)[0]) < pc.shape[0]
 
@@ -39,11 +55,13 @@ def test_single_in_frustum_2():
     # Test interface function
     box_3d_2 = deepcopy(box_3d)
     box_3d_2.t += 1
-    assert maskfilters.filter_objects_in_frustum(box_3d, box_3d_2, camera_calib)[0,0]
+    assert maskfilters.filter_objects_in_frustum(box_3d, box_3d_2, camera_calib)[0, 0]
     # Test interface function
     box_3d_2 = deepcopy(box_3d)
     box_3d_2.t += 30
-    assert not maskfilters.filter_objects_in_frustum(box_3d, box_3d_2, camera_calib)[0,0]
+    assert not maskfilters.filter_objects_in_frustum(box_3d, box_3d_2, camera_calib)[
+        0, 0
+    ]
 
 
 def test_multiple_in_frustum():
@@ -52,9 +70,11 @@ def test_multiple_in_frustum():
     box_3d_2.t += 1
     box_3d_3 = deepcopy(box_3d)
     box_3d_3.t += 30
-    res = maskfilters.filter_objects_in_frustum(box_3d, [box_3d_2, box_3d_3], camera_calib)
-    assert res[0,0]
-    assert not res[0,1]
+    res = maskfilters.filter_objects_in_frustum(
+        box_3d, [box_3d_2, box_3d_3], camera_calib
+    )
+    assert res[0, 0]
+    assert not res[0, 1]
 
 
 def test_range_filter():
@@ -76,8 +96,8 @@ def test_range_filter():
 
 def test_cone_filter():
     uv = np.array([1, 0, 0])
-    cone_filter_1 = maskfilters.filter_points_in_cone(pc, uv, 15*np.pi/180)
-    cone_filter_2 = maskfilters.filter_points_in_cone(pc, uv, 30*np.pi/180)
+    cone_filter_1 = maskfilters.filter_points_in_cone(pc, uv, 15 * np.pi / 180)
+    cone_filter_2 = maskfilters.filter_points_in_cone(pc, uv, 30 * np.pi / 180)
     cone_filter_3 = maskfilters.filter_points_in_cone(pc, uv, np.pi)
     assert 0 < sum(cone_filter_1) < sum(cone_filter_2) < sum(cone_filter_3)
 

@@ -17,4 +17,4 @@ def q_mult_vec(q, v):
 
 @jit(nopython=True, fastmath=False)
 def _q_mult_vec(s, r, m, v):
-    return v + 2*np.cross(r, (s*v + np.cross(r,v)))/m
+    return v + 2 * np.cross(r, (s * v + np.cross(r, v))) / m

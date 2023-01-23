@@ -8,13 +8,26 @@
 
 """
 
-import os, sys
+import os
+import sys
+
 from avstack.modules import perception
 
-sys.path.append('tests/')
+
+sys.path.append("tests/")
 from utilities import get_test_sensor_data
 
-obj, box_calib, lidar_calib, pc, camera_calib, img, box_2d, box_3d = get_test_sensor_data()
+
+(
+    obj,
+    box_calib,
+    lidar_calib,
+    pc,
+    camera_calib,
+    img,
+    box_2d,
+    box_3d,
+) = get_test_sensor_data()
 
 
 def test_mmdet_2d_perception():
@@ -22,7 +35,7 @@ def test_mmdet_2d_perception():
     try:
         import mmdet
     except ModuleNotFoundError as e:
-        print('Cannot run mmdet test without the module')
+        print("Cannot run mmdet test without the module")
     else:
         detector = perception.object2dfv.MMDetObjectDetector2D()
-        detections = detector(frame, img, 'camera_objects_2d')
+        detections = detector(frame, img, "camera_objects_2d")

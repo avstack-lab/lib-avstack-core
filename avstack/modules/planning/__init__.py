@@ -8,5 +8,6 @@
 
 """
 
-from .base import WaypointPlan, Waypoint
 import avstack.modules.planning.vehicle
+
+from .base import Waypoint, WaypointPlan

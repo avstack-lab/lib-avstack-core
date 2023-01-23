@@ -7,18 +7,20 @@
 """
 
 """
+from copy import copy, deepcopy
 from itertools import count
+
 import numpy as np
 import quaternion
-from copy import copy, deepcopy
-from avstack.geometry import Rotation, Transform, Vector, Translation
+
+from avstack.geometry import Rotation, Transform, Translation, Vector
 
 
-class _LocalizationAlgorithm():
+class _LocalizationAlgorithm:
     def __init__(self, t_init, ego_init, rate=100):
         self.t_last_exec = -np.inf
         self.rate = rate
-        self._interval = 1/rate
+        self._interval = 1 / rate
         self._last_estimate = None
         self.assign_from_ego(t_init, ego_init)
 

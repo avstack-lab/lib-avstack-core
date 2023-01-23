@@ -7,24 +7,23 @@
 """
 
 """
-import avstack
-from avstack.modules.planning.components import CollisionDetection
+import sys
+
 import numpy as np
 import quaternion
 
-from avstack.environment import EnvironmentState
-from avstack.modules import planning
-from avstack.modules.perception.detections import LaneLineInSpace
-from avstack.geometry import bbox, NominalOriginStandard
-from avstack import transformations as tforms
-
+import avstack
 from avstack import GroundTruthInformation
-from avstack.modules import prediction
-from avstack.modules import tracking
+from avstack import transformations as tforms
+from avstack.environment import EnvironmentState
+from avstack.geometry import NominalOriginStandard, bbox
+from avstack.modules import planning, prediction, tracking
+from avstack.modules.perception.detections import LaneLineInSpace
+from avstack.modules.planning.components import CollisionDetection
 from avstack.objects import VehicleState
 
-import sys
-sys.path.append('tests/')
+
+sys.path.append("tests/")
 from utilities import get_ego
 
 
@@ -32,42 +31,76 @@ def set_seed():
     seed = 10
     np.random.seed(seed)
 
-box_obj = bbox.Box3D([2,2,5,[0,0,0],np.quaternion(1)], NominalOriginStandard)  # box in local coordinates
+
+box_obj = bbox.Box3D(
+    [2, 2, 5, [0, 0, 0], np.quaternion(1)], NominalOriginStandard
+)  # box in local coordinates
 
 
 def get_object_no_collision(ego):
     set_seed()
-    pos_obj = ego.position + 10*np.random.rand(3)
+    pos_obj = ego.position + 10 * np.random.rand(3)
     vel_obj = np.random.rand(3)
     acc_obj = np.random.rand(3)
     rot_obj = np.eye(3)
     ang_obj = np.random.rand(3)
-    obj = VehicleState('car')
-    obj.set(0, pos_obj, box_obj, vel_obj, acc_obj, rot_obj, ang_obj, origin=NominalOriginStandard)
+    obj = VehicleState("car")
+    obj.set(
+        0,
+        pos_obj,
+        box_obj,
+        vel_obj,
+        acc_obj,
+        rot_obj,
+        ang_obj,
+        origin=NominalOriginStandard,
+    )
     return obj
 
 
 def get_object_collision(ego):
     set_seed()
-    pos_obj = ego.position + ego.velocity.vector * 3 + 0.5 * ego.acceleration.vector * 3 ** 2
+    pos_obj = (
+        ego.position + ego.velocity.vector * 3 + 0.5 * ego.acceleration.vector * 3**2
+    )
     vel_obj = np.zeros(3)
     acc_obj = np.zeros(3)
     rot_obj = np.eye(3)
     ang_obj = np.random.rand(3)
-    obj = VehicleState('car')
-    obj.set(0, pos_obj, box_obj, vel_obj, acc_obj, rot_obj, ang_obj, origin=NominalOriginStandard)
+    obj = VehicleState("car")
+    obj.set(
+        0,
+        pos_obj,
+        box_obj,
+        vel_obj,
+        acc_obj,
+        rot_obj,
+        ang_obj,
+        origin=NominalOriginStandard,
+    )
     return obj
 
 
 def get_object_collision_yaw(ego):
     set_seed()
-    pos_obj = ego.position + ego.velocity.vector * 3 + 0.5 * ego.acceleration.vector * 3 ** 2
+    pos_obj = (
+        ego.position + ego.velocity.vector * 3 + 0.5 * ego.acceleration.vector * 3**2
+    )
     vel_obj = np.zeros(3)
     acc_obj = np.zeros(3)
-    rot_obj = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]]) # Anticlockwise 90 degree
+    rot_obj = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])  # Anticlockwise 90 degree
     ang_obj = np.random.rand(3)
-    obj = VehicleState('car')
-    obj.set(0, pos_obj, box_obj, vel_obj, acc_obj, rot_obj, ang_obj, origin=NominalOriginStandard)
+    obj = VehicleState("car")
+    obj.set(
+        0,
+        pos_obj,
+        box_obj,
+        vel_obj,
+        acc_obj,
+        rot_obj,
+        ang_obj,
+        origin=NominalOriginStandard,
+    )
     return obj
 
 
@@ -81,10 +114,13 @@ def test_collision_detection():
     obj2 = get_object_collision_yaw(ego)
 
     frame = timestamp = 0
-    ground_truth = GroundTruthInformation(frame, timestamp, ego_state=ego, objects=[obj0, obj1, obj2])
+    ground_truth = GroundTruthInformation(
+        frame, timestamp, ego_state=ego, objects=[obj0, obj1, obj2]
+    )
     tracker = tracking.tracker3d.GroundTruthTracker()
     tracks = tracker(frame, ground_truth)
-    pred_ego = predictor(frame, tracks); pred_ego = pred_ego[list(pred_ego.keys())[0]]
+    pred_ego = predictor(frame, tracks)
+    pred_ego = pred_ego[list(pred_ego.keys())[0]]
     preds_3d = predictor(frame, tracks)
     collision_detection = CollisionDetection(ego, tracks)
     collision_records = collision_detection.collision_monitor(pred_ego, preds_3d)

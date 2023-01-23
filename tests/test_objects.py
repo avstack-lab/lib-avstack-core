@@ -9,17 +9,22 @@
 """
 
 import sys
-import numpy as np
 from copy import deepcopy
-from avstack.geometry import Translation, Transform, Rotation, Origin
-from avstack import transformations as tforms
 
-sys.path.append('tests/')
+import numpy as np
+
+from avstack import transformations as tforms
+from avstack.geometry import Origin, Rotation, Transform, Translation
+
+
+sys.path.append("tests/")
 from utilities import get_ego
 
 
 def test_change_reference():
-    O_new = Origin(np.array([1,2,3]), tforms.transform_orientation([1,-1,0.1], 'euler', 'dcm'))
+    O_new = Origin(
+        np.array([1, 2, 3]), tforms.transform_orientation([1, -1, 0.1], "euler", "dcm")
+    )
     obj1 = get_ego(seed=1)
     O_orig = deepcopy(obj1.origin)
     obj1_copy = get_ego(seed=1)

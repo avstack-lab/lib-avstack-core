@@ -9,5 +9,5 @@
 """
 
 
-class TrafficLight():
+class TrafficLight:
     pass

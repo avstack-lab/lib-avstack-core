@@ -11,14 +11,16 @@
 import numpy as np
 
 
-#============================================================
+# ============================================================
 # Base Class For Integrity
-#============================================================
+# ============================================================
 
-class _SensorIntegrity():
+
+class _SensorIntegrity:
     """
     Base class for all integrity monitoring algorithms
     """
+
     def __init__(self, name):
         """Inits defined in the subclasses"""
         self.name = name
@@ -32,17 +34,19 @@ class _SensorIntegrity():
         raise NotImplementedError
 
 
-#============================================================
+# ============================================================
 # Chi 2 Integrity
-#============================================================
+# ============================================================
+
 
 class Chi2Integrity(_SensorIntegrity):
     """
     Classic chi-2 threshold for anomaly detection
-    
+
     Takes in innovation along with innovation covariance and performs test
     Has options to perform instantaneous or windowed chi square detection
     """
+
     def __init__(self, p_thresh=0.95):
         """
         Initialize an anomaly detection module
@@ -51,11 +55,12 @@ class Chi2Integrity(_SensorIntegrity):
         df - degrees of freedom of the distribution
         p_thresh - probability threshold for the chi-square statistic
         """
-        super().__init__(name='Chi2')
+        super().__init__(name="Chi2")
         # Set up the threshold values beforehand (expensive to do real time)
         from scipy.stats.distributions import chi2
-        # Compute a threshold mapping 
-        self.thresh = {i:chi2.ppf(p_thresh, i) for i in range(6)}
+
+        # Compute a threshold mapping
+        self.thresh = {i: chi2.ppf(p_thresh, i) for i in range(6)}
         self.g = 0.0
         self.test_pass = True
 
@@ -66,6 +71,7 @@ class Chi2Integrity(_SensorIntegrity):
         df = len(y)
         if df not in self.thresh:
             from scipy.stats.distributions import chi2
+
             self.thresh[df] = chi2.ppf(p_thresh, df)
 
         # Compute chi square statistic

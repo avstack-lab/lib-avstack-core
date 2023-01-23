@@ -4,11 +4,19 @@
 # @Last modified by:   spencer
 # @Last modified time: 2021-08-13
 
+import itertools
+from functools import partial
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from functools import partial
-import itertools
-from avstack.datastructs import PrioritySet, OneEdgeBipartiteGraph, MultiEdgeBipartiteGraph, invert_dict_of_list
+
+from avstack.datastructs import (
+    MultiEdgeBipartiteGraph,
+    OneEdgeBipartiteGraph,
+    PrioritySet,
+    invert_dict_of_list,
+)
+
 
 """
 TODO:
@@ -29,7 +37,9 @@ def build_A_from_iou(boxes1, boxes2):
     return A
 
 
-def gnn_single_frame_assign(A, algorithm='JVC', all_assigned=False, cost_threshold=np.inf):
+def gnn_single_frame_assign(
+    A, algorithm="JVC", all_assigned=False, cost_threshold=np.inf
+):
     """
     Run linear-sum assignment algorithm
 
@@ -47,7 +57,7 @@ def gnn_single_frame_assign(A, algorithm='JVC', all_assigned=False, cost_thresho
         allow the algorithm to not assign for high cost
     """
 
-    assert algorithm in ['JVC']
+    assert algorithm in ["JVC"]
     assignments = []
     nrows = A.shape[0]
     ncols = A.shape[1]
@@ -59,8 +69,8 @@ def gnn_single_frame_assign(A, algorithm='JVC', all_assigned=False, cost_thresho
 
     # Eliminate useless ones
     if not all_assigned:
-        idx_lone_det = [i for i in range(A.shape[0]) if np.all(A[i,:] == np.inf)]
-        idx_lone_trk = [j for j in range(A.shape[1]) if np.all(A[:,j] == np.inf)]
+        idx_lone_det = [i for i in range(A.shape[0]) if np.all(A[i, :] == np.inf)]
+        idx_lone_trk = [j for j in range(A.shape[1]) if np.all(A[:, j] == np.inf)]
         if not all_assigned:
             left_rows = [i for i in range(A.shape[0]) if i not in idx_lone_det]
             left_cols = [j for j in range(A.shape[1]) if j not in idx_lone_trk]
@@ -80,11 +90,11 @@ def gnn_single_frame_assign(A, algorithm='JVC', all_assigned=False, cost_thresho
     pass  # TODO
 
     # Run assignment, if needed
-    if algorithm == 'JVC':
+    if algorithm == "JVC":
         large_value = 1e8
         A = np.where(A == np.inf, large_value, A)
         row_ind, col_ind = linear_sum_assignment(A, maximize=False)
-    elif algorithm in ['auction']:
+    elif algorithm in ["auction"]:
         raise NotImplementedError
     else:
         raise NotImplementedError
@@ -97,8 +107,11 @@ def gnn_single_frame_assign(A, algorithm='JVC', all_assigned=False, cost_thresho
     # Update assignment
     idx_lone_det.extend(list(set(left_rows) - set(row_ind)))
     idx_lone_trk.extend(list(set(left_cols) - set(col_ind)))
-    assignments = [(ri, cj) for ri, cj in zip(row_ind, col_ind) if
-                        (ri not in idx_lone_det) and (cj not in idx_lone_trk)]
+    assignments = [
+        (ri, cj)
+        for ri, cj in zip(row_ind, col_ind)
+        if (ri not in idx_lone_det) and (cj not in idx_lone_trk)
+    ]
 
     # Remove illegal assignments
     if not all_assigned:
@@ -120,12 +133,14 @@ def gnn_single_frame_assign(A, algorithm='JVC', all_assigned=False, cost_thresho
     if not all_assigned:
         for ri, cj in assignments:
             if A[left_rows.index(ri), left_cols.index(cj)] == large_value:
-                raise RuntimeError(f'Assignment made illegal choice -- '+\
-                f'{A}\n{assignments}\n({ri},{cj}) -- {A[left_rows.index(ri), left_cols.index(cj)]}\n'+\
-                f'row: {A[left_rows.index(ri),:]}\ncol: {A[:,left_cols.index(cj)]}')
+                raise RuntimeError(
+                    f"Assignment made illegal choice -- "
+                    + f"{A}\n{assignments}\n({ri},{cj}) -- {A[left_rows.index(ri), left_cols.index(cj)]}\n"
+                    + f"row: {A[left_rows.index(ri),:]}\ncol: {A[:,left_cols.index(cj)]}"
+                )
 
     # Make assignment
-    row_to_col = {a[0]:a[1] for a in assignments}
+    row_to_col = {a[0]: a[1] for a in assignments}
     return OneEdgeBipartiteGraph(row_to_col, nrows, ncols, cost)
 
 
@@ -159,30 +174,34 @@ def greedy_assignment(A, threshold):
     return OneEdgeBipartiteGraph(assigns, nrows, ncols, cost)
 
 
-def n_best_solutions(A, n: int, algorithm='JVC', verbose=False):
+def n_best_solutions(A, n: int, algorithm="JVC", verbose=False):
     """Return N-Best solution to assignment using Murty's algorithm
 
     NOTE: this is not an optimized version
     """
     # -- get single best
-    assign_sol_best = gnn_single_frame_assign(A, algorithm=algorithm, all_assigned=False)
+    assign_sol_best = gnn_single_frame_assign(
+        A, algorithm=algorithm, all_assigned=False
+    )
     n_required_feasible = len(assign_sol_best)  # must not lose assignments
-    best_sols = PrioritySet(max_size=n, max_heap=True)  # making max removes highest first
+    best_sols = PrioritySet(
+        max_size=n, max_heap=True
+    )  # making max removes highest first
     best_sols.push(assign_sol_best.cost, assign_sol_best)
-    sol_to_constraint_map = {assign_sol_best:([], [])}
+    sol_to_constraint_map = {assign_sol_best: ([], [])}
 
     # -- perform additional sweeps
     m = A.shape[1]
-    for i_sweep in range(n-1):
+    for i_sweep in range(n - 1):
         # -- get the next best as a starting point
         cost_start, sol_start = best_sols.n_smallest(n)[i_sweep]
         cons_yes_start, cons_no_start = sol_to_constraint_map[sol_start]
         sol = sol_start.copy()
         cons_yes = cons_yes_start.copy()
-        cons_no  = cons_no_start.copy()
+        cons_no = cons_no_start.copy()
 
         # -- all sequential manipulations starting at current spot
-        for i_subsweep in range(0, m-len(cons_yes_start)):
+        for i_subsweep in range(0, m - len(cons_yes_start)):
             # swap constraints
             if i_subsweep > 0:
                 cons_yes.append(cons_no.pop())
@@ -211,30 +230,39 @@ def n_best_solutions(A, n: int, algorithm='JVC', verbose=False):
             A_new = np.delete(A_new, del_cols, axis=1)  # remove "yes" cols
 
             # if i_sweep == 1:
-                # if i_subsweep == 0:
-                #     raise
+            # if i_subsweep == 0:
+            #     raise
 
             # run assignment, check feasible
-            assign_next = gnn_single_frame_assign(A_new, algorithm=algorithm, all_assigned=False)
+            assign_next = gnn_single_frame_assign(
+                A_new, algorithm=algorithm, all_assigned=False
+            )
             feasible = False
-            if len(assign_next) >= n_required_feasible-len(del_cols):
+            if len(assign_next) >= n_required_feasible - len(del_cols):
                 feasible = True
                 # map indices back
-                assignments = [(rows_new_to_old[ri], cols_new_to_old[cj]) for ri, cj in assign_next.assignment_tuples]
+                assignments = [
+                    (rows_new_to_old[ri], cols_new_to_old[cj])
+                    for ri, cj in assign_next.assignment_tuples
+                ]
                 assignments.extend(cons_yes)
                 cost = sum(A[ri, cj] for ri, cj in assignments)
-                row_to_col = {a[0]:a[1] for a in assignments}
-                assign_next = OneEdgeBipartiteGraph(row_to_col, A.shape[0], A.shape[1], cost)
+                row_to_col = {a[0]: a[1] for a in assignments}
+                assign_next = OneEdgeBipartiteGraph(
+                    row_to_col, A.shape[0], A.shape[1], cost
+                )
                 # store in set
                 best_sols.push(assign_next.cost, assign_next)
                 sol_to_constraint_map[assign_next] = (cons_yes.copy(), cons_no.copy())
             if verbose:
-                pr_str = f'\nSweep {i_sweep} and Subsweep {i_subsweep}:\n' + \
-                      f'--yes: {cons_yes}\n--no:  {cons_no}\n'
+                pr_str = (
+                    f"\nSweep {i_sweep} and Subsweep {i_subsweep}:\n"
+                    + f"--yes: {cons_yes}\n--no:  {cons_no}\n"
+                )
                 if feasible:
-                    pr_str += f'Yield the assignment: {assignments} with cost {cost}'
+                    pr_str += f"Yield the assignment: {assignments} with cost {cost}"
                 else:
-                    pr_str += f'Did not yield a feasible assignment'
+                    pr_str += f"Did not yield a feasible assignment"
                 print(pr_str)
 
     # -- return in regular order
@@ -249,11 +277,11 @@ def pda_single_frame_assign(gate_map, d2_map, S_map, PD, beta, nrows, ncols):
     assert ncols == len(gate_map)
 
     # form hypothesis probabilities
-    p_hyp = {j:{} for j in gate_map}
+    p_hyp = {j: {} for j in gate_map}
     cost = 0
     for j in gate_map:  # tracks
         b = beta * np.sqrt(np.linalg.det(S_map[j]))
-        alpha_is = {i:PD * np.exp(-d2_map[j][i]/2) for i in gate_map[j]}
+        alpha_is = {i: PD * np.exp(-d2_map[j][i] / 2) for i in gate_map[j]}
         sum_alpha_is = sum(alpha_is.values())
         for i in [-1] + gate_map[j]:  # gated msmts for the track
             if i == -1:  # no assignment
@@ -264,7 +292,7 @@ def pda_single_frame_assign(gate_map, d2_map, S_map, PD, beta, nrows, ncols):
 
     # create assignment solution
     gate_map_rev = invert_dict_of_list(gate_map)
-    assignments = {i:{j:p_hyp[j][i] for j in gate_map_rev[i]} for i in gate_map_rev}
+    assignments = {i: {j: p_hyp[j][i] for j in gate_map_rev[i]} for i in gate_map_rev}
     assign_sol = MultiEdgeBipartiteGraph(assignments, nrows, ncols, cost=cost)
     return assign_sol
 
@@ -273,15 +301,19 @@ def p_H(d2_map, S_map, PD, beta, i, j):
     """Hypothesis probability for JPDA
     NOTE: Can be optimized by pre-computing"""
     if i == -1:
-        p = (1-PD)*beta
+        p = (1 - PD) * beta
     else:
         M = S_map[j].shape[0]
-        g = np.exp(-d2_map[j][i]/2) / (((2*np.pi)**(M/2)) * np.sqrt(np.linalg.det(S_map[j])))
-        p = g*PD
+        g = np.exp(-d2_map[j][i] / 2) / (
+            ((2 * np.pi) ** (M / 2)) * np.sqrt(np.linalg.det(S_map[j]))
+        )
+        p = g * PD
     return p
 
 
-def jpda_single_frame_assign(gate_map, d2_map, S_map, PD, beta, nrows, ncols, A=None, method='combinatorial'):
+def jpda_single_frame_assign(
+    gate_map, d2_map, S_map, PD, beta, nrows, ncols, A=None, method="combinatorial"
+):
     """
     :gate_map -- {j1:[i1, i2,...], j2:...} where j is track and i is measurement
     :d2_map -- {}
@@ -289,9 +321,9 @@ def jpda_single_frame_assign(gate_map, d2_map, S_map, PD, beta, nrows, ncols, A=
     p_H_partial = partial(p_H, d2_map, S_map, PD, beta)
 
     # Get the assignments and their probabilities
-    if method == 'combinatorial':
+    if method == "combinatorial":
         best_sols, probs = _jpda_via_combinatorics(gate_map, p_H_partial, nrows, ncols)
-    elif method == 'n_best':
+    elif method == "n_best":
         best_sols, probs = _jpda_via_n_best()
     else:
         raise NotImplementedError
@@ -300,10 +332,10 @@ def jpda_single_frame_assign(gate_map, d2_map, S_map, PD, beta, nrows, ncols, A=
     assignments = {}
     cost = 0
     for sol, p in zip(best_sols, probs):
-        for i, j_w in sol.iterate_over('row').items():
+        for i, j_w in sol.iterate_over("row").items():
             j = list(j_w.keys())[0]
             if i not in assignments:
-                assignments[i] = {j:p}
+                assignments[i] = {j: p}
             elif j not in assignments[i]:
                 assignments[i][j] = p
             else:
@@ -320,13 +352,29 @@ def _jpda_via_combinatorics(gate_map, p_H_partial, nrows, ncols):
     all_combos = itertools.product(*all_gates)
 
     # Score combination
-    best_sols = [OneEdgeBipartiteGraph({i:j for i,j in zip(combo, gate_map.keys()) if i!=-1}, nrows, ncols, cost=0)
-                    for combo in all_combos if len(set(combo).difference([-1])) == len([c for c in combo if c != -1])]
-    likelihoods = [np.prod([p_H_partial(i,list(j.keys())[0]) for i,j in sol.iterate_over('row').items()] +
-                           [p_H_partial(-1,j) for j in sol.unassigned_cols]) for sol in best_sols]
+    best_sols = [
+        OneEdgeBipartiteGraph(
+            {i: j for i, j in zip(combo, gate_map.keys()) if i != -1},
+            nrows,
+            ncols,
+            cost=0,
+        )
+        for combo in all_combos
+        if len(set(combo).difference([-1])) == len([c for c in combo if c != -1])
+    ]
+    likelihoods = [
+        np.prod(
+            [
+                p_H_partial(i, list(j.keys())[0])
+                for i, j in sol.iterate_over("row").items()
+            ]
+            + [p_H_partial(-1, j) for j in sol.unassigned_cols]
+        )
+        for sol in best_sols
+    ]
     # Normalize
     sl = sum(likelihoods)
-    probs = [l/sl for l in likelihoods]
+    probs = [l / sl for l in likelihoods]
     return best_sols, probs
 
 
@@ -334,7 +382,7 @@ def _jpda_via_n_best():
     """Get jpda probabilities using efficient n best algorithm"""
     raise NotImplementedError
     # Get assignments
-    p_hyp = {j:{} for j in gate_map}
+    p_hyp = {j: {} for j in gate_map}
     cost = 0
     n_gates = [len(g) + 1 for g in gate_map.values()]  # add 1 for no assignment
     n_combos_max = np.prod(n_gates)  # overestimate of the number of combinations

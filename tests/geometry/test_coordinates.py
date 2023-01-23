@@ -10,15 +10,12 @@
 
 
 import numpy as np
+
 from avstack.geometry import coordinates
 
 
-R_lidar_2_carla = np.array([[1,  0, 0],
-                            [0, -1, 0],
-                            [0,  0, 1]])
-R_lidar_2_camera = np.array([[ 0, -1,  0],
-                             [ 0,  0, -1],
-                             [ 1,  0,  0]])
+R_lidar_2_carla = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]])
+R_lidar_2_camera = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])
 R_camera_2_carla = R_lidar_2_carla @ R_lidar_2_camera.T
 
 

@@ -8,20 +8,22 @@
 
 """
 
+from copy import copy, deepcopy
+
 import numpy as np
 import quaternion
 from numba import jit
 from numba.types import float64, int64
 
-from copy import copy, deepcopy
 from avstack import transformations as tforms
-from avstack.geometry import StandardCoordinates, CameraCoordinates
+from avstack.geometry import CameraCoordinates, StandardCoordinates
+
 from .base import q_mult_vec
 
 
 def get_origin_from_line(line):
     items = line.split()
-    assert items[0] == 'origin', items
+    assert items[0] == "origin", items
     x = np.array([float(r) for r in items[1:4]])
     q = np.quaternion(*[float(w) for w in items[4:8]])
     return Origin(x, q)
@@ -29,38 +31,38 @@ def get_origin_from_line(line):
 
 def get_transform_from_line(line):
     items = line.split()
-    assert items[0] == 'transform', items
-    idx_tr = items.index('translation')
-    R = get_rotation_from_line(' '.join(items[1:idx_tr]))
-    Tr = get_translation_from_line(' '.join(items[idx_tr:]))
+    assert items[0] == "transform", items
+    idx_tr = items.index("translation")
+    R = get_rotation_from_line(" ".join(items[1:idx_tr]))
+    Tr = get_translation_from_line(" ".join(items[idx_tr:]))
     return Transform(R, Tr)
 
 
 def get_rotation_from_line(line):
     items = line.split()
-    assert items[0] == 'rotation', items
+    assert items[0] == "rotation", items
     q = np.quaternion(*[float(r) for r in items[1:5]])
-    origin = get_origin_from_line(' '.join(items[5:]))
+    origin = get_origin_from_line(" ".join(items[5:]))
     return Rotation(q, origin=origin)
 
 
 def get_translation_from_line(line):
     items = line.split()
-    assert items[0] == 'translation', items
+    assert items[0] == "translation", items
     v = [float(x) for x in items[1:4]]
-    origin = get_origin_from_line(' '.join(items[4:]))
+    origin = get_origin_from_line(" ".join(items[4:]))
     return Translation(v, origin=origin)
 
 
-@jit(float64[:](float64[:], int64, float64[:]),nopython=True)
+@jit(float64[:](float64[:], int64, float64[:]), nopython=True)
 def fastround(arr, ndec, out):
     for i in range(len(arr)):
         if np.abs(arr[i]) < 1e-12:
-            arr[i] = 0.
+            arr[i] = 0.0
     return np.round_(arr, ndec, out)
 
 
-class Origin():
+class Origin:
     """An origin is like a transform but avoids circular reference
 
     An origin can be attached to a vector to say where the "zero" of
@@ -74,32 +76,35 @@ class Origin():
         --> this is like q_origin_2_object in origin's frame
 
     """
+
     def __init__(self, x: np.ndarray, q: np.quaternion, n_prec=8):
         # -- parse quaternion/rotation
         if isinstance(x, np.quaternion) and isinstance(q, np.ndarray):
             x, q = q, x
         if isinstance(q, np.quaternion):
             self.q = q
-        elif isinstance(q, (list, np.ndarray)) and (len(q)==4):
+        elif isinstance(q, (list, np.ndarray)) and (len(q) == 4):
             self.q = quaternion.from_float_array(q)
-        elif isinstance(q, np.ndarray) and q.shape==(3,3):
-            self.q = tforms.transform_orientation(q, 'dcm', 'quat')
+        elif isinstance(q, np.ndarray) and q.shape == (3, 3):
+            self.q = tforms.transform_orientation(q, "dcm", "quat")
         else:
-            raise ValueError(f'{type(q)} must be quaternion or 3x3\n{q}')
+            raise ValueError(f"{type(q)} must be quaternion or 3x3\n{q}")
 
         # -- parse translation
-        if isinstance(x, np.ndarray) and (len(x)==3):
+        if isinstance(x, np.ndarray) and (len(x) == 3):
             self.x = x.astype(np.float64)
-        elif isinstance(x, list) and (len(x)==3):
+        elif isinstance(x, list) and (len(x) == 3):
             self.x = np.array(x, dtype=np.float64)
         else:
-            raise ValueError(f'{x} must be a list of ndaray of len 3')
+            raise ValueError(f"{x} must be a list of ndaray of len 3")
 
         # -- round results
         y = np.empty_like(self.x)
         self.x = fastround(self.x, n_prec, y)
         y = np.empty_like(self.x)
-        self.q = np.quaternion(np.round(self.q.w, n_prec), *fastround(self.q.vec, n_prec, y))
+        self.q = np.quaternion(
+            np.round(self.q.w, n_prec), *fastround(self.q.vec, n_prec, y)
+        )
 
     def __hash__(self):
         return hash(self.x.tobytes() + self.q.vec.tobytes())
@@ -109,9 +114,13 @@ class Origin():
             if hash(self) == hash(other):
                 return True
             else:
-                return quaternion.allclose(self.q, other.q) and np.allclose(self.x, other.x)
+                return quaternion.allclose(self.q, other.q) and np.allclose(
+                    self.x, other.x
+                )
         else:
-            raise NotImplementedError(f'Cannot check equality between origin and {type(other)}')
+            raise NotImplementedError(
+                f"Cannot check equality between origin and {type(other)}"
+            )
 
     def __eq__(self, other):
         if isinstance(other, Origin):
@@ -123,13 +132,15 @@ class Origin():
                 # c2 = np.all(self.x == other.x)
                 # return c1 and c2
         else:
-            raise NotImplementedError(f'Cannot check equality between origin and {type(other)}')
+            raise NotImplementedError(
+                f"Cannot check equality between origin and {type(other)}"
+            )
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return f'origin of x:{self.x}, q:{self.q}'
+        return f"origin of x:{self.x}, q:{self.q}"
 
     @property
     def x_b(self):
@@ -157,7 +168,7 @@ class Origin():
 
     @property
     def euler(self):
-        return tforms.transform_orientation(self.q, 'quat', 'euler')
+        return tforms.transform_orientation(self.q, "quat", "euler")
 
     @property
     def rotation(self):
@@ -176,8 +187,9 @@ class Origin():
 
     @property
     def matrix(self):
-        return np.block([[self.R, self.x_b[:,None]],
-                         [np.zeros((1,3)), np.ones((1,1))]])
+        return np.block(
+            [[self.R, self.x_b[:, None]], [np.zeros((1, 3)), np.ones((1, 1))]]
+        )
 
     def translate(self, other: np.ndarray):
         return Origin(self.x + other, self.q)
@@ -197,7 +209,7 @@ class Origin():
         """
         if isinstance(other, np.quaternion):
             pass
-        elif isinstance(other, np.ndarray) and other.shape == (3,3):
+        elif isinstance(other, np.ndarray) and other.shape == (3, 3):
             other = quaternion.from_rotation_matrix(other)
         else:
             raise NotImplementedError(type(other))
@@ -257,7 +269,6 @@ class Origin():
         x_ON_to_pts_in_ON = q_mult_vec(q_O_to_ON, x_ON_to_pts_in_O)
         return x_ON_to_pts_in_ON
 
-
     def __matmul__(self, other):
         """Called when doing self @ other
 
@@ -282,9 +293,14 @@ class Origin():
             v_out = self.q * (other - self.x)
         """
         if isinstance(other, np.ndarray):
-            if ((len(other.shape) == 1) or (other.shape[0] == 3)) or \
-                    ((len(other.shape) == 2) and (other.shape[1] == 3)):
-                x_d = (other-self.x) if (len(other.shape)==1 or other.shape[0]==3) else (other - self.x[:,None].T)
+            if ((len(other.shape) == 1) or (other.shape[0] == 3)) or (
+                (len(other.shape) == 2) and (other.shape[1] == 3)
+            ):
+                x_d = (
+                    (other - self.x)
+                    if (len(other.shape) == 1 or other.shape[0] == 3)
+                    else (other - self.x[:, None].T)
+                )
                 return q_mult_vec(self.q, x_d)
             else:
                 raise NotImplementedError
@@ -292,25 +308,27 @@ class Origin():
             raise NotImplementedError
 
     def format_as_string(self):
-        return f'origin {self.x[0]} {self.x[1]} {self.x[2]} '\
-               f'{self.q.w} {self.q.x} {self.q.y} {self.q.z}'
+        return (
+            f"origin {self.x[0]} {self.x[1]} {self.x[2]} "
+            f"{self.q.w} {self.q.x} {self.q.y} {self.q.z}"
+        )
 
 
 R_stan_to_cam = StandardCoordinates.get_conversion_matrix(CameraCoordinates)
 q_stan_to_cam = quaternion.from_rotation_matrix(R_stan_to_cam)
 NominalOriginStandard = Origin(np.zeros((3,)), np.quaternion(1))
-NominalOriginCamera   = Origin(np.zeros((3,)), q_stan_to_cam)
+NominalOriginCamera = Origin(np.zeros((3,)), q_stan_to_cam)
 
 
-class Rotation():
+class Rotation:
     def __init__(self, q, origin=NominalOriginStandard, n_prec=8):
         """Assumes R is something like R_global_2_local"""
         if isinstance(q, np.quaternion):
             pass
-        elif isinstance(q, np.ndarray) and q.shape==(3,3):
-            q = tforms.transform_orientation(q, 'dcm', 'quat')
+        elif isinstance(q, np.ndarray) and q.shape == (3, 3):
+            q = tforms.transform_orientation(q, "dcm", "quat")
         else:
-            raise ValueError(f'{type(q)} must be quaternion or 3x3')
+            raise ValueError(f"{type(q)} must be quaternion or 3x3")
         y = np.empty_like(q.vec)
         self.q = np.quaternion(np.round(q.w, n_prec), *fastround(q.vec, n_prec, y))
         assert isinstance(origin, Origin), origin
@@ -322,7 +340,7 @@ class Rotation():
 
     @property
     def euler(self):
-        return tforms.transform_orientation(self.q, 'quat', 'euler')
+        return tforms.transform_orientation(self.q, "quat", "euler")
 
     @property
     def T(self):
@@ -339,22 +357,22 @@ class Rotation():
 
     @property
     def forward_vector(self):
-        return tforms.transform_orientation(self.q_by_origin, 'quat', 'dcm')[:,0]
+        return tforms.transform_orientation(self.q_by_origin, "quat", "dcm")[:, 0]
 
     @property
     def left_vector(self):
-        return tforms.transform_orientation(self.q_by_origin, 'quat', 'dcm')[:,1]
+        return tforms.transform_orientation(self.q_by_origin, "quat", "dcm")[:, 1]
 
     @property
     def up_vector(self):
-        return tforms.transform_orientation(self.q_by_origin, 'quat', 'dcm')[:,2]
+        return tforms.transform_orientation(self.q_by_origin, "quat", "dcm")[:, 2]
 
     @property
     def yaw(self):
-        return tforms.transform_orientation(self.q_by_origin, 'quat', 'euler')[2]
+        return tforms.transform_orientation(self.q_by_origin, "quat", "euler")[2]
 
     def __str__(self):
-        return f'Rotation with quaternion: {self.q}'
+        return f"Rotation with quaternion: {self.q}"
 
     def __repr__(self):
         return self.__str__()
@@ -462,11 +480,12 @@ class Rotation():
         return f"rotation {self.q.w} {self.q.x} {self.q.y} {self.q.z} {self.origin.format_as_string()}"
 
 
-class Translation():
-    TYPE = 'Translation'
+class Translation:
+    TYPE = "Translation"
+
     def __init__(self, *args, origin=NominalOriginStandard, n_prec=8):
         if len(args) == 1:
-            assert len(args[0]) == 3, f'Actual length: {len(args[0])}, {args[0]}'
+            assert len(args[0]) == 3, f"Actual length: {len(args[0])}, {args[0]}"
             self.x, self.y, self.z = args[0]
         elif len(args) == 2:
             assert isinstance(args[1], Origin), args[1]
@@ -508,7 +527,7 @@ class Translation():
         return np.all(np.isfinite(self.vector))
 
     def __str__(self):
-        return f'{self.TYPE} at [{self.x}, {self.y}, {self.z}] with {self.origin}'
+        return f"{self.TYPE} at [{self.x}, {self.y}, {self.z}] with {self.origin}"
 
     def __repr__(self):
         return self.__str__()
@@ -581,7 +600,7 @@ class Translation():
                 if other.shape[0] == 3:
                     return other + self.vector
                 elif other.shape[1] == 3:
-                    return other + self.vector[:,None].T
+                    return other + self.vector[:, None].T
                 else:
                     raise NotImplementedError
             else:
@@ -618,9 +637,9 @@ class Translation():
         if isinstance(other, Rotation):
             if self.origin != other.origin:
                 other.change_origin(self.origin)
-            x = (self.vector @ other.R)
+            x = self.vector @ other.R
         elif isinstance(other, np.ndarray):
-            assert other.shape == (3,3)
+            assert other.shape == (3, 3)
             x = other @ self.vector
         else:
             raise NotImplementedError(type(other))
@@ -666,7 +685,12 @@ class Translation():
         if origin_new != self.origin:
             # x_global = self.origin.R.T @ self.vector + self.origin.x
             # x_new = origin_new.R @ (x_global - origin_new.x)
-            x_out = q_mult_vec(origin_new.q, q_mult_vec(self.origin.q.conjugate(), self.vector) + self.origin.x - origin_new.x)
+            x_out = q_mult_vec(
+                origin_new.q,
+                q_mult_vec(self.origin.q.conjugate(), self.vector)
+                + self.origin.x
+                - origin_new.x,
+            )
             self.__init__(x_out, origin=origin_new)
 
     def sqrt(self):
@@ -686,19 +710,20 @@ class Translation():
             try:
                 dist = np.linalg.norm(self.vector - other.translation.vector)
             except Exception as e:
-                raise NotImplementedError(f'Type {type(other)} not able for dist calc')
+                raise NotImplementedError(f"Type {type(other)} not able for dist calc")
         return dist
 
     def format_as_string(self):
-        return f'translation {self.vector[0]} {self.vector[1]} {self.vector[2]} {self.origin.format_as_string()}'
+        return f"translation {self.vector[0]} {self.vector[1]} {self.vector[2]} {self.origin.format_as_string()}"
 
 
 class Vector(Translation):
-    TYPE = 'Vector'
+    TYPE = "Vector"
     """
     Unlike translation, a vector is NOT related to the origin's translation
     so only the rotation aspect is applied
     """
+
     def __eq__(self, other):
         if isinstance(other, np.ndarray):
             v1 = self.vector
@@ -721,10 +746,10 @@ class Vector(Translation):
             self.__init__(v_new, origin=origin_new)
 
     def format_as_string(self):
-        return f'vector {self.vector[0]} {self.vector[1]} {self.vector[2]} {self.origin.format_as_string()}'
+        return f"vector {self.vector[0]} {self.vector[1]} {self.vector[2]} {self.origin.format_as_string()}"
 
 
-class Transform():
+class Transform:
     def __init__(self, rotation: Rotation, translation: Translation):
         self.rotation = rotation
         self.translation = translation
@@ -735,7 +760,7 @@ class Transform():
         return self.__str__()
 
     def __str__(self):
-        return f'Transform with: {self.rotation}, {self.translation}'
+        return f"Transform with: {self.rotation}, {self.translation}"
 
     def copy(self):
         return Transform(self.rotation.copy(), self.translation.copy())
@@ -747,7 +772,7 @@ class Transform():
 
     @rotation.setter
     def rotation(self, rotation):
-        assert isinstance(rotation, Rotation), f'{type(rotation)}'
+        assert isinstance(rotation, Rotation), f"{type(rotation)}"
         self._rotation = rotation
 
     @property
@@ -776,15 +801,21 @@ class Transform():
 
     @property
     def matrix(self):
-        return np.block([[self.rotation.R, self.translation_b.vector[:,None]],
-                         [np.zeros((1,3)), np.ones((1,1))]])
+        return np.block(
+            [
+                [self.rotation.R, self.translation_b.vector[:, None]],
+                [np.zeros((1, 3)), np.ones((1, 1))],
+            ]
+        )
 
     @property
     def inverse_matrix(self):
         return self.T.matrix
 
     def __eq__(self, other):
-        return (self.rotation == other.rotation) and (self.translation == other.translation)
+        return (self.rotation == other.rotation) and (
+            self.translation == other.translation
+        )
 
     def __matmul__(self, other):
         """called when doing self @ other"""
@@ -819,10 +850,10 @@ class Transform():
         self.translation.change_origin(origin_new)
 
     def format_as_string(self):
-        return f'transform {self.rotation.format_as_string()} {self.translation.format_as_string()}'
+        return f"transform {self.rotation.format_as_string()} {self.translation.format_as_string()}"
 
 
-class PointCloud():
+class PointCloud:
     def __init__(self, points, origin):
         self.points = points
         self.origin = origin

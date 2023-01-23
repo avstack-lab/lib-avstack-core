@@ -6,39 +6,49 @@
 
 import numpy as np
 import quaternion
-from avstack.geometry import Box2D, Box3D
-from avstack import transformations as tforms
 from filterpy.kalman import KalmanFilter
 
+from avstack import transformations as tforms
+from avstack.geometry import Box2D, Box3D
 
-class EagerMOTTrack():
+
+class EagerMOTTrack:
     count = 0
+
     def __init__(self, box2d, box3d, framerate):
         """A new track for eagermot"""
         self.framerate = framerate
-        self.frame_interval = 1./framerate
+        self.frame_interval = 1.0 / framerate
         dt = self.frame_interval
 
         # Set up the 3D kalman filter
         self.kf = KalmanFilter(dim_x=10, dim_z=7)
-        self.kf.F = np.array([[1,0,0,0,0,0,0,dt,0,0],      # state transition matrix
-                              [0,1,0,0,0,0,0,0,dt,0],
-                              [0,0,1,0,0,0,0,0,0,dt],
-                              [0,0,0,1,0,0,0,0,0,0],
-                              [0,0,0,0,1,0,0,0,0,0],
-                              [0,0,0,0,0,1,0,0,0,0],
-                              [0,0,0,0,0,0,1,0,0,0],
-                              [0,0,0,0,0,0,0,1,0,0],
-                              [0,0,0,0,0,0,0,0,1,0],
-                              [0,0,0,0,0,0,0,0,0,1]])
+        self.kf.F = np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, dt, 0, 0],  # state transition matrix
+                [0, 1, 0, 0, 0, 0, 0, 0, dt, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0, 0, dt],
+                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            ]
+        )
 
-        self.kf.H = np.array([[1,0,0,0,0,0,0,0,0,0],      # measurement function,
-                              [0,1,0,0,0,0,0,0,0,0],
-                              [0,0,1,0,0,0,0,0,0,0],
-                              [0,0,0,1,0,0,0,0,0,0],
-                              [0,0,0,0,1,0,0,0,0,0],
-                              [0,0,0,0,0,1,0,0,0,0],
-                              [0,0,0,0,0,0,1,0,0,0]])
+        self.kf.H = np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # measurement function,
+                [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            ]
+        )
 
         # self.kf.P[7:, 7:] *= 1000.
         # self.kf.P *= 10.
@@ -50,8 +60,8 @@ class EagerMOTTrack():
         self.id = EagerMOTTrack.count
         EagerMOTTrack.count += 1
         self.history = []
-        self.hits = 1           # number of total hits including the first detection
-        self.hit_streak = 1     # number of continuing hit considering the first detection
+        self.hits = 1  # number of total hits including the first detection
+        self.hit_streak = 1  # number of continuing hit considering the first detection
         self.first_continuing_hit = 1
         self.still_first = True
         self.age = 0
@@ -69,7 +79,7 @@ class EagerMOTTrack():
             bbox3D = np.array([bb.t[0], bb.t[1], bb.t[2], bb.yaw, bb.h, bb.w, bb.l])
             self.box3d_origin = box3d.origin
             self.box3d_initialized = True
-            self.kf.x[:7] = bbox3D[:,None]
+            self.kf.x[:7] = bbox3D[:, None]
             self.box3d_n_confirmed = 1
         if box2d is None:
             self.camera_calibration = None
@@ -87,16 +97,16 @@ class EagerMOTTrack():
     @property
     def box3d(self):
         if self.box3d_initialized:
-            x, y, z, yaw, h, w, l = self.kf.x[:7,0]
-            q = tforms.transform_orientation([0,0,yaw], 'euler', 'quat')
-            return Box3D([h,w,l,[x,y,z],q], self.box3d_origin)
+            x, y, z, yaw, h, w, l = self.kf.x[:7, 0]
+            q = tforms.transform_orientation([0, 0, yaw], "euler", "quat")
+            return Box3D([h, w, l, [x, y, z], q], self.box3d_origin)
         else:
             return None
 
     @property
     def yaw(self):
         if self.box3d_initialized:
-            return self.kf.x[3,0]
+            return self.kf.x[3, 0]
         else:
             return None
 
@@ -104,17 +114,19 @@ class EagerMOTTrack():
         return self.__str__()
 
     def __str__(self):
-        return f'EagerMOT track:\nbox3d -- {self.box3d_n_confirmed} confirmed: {self.box3d}\nbox2d -- {self.box2d_n_confirmed} confirmed: {self.box2d}'
+        return f"EagerMOT track:\nbox3d -- {self.box3d_n_confirmed} confirmed: {self.box3d}\nbox2d -- {self.box2d_n_confirmed} confirmed: {self.box2d}"
 
     def predict(self):
         """Predict the states forward a frame"""
         if self.box3d_initialized:
             # -- predict the 3d box first
             self.kf.predict()
-            if self.kf.x[3] >= np.pi: self.kf.x[3] -= np.pi * 2
-            if self.kf.x[3] < -np.pi: self.kf.x[3] += np.pi * 2
+            if self.kf.x[3] >= np.pi:
+                self.kf.x[3] -= np.pi * 2
+            if self.kf.x[3] < -np.pi:
+                self.kf.x[3] += np.pi * 2
             self.age += 1
-            if (self.time_since_update > 0):
+            if self.time_since_update > 0:
                 self.hit_streak = 0
                 self.still_first = False
             self.time_since_update += 1
@@ -129,9 +141,9 @@ class EagerMOTTrack():
         self.time_since_update = 0
         self.history = []
         self.hits += 1
-        self.hit_streak += 1          # number of continuing hit
+        self.hit_streak += 1  # number of continuing hit
         if self.still_first:
-            self.first_continuing_hit += 1      # number of continuing hit in the fist time
+            self.first_continuing_hit += 1  # number of continuing hit in the fist time
 
             # -- 2d update first
             if detection_2d is not None:
@@ -150,29 +162,42 @@ class EagerMOTTrack():
                 bb = detection_3d
                 bbox3D = np.array([bb.t[0], bb.t[1], bb.t[2], bb.yaw, bb.h, bb.w, bb.l])
                 if not self.box3d_initialized:
-                    self.kf.x[:7] = bbox3D[:,None]
+                    self.kf.x[:7] = bbox3D[:, None]
                     self.box3d_initialized = True
                 else:
                     ######################### orientation correction
-                    if self.kf.x[3] >= np.pi: self.kf.x[3] -= np.pi * 2
-                    if self.kf.x[3] < -np.pi: self.kf.x[3] += np.pi * 2
+                    if self.kf.x[3] >= np.pi:
+                        self.kf.x[3] -= np.pi * 2
+                    if self.kf.x[3] < -np.pi:
+                        self.kf.x[3] += np.pi * 2
                     new_theta = bbox3D[3]
-                    if new_theta >= np.pi: new_theta -= np.pi * 2
-                    if new_theta < -np.pi: new_theta += np.pi * 2
+                    if new_theta >= np.pi:
+                        new_theta -= np.pi * 2
+                    if new_theta < -np.pi:
+                        new_theta += np.pi * 2
                     bbox3D[3] = new_theta
 
                     predicted_theta = self.kf.x[3]
-                    if abs(new_theta - predicted_theta) > np.pi / 2.0 and abs(new_theta - predicted_theta) < np.pi * 3 / 2.0:
+                    if (
+                        abs(new_theta - predicted_theta) > np.pi / 2.0
+                        and abs(new_theta - predicted_theta) < np.pi * 3 / 2.0
+                    ):
                         self.kf.x[3] += np.pi
-                        if self.kf.x[3] > np.pi: self.kf.x[3] -= np.pi * 2
-                        if self.kf.x[3] < -np.pi: self.kf.x[3] += np.pi * 2
+                        if self.kf.x[3] > np.pi:
+                            self.kf.x[3] -= np.pi * 2
+                        if self.kf.x[3] < -np.pi:
+                            self.kf.x[3] += np.pi * 2
 
                     # now the angle is acute: < 90 or > 270, convert the case of > 270 to < 90
                     if abs(new_theta - self.kf.x[3]) >= np.pi * 3 / 2.0:
-                        if new_theta > 0: self.kf.x[3] += np.pi * 2
-                        else: self.kf.x[3] -= np.pi * 2
+                        if new_theta > 0:
+                            self.kf.x[3] += np.pi * 2
+                        else:
+                            self.kf.x[3] -= np.pi * 2
 
                     #########################     # flip
                     self.kf.update(bbox3D)
-                    if self.kf.x[3] >= np.pi: self.kf.x[3] -= np.pi * 2
-                    if self.kf.x[3] < -np.pi: self.kf.x[3] += np.pi * 2
+                    if self.kf.x[3] >= np.pi:
+                        self.kf.x[3] -= np.pi * 2
+                    if self.kf.x[3] < -np.pi:
+                        self.kf.x[3] += np.pi * 2

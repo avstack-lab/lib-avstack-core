@@ -9,9 +9,11 @@
 """
 
 import sys
+
 import avstack.datastructs as ds
 
-sys.path.append('tests/')
+
+sys.path.append("tests/")
 from utilities import get_lidar_data
 
 

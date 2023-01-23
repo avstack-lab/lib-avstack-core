@@ -8,11 +8,11 @@
 
 """
 
+import avstack.modules.control
+import avstack.modules.fusion
 import avstack.modules.localization
 import avstack.modules.perception
-import avstack.modules.tracking
-import avstack.modules.fusion
-import avstack.modules.prediction
 import avstack.modules.planning
-import avstack.modules.control
+import avstack.modules.prediction
 import avstack.modules.safety
+import avstack.modules.tracking

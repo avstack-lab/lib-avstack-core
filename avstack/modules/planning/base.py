@@ -9,10 +9,11 @@
 """
 
 import numpy as np
+
 from avstack.datastructs import PriorityQueue
 
 
-class _PlanningAlgorithm():
+class _PlanningAlgorithm:
     def __init__(self):
         pass
 
@@ -44,11 +45,15 @@ class WaypointPlan(PriorityQueue):
         ## the len of this priority queue is less than min_waypoint
         ## the cloest waypoint distance is larger than max_dist
         c1 = len(self) < self.min_waypoints
-        c2 = (self.top()[0] >= self.max_dist or self.top()[1].target_speed ==0) if not c1 else None
+        c2 = (
+            (self.top()[0] >= self.max_dist or self.top()[1].target_speed == 0)
+            if not c1
+            else None
+        )
         return c1 or c2
 
 
-class Waypoint():
+class Waypoint:
     def __init__(self, target_point, target_speed):
         self.target_point = target_point
         self.target_speed = target_speed
@@ -68,4 +73,4 @@ class Waypoint():
         return self.__str__()
 
     def __str__(self):
-        return f'Waypoint at point {self.target_point} with speed {self.target_speed}'
+        return f"Waypoint at point {self.target_point} with speed {self.target_speed}"

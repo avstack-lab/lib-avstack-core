@@ -11,19 +11,18 @@
 import avstack.ego.vehicle
 
 
-
 def get_ego(obj_class, obj_stack):
     """Get uninitialized stack"""
-    if obj_class.lower() == 'vehicle':
-        if obj_stack.lower() == 'level2lidarbasedvehicle':
+    if obj_class.lower() == "vehicle":
+        if obj_stack.lower() == "level2lidarbasedvehicle":
             stack = avstack.ego.vehicle.Level2LidarBasedVehicle
-        elif obj_stack.lower() == 'level2groundtruthperception':
+        elif obj_stack.lower() == "level2groundtruthperception":
             stack = avstack.ego.vehicle.Level2GroundTruthPerception
-        elif obj_stack.lower() == 'level2gtperceptiongtlocalization':
+        elif obj_stack.lower() == "level2gtperceptiongtlocalization":
             stack = avstack.ego.vehicle.Level2GtPerceptionGtLocalization
-        elif obj_stack.lower() == 'groundtruthmapplanner':
+        elif obj_stack.lower() == "groundtruthmapplanner":
             stack = avstack.ego.vehicle.GroundTruthMapPlanner
-        elif obj_stack.lower() == 'passthroughautopilotvehicle':
+        elif obj_stack.lower() == "passthroughautopilotvehicle":
             stack = avstack.ego.vehicle.PassthroughAutopilotVehicle
         else:
             raise NotImplementedError(obj_stack.lower())

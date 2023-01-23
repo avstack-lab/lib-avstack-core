@@ -8,10 +8,12 @@
 
 """
 
-import os, psutil, glob
+import glob
+import os
 import subprocess
 from shutil import copyfile, rmtree
 
+import psutil
 
 
 def kill_process(proc_pid):
@@ -26,14 +28,14 @@ def run_command(call_list, dirchange=None):
     if dirchange is not None:
         os.chdir(dirchange)
     try:
-        print('STARTING PROCESS')
+        print("STARTING PROCESS")
         pro = subprocess.Popen(call_list, shell=False, preexec_fn=os.setsid)
         pro.wait()
     except KeyboardInterrupt:
-        print('KILLING PROCESS')
+        print("KILLING PROCESS")
         kill_process(pro.pid)
     else:
-        print('FINISHED PROCESS')
+        print("FINISHED PROCESS")
     finally:
         os.chdir(curdir)
 

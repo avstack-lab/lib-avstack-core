@@ -9,12 +9,22 @@
 """
 
 import numpy as np
+
+from avstack.geometry import Transform, Translation
+
 from .pid import PIDLateralController, PIDLongitudinalController
-from avstack.geometry import Translation, Transform
 
 
-class VehicleControlSignal():
-    def __init__(self, throttle=0.0, brake=0.0, steer=0.0, hand_brake=False, reverse=False, manual_gear_shift=False):
+class VehicleControlSignal:
+    def __init__(
+        self,
+        throttle=0.0,
+        brake=0.0,
+        steer=0.0,
+        hand_brake=False,
+        reverse=False,
+        manual_gear_shift=False,
+    ):
         self.throttle = throttle
         self.brake = brake
         self.steer = steer
@@ -53,7 +63,7 @@ class VehicleControlSignal():
         return self.__str__()
 
     def __str__(self):
-        return f'VehicleControlSignal -- throttle: {self.throttle}, brake: {self.brake}, steer: {self.steer}'
+        return f"VehicleControlSignal -- throttle: {self.throttle}, brake: {self.brake}, steer: {self.steer}"
 
 
 # ====================================================
@@ -61,13 +71,20 @@ class VehicleControlSignal():
 # ====================================================
 
 
-class _ControlAlgorithm():
+class _ControlAlgorithm:
     pass
 
 
 class VehiclePIDController(_ControlAlgorithm):
-    def __init__(self, args_lateral, args_longitudinal, max_throttle=0.75,
-            max_brake=1.0, max_steering=0.8, **kwargs):
+    def __init__(
+        self,
+        args_lateral,
+        args_longitudinal,
+        max_throttle=0.75,
+        max_brake=1.0,
+        max_steering=0.8,
+        **kwargs,
+    ):
         """
         Constructor method.
 
@@ -130,5 +147,5 @@ class VehiclePIDController(_ControlAlgorithm):
         else:
             steer = max(-self.max_steer, current_steering)
         self.past_steering = steer
-        
+
         return VehicleControlSignal(throttle=throttle, brake=brake, steer=steer)

@@ -8,12 +8,13 @@
 
 """
 
-import numpy as np
-import quaternion
 from copy import copy, deepcopy
 
+import numpy as np
+import quaternion
+
 from avstack import GroundTruthInformation
-from avstack.geometry import bbox, NominalOriginStandard
+from avstack.geometry import NominalOriginStandard, bbox
 from avstack.modules import localization
 from avstack.objects import VehicleState
 
@@ -21,12 +22,12 @@ from avstack.objects import VehicleState
 def test_init_ground_truth():
     # -- set up ego
     pos = np.random.rand(3)
-    box = bbox.Box3D([2,2,5,[0,0,0],np.quaternion(1)], NominalOriginStandard)
+    box = bbox.Box3D([2, 2, 5, [0, 0, 0], np.quaternion(1)], NominalOriginStandard)
     vel = np.random.rand(3)
     acc = np.random.rand(3)
     rot = np.quaternion()
     ang = np.random.rand(3)
-    ego_init = VehicleState('car')
+    ego_init = VehicleState("car")
     ego_init.set(0, pos, box, vel, acc, rot, ang, origin=NominalOriginStandard)
 
     # -- set up localizer
@@ -44,4 +45,4 @@ def test_init_ground_truth():
     assert ego_loc.velocity.allclose(vel)
     dt = 1e-5
     ego_loc2 = localizer(timestamp + dt, ground_truth=ground_truth)
-    assert ego_loc2.velocity.allclose(ego_loc.velocity + ego_loc.acceleration*dt)
+    assert ego_loc2.velocity.allclose(ego_loc.velocity + ego_loc.acceleration * dt)

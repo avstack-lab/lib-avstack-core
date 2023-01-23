@@ -8,15 +8,18 @@
 
 """
 
-import numpy as np
 from cmath import sqrt
 from math import cos, sin
-from avstack.geometry import Transform, Translation, Rotation, StandardCoordinates
-from .base import WaypointPlan, Waypoint
+
+import numpy as np
+
 from avstack import transformations as tforms
+from avstack.geometry import Rotation, StandardCoordinates, Transform, Translation
+
+from .base import Waypoint, WaypointPlan
 
 
-class CollisionDetection():
+class CollisionDetection:
     def __init__(self, ego, tracks):
         self.ego = ego
         self.tracks = tracks
@@ -30,26 +33,47 @@ class CollisionDetection():
         obj_w = self.tracks[ID].box3d.w
         obj_h = self.tracks[ID].box3d.h
         obj_yaw = self.tracks[ID].box3d.yaw
-        if ((ego_p[0] - obj_p[0]) ** 2 + (ego_p[1] - obj_p[1]) ** 2) ** 0.5 > (max(ego_l, ego_w, ego_h) + max(obj_l, obj_w, obj_h)):
+        if ((ego_p[0] - obj_p[0]) ** 2 + (ego_p[1] - obj_p[1]) ** 2) ** 0.5 > (
+            max(ego_l, ego_w, ego_h) + max(obj_l, obj_w, obj_h)
+        ):
             return False
         else:
             if ego_yaw == obj_yaw:
-                return not ((ego_p[0] + ego_l / 2) < (obj_p[0] - obj_l / 2) or (ego_p[0] - ego_l / 2) > (obj_p[0] + obj_l / 2) or (ego_p[1] + ego_w / 2) < (obj_p[1] - obj_w / 2) or (ego_p[1] - ego_w / 2) > (obj_p[1] + obj_w / 2))
+                return not (
+                    (ego_p[0] + ego_l / 2) < (obj_p[0] - obj_l / 2)
+                    or (ego_p[0] - ego_l / 2) > (obj_p[0] + obj_l / 2)
+                    or (ego_p[1] + ego_w / 2) < (obj_p[1] - obj_w / 2)
+                    or (ego_p[1] - ego_w / 2) > (obj_p[1] + obj_w / 2)
+                )
             else:
                 dis_x = obj_p[0] - ego_p[0]
                 dis_y = obj_p[1] - ego_p[1]
                 ego_lx = ego_l / 2 * cos(ego_yaw)
                 ego_wx = ego_w / 2 * sin(ego_yaw)
                 ego_ly = ego_l / 2 * sin(ego_yaw)
-                ego_wy = - ego_w / 2 * cos(ego_yaw)
+                ego_wy = -ego_w / 2 * cos(ego_yaw)
                 obj_lx = obj_l / 2 * cos(obj_yaw)
                 obj_wx = obj_w / 2 * sin(obj_yaw)
                 obj_ly = obj_l / 2 * sin(obj_yaw)
-                obj_wy = - obj_w / 2 * cos(obj_yaw)
-                return abs(dis_x * cos(ego_yaw) + dis_y * sin(ego_yaw)) <= abs(obj_lx * cos(ego_yaw) + obj_ly * sin(ego_yaw)) + abs(obj_wx * cos(ego_yaw) + obj_wy * sin(ego_yaw)) + ego_l / 2\
-                        and abs(dis_x * sin(ego_yaw) - dis_y * cos(ego_yaw)) <= abs(obj_lx * sin(ego_yaw) - obj_ly * cos(ego_yaw)) + abs(obj_wx * sin(ego_yaw) - obj_wy * cos(ego_yaw)) + ego_w / 2\
-                         and abs(dis_x * cos(obj_yaw) + dis_y * sin(obj_yaw)) <= abs(ego_lx * cos(obj_yaw) + ego_ly * sin(obj_yaw)) + abs(ego_wx * cos(obj_yaw) + ego_wy * sin(obj_yaw)) + obj_l / 2\
-                          and abs(dis_x * sin(obj_yaw) - dis_y * cos(obj_yaw)) <= abs(ego_lx * sin(obj_yaw) - ego_ly * cos(obj_yaw)) + abs(ego_wx * sin(obj_yaw) - ego_wy * cos(obj_yaw)) + obj_w / 2
+                obj_wy = -obj_w / 2 * cos(obj_yaw)
+                return (
+                    abs(dis_x * cos(ego_yaw) + dis_y * sin(ego_yaw))
+                    <= abs(obj_lx * cos(ego_yaw) + obj_ly * sin(ego_yaw))
+                    + abs(obj_wx * cos(ego_yaw) + obj_wy * sin(ego_yaw))
+                    + ego_l / 2
+                    and abs(dis_x * sin(ego_yaw) - dis_y * cos(ego_yaw))
+                    <= abs(obj_lx * sin(ego_yaw) - obj_ly * cos(ego_yaw))
+                    + abs(obj_wx * sin(ego_yaw) - obj_wy * cos(ego_yaw))
+                    + ego_w / 2
+                    and abs(dis_x * cos(obj_yaw) + dis_y * sin(obj_yaw))
+                    <= abs(ego_lx * cos(obj_yaw) + ego_ly * sin(obj_yaw))
+                    + abs(ego_wx * cos(obj_yaw) + ego_wy * sin(obj_yaw))
+                    + obj_l / 2
+                    and abs(dis_x * sin(obj_yaw) - dis_y * cos(obj_yaw))
+                    <= abs(ego_lx * sin(obj_yaw) - ego_ly * cos(obj_yaw))
+                    + abs(ego_wx * sin(obj_yaw) - ego_wy * cos(obj_yaw))
+                    + obj_w / 2
+                )
 
     def collision_monitor(self, preds_ego, preds_tracks):
         collision = {}
@@ -65,7 +89,7 @@ class CollisionDetection():
 
 def get_object_to_follow(ego_state, objects_3d, lane_lines):
     """Find an object to follow, if one exists
-    
+
     objects are already in relative frame
     """
     # -- extract from main camera
@@ -78,10 +102,13 @@ def get_object_to_follow(ego_state, objects_3d, lane_lines):
     d_min = np.inf
     obj_follow = None
     for obj in objects_3d:
-        rel_pos = obj.position  # ego_state.attitude @ (obj.position - ego_state.position)
+        rel_pos = (
+            obj.position
+        )  # ego_state.attitude @ (obj.position - ego_state.position)
         d_next = rel_pos.norm()
-        if lane_lines[0].object_between_lanes_projected(lane_lines[1], rel_pos) and \
-                (rel_pos.x - ego_state.box3d.l / 2 - obj.box3d.l / 2 > 0):
+        if lane_lines[0].object_between_lanes_projected(lane_lines[1], rel_pos) and (
+            rel_pos.x - ego_state.box3d.l / 2 - obj.box3d.l / 2 > 0
+        ):
             if (d_next < d_min) and (d_next < 45):
                 d_min = d_next
                 obj_follow = obj
@@ -89,19 +116,22 @@ def get_object_to_follow(ego_state, objects_3d, lane_lines):
 
 
 def determine_direction(ego_state, lane_lines, following_id, lane_id, tracks):
-    #For ground_true
+    # For ground_true
     if len(lane_lines) == 2:
         if abs(lane_id) == 1 or abs(lane_id) == 2:
             tracks_around = []
             for i in tracks:
-                if ego_state.position.distance(tracks[i].position) < 4.5 and i != following_id:
+                if (
+                    ego_state.position.distance(tracks[i].position) < 4.5
+                    and i != following_id
+                ):
                     tracks_around.append(tracks[i])
 
             if abs(lane_id) == 1:
-                diretcion = 'right'
+                diretcion = "right"
                 offset = -3.5
             else:
-                diretcion = 'left'
+                diretcion = "left"
                 offset = 3.5
 
             if tracks_around == []:
@@ -111,17 +141,19 @@ def determine_direction(ego_state, lane_lines, following_id, lane_id, tracks):
                     lane_lines[0][i].y += offset
                     lane_lines[1][i].y += offset
                 for track_around in tracks_around:
-                    if lane_lines[0].object_between_lanes_projected(lane_lines[1], track_around.position - ego_state.position):
+                    if lane_lines[0].object_between_lanes_projected(
+                        lane_lines[1], track_around.position - ego_state.position
+                    ):
                         return None
                 return diretcion
         else:
             return None
-    #Interface for sensors
+    # Interface for sensors
     else:
         raise NotImplementedError
 
 
-class ChangeLine():
+class ChangeLine:
     def __init__(self, ego):
         self.ego = ego
 
@@ -134,14 +166,18 @@ class ChangeLine():
 
         if (len(lane_lines) > 0) and (isinstance(lane_lines[0], list)):
             lane_lines = lane_lines[0]
-        
+
         if len(lane_lines) == 2:
-            _, lateral_offset, yaw_offset = lane_lines[0].compute_center_lane_and_offset(lane_lines[1])
+            _, lateral_offset, yaw_offset = lane_lines[
+                0
+            ].compute_center_lane_and_offset(lane_lines[1])
             lateral_offset += offset
-            target_loc = ego_state.position + \
-                         lateral_offset*left_vec + \
-                         d_forward*forward_vec
-            R_b2way = Rotation(target_loc.coordinates, tforms.get_rot_yaw_matrix(-yaw_offset, '+z'))
+            target_loc = (
+                ego_state.position + lateral_offset * left_vec + d_forward * forward_vec
+            )
+            R_b2way = Rotation(
+                target_loc.coordinates, tforms.get_rot_yaw_matrix(-yaw_offset, "+z")
+            )
             R_world2b = ego_state.attitude
             target_rot = R_b2way @ R_world2b
             target_speed = speed_target
@@ -151,7 +187,7 @@ class ChangeLine():
         target_point = Transform(target_rot, target_loc)
         return distance, Waypoint(target_point, speed_target)
 
-        
+
 # class AdaptiveCruiseControl():
 #     def __init__(self, goal_dt=3, min_dt=2, min_d=2):
 #         self.goal_dt = goal_dt
@@ -185,7 +221,6 @@ class ChangeLine():
 #         for obj in objects:
 #             raise
 #         return obj
-
 
 
 # class TailgatingMonitor():
@@ -237,7 +272,6 @@ class ChangeLine():
 #         return obj
 
 
-
 # class OvertakingPlanner():
 #     def __init__(self, goal_dt=3.0, min_dt=2, min_d=2):
 #         self.goal_dt = goal_dt
@@ -253,51 +287,50 @@ class ChangeLine():
 
 #     def _plan_overtake(self, ego, slow_front_objects, speed_limit):
 #         raise NotImplementedError
-    # def _overtake(self, location, rotation, waypoint, vehicle_list):
-    #     """
-    #     This method is in charge of overtaking behaviors.
+# def _overtake(self, location, rotation, waypoint, vehicle_list):
+#     """
+#     This method is in charge of overtaking behaviors.
 
-    #         :param location: current location of the agent
-    #         :param waypoint: current waypoint of the agent
-    #         :param vehicle_list: list of all the nearby vehicles
-    #     """
+#         :param location: current location of the agent
+#         :param waypoint: current waypoint of the agent
+#         :param vehicle_list: list of all the nearby vehicles
+#     """
 
-    #     left_turn = waypoint.left_lane_marking.lane_change
-    #     right_turn = waypoint.right_lane_marking.lane_change
-    #     v_f = rotation.get_forward_vector()
-    #     d_forward = 5
+#     left_turn = waypoint.left_lane_marking.lane_change
+#     right_turn = waypoint.right_lane_marking.lane_change
+#     v_f = rotation.get_forward_vector()
+#     d_forward = 5
 
-    #     left_wpt = waypoint.get_left_lane()
-    #     right_wpt = waypoint.get_right_lane()
-    #     if (left_turn == carla.LaneChange.Left or left_turn ==
-    #             carla.LaneChange.Both) and waypoint.lane_id * left_wpt.lane_id > 0 and left_wpt.lane_type == carla.LaneType.Driving:
-    #         new_vehicle_state, _, _ = self._bh_is_vehicle_hazard(waypoint, location, vehicle_list, max(
-    #             self.behavior.min_proximity_threshold, self.speed_limit / 3), up_angle_th=180, lane_offset=-1)
-    #         if not new_vehicle_state:
-    #             print("Overtaking to the left!")
-    #             self.behavior.overtake_counter = 200
-    #             start = carla.Location(left_wpt.transform.location.x + d_forward*v_f.x,
-    #                                    left_wpt.transform.location.y + d_forward*v_f.y,
-    #                                    left_wpt.transform.location.z + d_forward*v_f.z)
-    #             self.set_destination(start,
-    #                                  self.end_waypoint.transform.location, clean=True)
-    #     elif right_turn == carla.LaneChange.Right and waypoint.lane_id * right_wpt.lane_id > 0 and right_wpt.lane_type == carla.LaneType.Driving:
-    #         new_vehicle_state, _, _ = self._bh_is_vehicle_hazard(waypoint, location, vehicle_list, max(
-    #             self.behavior.min_proximity_threshold, self.speed_limit / 3), up_angle_th=180, lane_offset=1)
-    #         if not new_vehicle_state:
-    #             print("Overtaking to the right!")
-    #             self.behavior.overtake_counter = 200
-    #             start = carla.Location(right_wpt.transform.location.x + d_forward*v_f.x,
-    #                                    right_wpt.transform.location.y + d_forward*v_f.y,
-    #                                    right_wpt.transform.location.z + d_forward*v_f.z)
-    #             self.set_destination(start,
-    #                                  self.end_waypoint.transform.location, clean=True)
-    #     control = None
-    #     if self.behavior.tailgate_counter > 0:
-    #         self.behavior.tailgate_counter -= 1
-    #     if self.behavior.overtake_counter > 0:
-    #         self.behavior.overtake_counter -= 1
-
+#     left_wpt = waypoint.get_left_lane()
+#     right_wpt = waypoint.get_right_lane()
+#     if (left_turn == carla.LaneChange.Left or left_turn ==
+#             carla.LaneChange.Both) and waypoint.lane_id * left_wpt.lane_id > 0 and left_wpt.lane_type == carla.LaneType.Driving:
+#         new_vehicle_state, _, _ = self._bh_is_vehicle_hazard(waypoint, location, vehicle_list, max(
+#             self.behavior.min_proximity_threshold, self.speed_limit / 3), up_angle_th=180, lane_offset=-1)
+#         if not new_vehicle_state:
+#             print("Overtaking to the left!")
+#             self.behavior.overtake_counter = 200
+#             start = carla.Location(left_wpt.transform.location.x + d_forward*v_f.x,
+#                                    left_wpt.transform.location.y + d_forward*v_f.y,
+#                                    left_wpt.transform.location.z + d_forward*v_f.z)
+#             self.set_destination(start,
+#                                  self.end_waypoint.transform.location, clean=True)
+#     elif right_turn == carla.LaneChange.Right and waypoint.lane_id * right_wpt.lane_id > 0 and right_wpt.lane_type == carla.LaneType.Driving:
+#         new_vehicle_state, _, _ = self._bh_is_vehicle_hazard(waypoint, location, vehicle_list, max(
+#             self.behavior.min_proximity_threshold, self.speed_limit / 3), up_angle_th=180, lane_offset=1)
+#         if not new_vehicle_state:
+#             print("Overtaking to the right!")
+#             self.behavior.overtake_counter = 200
+#             start = carla.Location(right_wpt.transform.location.x + d_forward*v_f.x,
+#                                    right_wpt.transform.location.y + d_forward*v_f.y,
+#                                    right_wpt.transform.location.z + d_forward*v_f.z)
+#             self.set_destination(start,
+#                                  self.end_waypoint.transform.location, clean=True)
+#     control = None
+#     if self.behavior.tailgate_counter > 0:
+#         self.behavior.tailgate_counter -= 1
+#     if self.behavior.overtake_counter > 0:
+#         self.behavior.overtake_counter -= 1
 
 
 # class TrafficLightPlanner():
@@ -389,8 +422,6 @@ class ChangeLine():
 #         return (False, None)
 
 
-
-
 # class CollisionAvoidancePlanner():
 #     def collision_and_car_avoid_manager(self, location, rotation, waypoint):
 #     """
@@ -444,7 +475,6 @@ class ChangeLine():
 #     return vehicle_state, vehicle, distance
 
 
-
 #     def pedestrian_avoid_manager(self, location, waypoint):
 #         """
 #         This module is in charge of warning in case of a collision
@@ -495,5 +525,3 @@ class ChangeLine():
 #             # Emergency brake if the car is very close.
 #             if distance < self.behavior.braking_distance:
 #                 return self.emergency_stop()
-
-

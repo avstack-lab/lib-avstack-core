@@ -6,6 +6,6 @@
 # @Description:
 
 
-from .stats import mean_confidence_interval
-from .other import check_xor_for_none
 from . import pools  # import to apply patch to multiprocess pool
+from .other import check_xor_for_none
+from .stats import mean_confidence_interval

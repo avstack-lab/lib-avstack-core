@@ -9,9 +9,11 @@ A collection of slicers, masks, and filtering operations for perception data
 The code is independent of data source so long as format is standard
 """
 
+from copy import copy, deepcopy
+
 import numpy as np
 from numba import jit
-from copy import copy, deepcopy
+
 import avstack.geometry.bbox as bbox
 import avstack.transformations as tforms
 from avstack.geometry.coordinates import LidarCoordinates
@@ -20,6 +22,7 @@ from avstack.geometry.coordinates import LidarCoordinates
 # ==============================================================================
 # FILTERS
 # ==============================================================================
+
 
 def _get_extents_filter(loc_data, extents):
     """
@@ -30,12 +33,14 @@ def _get_extents_filter(loc_data, extents):
     y_extents = extents[1]
     z_extents = extents[2]
 
-    extents_filter = (loc_data[:,0] > x_extents[0]) & \
-                     (loc_data[:,0] < x_extents[1]) & \
-                     (loc_data[:,1] > y_extents[0]) & \
-                     (loc_data[:,1] < y_extents[1]) & \
-                     (loc_data[:,2] > z_extents[0]) & \
-                     (loc_data[:,2] < z_extents[1])
+    extents_filter = (
+        (loc_data[:, 0] > x_extents[0])
+        & (loc_data[:, 0] < x_extents[1])
+        & (loc_data[:, 1] > y_extents[0])
+        & (loc_data[:, 1] < y_extents[1])
+        & (loc_data[:, 2] > z_extents[0])
+        & (loc_data[:, 2] < z_extents[1])
+    )
 
     return extents_filter
 
@@ -53,7 +58,7 @@ def filter_points(point_cloud, extents, ground_plane=None, offset_dist=2.0):
     :return: A binary mask for points within the extents and offset plane
     """
 
-    pc2 = np.asarray(point_cloud[:,0:3])
+    pc2 = np.asarray(point_cloud[:, 0:3])
 
     # Filter points within certain xyz range
     extents_filter = _get_extents_filter(pc2, extents)
@@ -64,7 +69,7 @@ def filter_points(point_cloud, extents, ground_plane=None, offset_dist=2.0):
 
         # Calculate filter using ground plane
         ones_col = np.ones(pc2.shape[0])
-        padded_points = np.hstack([pc2, ones_col[:,None]])
+        padded_points = np.hstack([pc2, ones_col[:, None]])
 
         offset_plane = ground_plane + [0, 0, 0, -offset_dist]
 
@@ -115,11 +120,13 @@ def filter_points_in_image(point_cloud, im_size, calib):
     """Filter points based on if they fall within the image specified"""
     # Filter points based on the image coordinates
     point_in_im = calib.project_velo_to_image(point_cloud[:, 0:3])
-    point_in_im_mask = (point_in_im[:, 0] > 0) & \
-                       (point_in_im[:, 0] < im_size[1]) & \
-                       (point_in_im[:, 1] > 0) & \
-                       (point_in_im[:, 1] < im_size[0]) & \
-                       (point_cloud[:,0] > 0)
+    point_in_im_mask = (
+        (point_in_im[:, 0] > 0)
+        & (point_in_im[:, 0] < im_size[1])
+        & (point_in_im[:, 1] > 0)
+        & (point_in_im[:, 1] < im_size[0])
+        & (point_cloud[:, 0] > 0)
+    )
     return point_in_im_mask
 
 
@@ -127,9 +134,9 @@ def filter_points_in_cone(point_cloud, v_unit, half_angle):
     """Filter points defined by a cone"""
     assert np.isclose(np.linalg.norm(v_unit), 1)
     rng_pts = np.linalg.norm(point_cloud.data, axis=1)
-    cos_th = np.dot(point_cloud.data[:,:3], v_unit) / rng_pts
+    cos_th = np.dot(point_cloud.data[:, :3], v_unit) / rng_pts
     cos_ha = np.cos(half_angle)
-    return (cos_th >= cos_ha)  # reverse since instead of arccos
+    return cos_th >= cos_ha  # reverse since instead of arccos
 
 
 def filter_points_in_image_frustum(point_cloud, box2d, camera_calib):
@@ -138,13 +145,15 @@ def filter_points_in_image_frustum(point_cloud, box2d, camera_calib):
 
     point_cloud - velo coordinates
     """
-    lidar_in_img_ref = point_cloud.calibration.transform_3d_to_3d(point_cloud.data[:,:3], camera_calib.origin)
-    lidar_mask0 = lidar_in_img_ref[:,2] >= 0  # assumes z is forward
+    lidar_in_img_ref = point_cloud.calibration.transform_3d_to_3d(
+        point_cloud.data[:, :3], camera_calib.origin
+    )
+    lidar_mask0 = lidar_in_img_ref[:, 2] >= 0  # assumes z is forward
     lidar_image = point_cloud.project(camera_calib)
-    lidar_mask1 = lidar_image.data[:,0] > box2d.box2d[0]
-    lidar_mask2 = lidar_image.data[:,1] > box2d.box2d[1]
-    lidar_mask3 = lidar_image.data[:,0] < box2d.box2d[2]
-    lidar_mask4 = lidar_image.data[:,1] < box2d.box2d[3]
+    lidar_mask1 = lidar_image.data[:, 0] > box2d.box2d[0]
+    lidar_mask2 = lidar_image.data[:, 1] > box2d.box2d[1]
+    lidar_mask3 = lidar_image.data[:, 0] < box2d.box2d[2]
+    lidar_mask4 = lidar_image.data[:, 1] < box2d.box2d[3]
     frustum_filter = lidar_mask0 & lidar_mask1 & lidar_mask2 & lidar_mask3 & lidar_mask4
 
     return frustum_filter
@@ -162,7 +171,7 @@ def filter_points_in_pillar(point_cloud, box_bev):
     z - up
     """
     # Project point cloud to bev -- z is up so is reduced
-    pc_velo_bev = np.delete(point_cloud.data[:,0:3], 2, axis=1)
+    pc_velo_bev = np.delete(point_cloud.data[:, 0:3], 2, axis=1)
 
     # Get points in hull
     return bbox.in_hull(pc_velo_bev, box_bev)
@@ -187,8 +196,10 @@ def filter_points_in_pillar(point_cloud, box_bev):
 #     return frustum_filter & (~pillar_filter) & (~range_filter)
 
 
-def filter_points_slice(point_cloud, area_extents, ground_plane, height_min, height_max):
-    """ Creates a slice filter to take a slice of the point cloud between
+def filter_points_slice(
+    point_cloud, area_extents, ground_plane, height_min, height_max
+):
+    """Creates a slice filter to take a slice of the point cloud between
         ground_offset_dist and offset_dist above the ground plane
 
     Args:
@@ -205,19 +216,18 @@ def filter_points_slice(point_cloud, area_extents, ground_plane, height_min, hei
     """
 
     # Filter points within certain xyz range and offset from ground plane
-    top_to_road = filter_points(point_cloud, area_extents,
-                                               ground_plane, height_max)
+    top_to_road = filter_points(point_cloud, area_extents, ground_plane, height_max)
 
     # Filter points within 0.2m of the road plane
-    low_to_road = filter_points(point_cloud, area_extents,
-                                             ground_plane,
-                                             height_min)
+    low_to_road = filter_points(point_cloud, area_extents, ground_plane, height_min)
 
     slice_filter = np.logical_xor(top_to_road, low_to_road)
     return slice_filter
 
 
-def filter_points_in_box(points, box_corners, include_boundary=True, coarse_filters=True, max_range=150):
+def filter_points_in_box(
+    points, box_corners, include_boundary=True, coarse_filters=True, max_range=150
+):
     """
     Returns the points that are inside the box
     points = (N,3)
@@ -229,7 +239,7 @@ def filter_points_in_box(points, box_corners, include_boundary=True, coarse_filt
     how-to-determine-a-point-is-inside-or-outside-a-cube#:~:
     text=If%20the%20projection%20lies%20inside,the%20point%20P%20is%20V.
     """
-    pc = points[:,0:3]
+    pc = points[:, 0:3]
 
     # check if we're way off first
     if coarse_filters:
@@ -244,19 +254,19 @@ def filter_points_in_box(points, box_corners, include_boundary=True, coarse_filt
 @jit(nopython=True)
 def _check_pts_boundary(pc, box_corners, include_boundary):
     # unpack box corners
-    t1,t2,t3,t4,b1,b2,b3,b4 = box_corners
+    t1, t2, t3, t4, b1, b2, b3, b4 = box_corners
     # get vectors
-    dir1 = t1-b1
+    dir1 = t1 - b1
     size1 = np.linalg.norm(dir1)
     dir1 = dir1 / size1
-    dir2 = b2-b1
+    dir2 = b2 - b1
     size2 = np.linalg.norm(dir2)
     dir2 = dir2 / size2
-    dir3 = b4-b1
+    dir3 = b4 - b1
     size3 = np.linalg.norm(dir3)
     dir3 = dir3 / size3
 
-    box_center = (b1+t3) / 2.0
+    box_center = (b1 + t3) / 2.0
     dir_vec = pc - box_center
 
     # Run checks
@@ -291,7 +301,9 @@ def filter_points_in_object_bbox(point_cloud, box3d):
     # Get points in each bounding box
     box3d_pts_3d = box3d.corners
     if point_cloud.calibration.origin != box3d.origin:
-        box3d_pts_3d = point_cloud.calibration.origin @ (box3d.origin.inv() @ box3d_pts_3d)
+        box3d_pts_3d = point_cloud.calibration.origin @ (
+            box3d.origin.inv() @ box3d_pts_3d
+        )
     box_filter = filter_points_in_box(point_cloud.data, box3d_pts_3d)
     return box_filter
 
@@ -300,13 +312,15 @@ def filter_points_in_image(points, P):
     """
     Filter which points are in view for an image
     """
-    im_size = [2*P[1,2], 2*P[0,2]]  # size is [h, w]
+    im_size = [2 * P[1, 2], 2 * P[0, 2]]  # size is [h, w]
     points_in_img = tforms.project_to_image(points, P)
-    points_in_im_mask = (points_in_img[:, 0] > 0) & \
-                        (points_in_img[:, 0] < im_size[1]) & \
-                        (points_in_img[:, 1] > 0) & \
-                        (points_in_img[:, 1] < im_size[0]) & \
-                        (points[:, 2] > 0)
+    points_in_im_mask = (
+        (points_in_img[:, 0] > 0)
+        & (points_in_img[:, 0] < im_size[1])
+        & (points_in_img[:, 1] > 0)
+        & (points_in_img[:, 1] < im_size[0])
+        & (points[:, 2] > 0)
+    )
     return points_in_im_mask
 
 
@@ -336,23 +350,25 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
             return False
 
     # calculate min dot product based on half-angle
-    delta = 1.5*np.pi/180  # add some small delta for errors...
-    fov_half = delta + np.arctan(2*(camera_calib.P[0,0])/camera_calib.img_shape[1])  # in radians
+    delta = 1.5 * np.pi / 180  # add some small delta for errors...
+    fov_half = delta + np.arctan(
+        2 * (camera_calib.P[0, 0]) / camera_calib.img_shape[1]
+    )  # in radians
 
     # -- front edge, center, back edge
     center = box_3d_2.t
     fv = box_3d_2.rot.forward_vector
     lv = box_3d_2.rot.left_vector
-    front_edge = center + box_3d_2.l/2 * fv
-    left_edge = center + box_3d_2.w/2 * lv
-    back_edge = center - box_3d_2.l/2 * fv
-    right_edge = center - box_3d_2.w/2 * lv
+    front_edge = center + box_3d_2.l / 2 * fv
+    left_edge = center + box_3d_2.w / 2 * lv
+    back_edge = center - box_3d_2.l / 2 * fv
+    right_edge = center - box_3d_2.w / 2 * lv
 
-    c1 = np.dot(front_edge, np.array([0,0,1])) > np.cos(fov_half) * front_edge.norm()
-    c2 = np.dot(center, np.array([0,0,1])) > np.cos(fov_half) * center.norm()
-    c3 = np.dot(back_edge, np.array([0,0,1])) > np.cos(fov_half) * front_edge.norm()
-    c4 = np.dot(left_edge, np.array([0,0,1])) > np.cos(fov_half) * left_edge.norm()
-    c5 = np.dot(right_edge, np.array([0,0,1])) > np.cos(fov_half) * right_edge.norm()
+    c1 = np.dot(front_edge, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
+    c2 = np.dot(center, np.array([0, 0, 1])) > np.cos(fov_half) * center.norm()
+    c3 = np.dot(back_edge, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
+    c4 = np.dot(left_edge, np.array([0, 0, 1])) > np.cos(fov_half) * left_edge.norm()
+    c5 = np.dot(right_edge, np.array([0, 0, 1])) > np.cos(fov_half) * right_edge.norm()
 
     if any([c1, c2, c3, c4, c5]):
         box_3d_2_2d = box_3d_2.project_to_2d_bbox(calib=camera_calib)
@@ -373,9 +389,10 @@ def filter_objects_in_frustum(objs_1, objs_2, camera_calib):
 
     for i in range(len(objs_1)):
         for j in range(len(objs_2)):
-            if _item_in_frustum(objs_1[i], objs_2[j], camera_calib) or \
-               _item_in_frustum(objs_2[j], objs_1[i], camera_calib):
-                in_frustum[i,j] = True
+            if _item_in_frustum(objs_1[i], objs_2[j], camera_calib) or _item_in_frustum(
+                objs_2[j], objs_1[i], camera_calib
+            ):
+                in_frustum[i, j] = True
 
     return in_frustum
 

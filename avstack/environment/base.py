@@ -10,10 +10,11 @@
 
 from .traffic import TrafficLevel
 
+
 mph_per_mps = 2.23694  # 1 m/s = 2.23694 mph
 
 
-class EnvironmentState():
+class EnvironmentState:
     def __init__(self):
         self.speed_limit = 35 / mph_per_mps
         self.work_zone = False

@@ -8,21 +8,31 @@
 
 """
 
-import os, shutil
+import os
+import shutil
+
 import numpy as np
-from avstack.objects import VehicleState
+
 from avstack.modules.perception.detections import BoxDetection
+from avstack.objects import VehicleState
 
 
-class _TrackingAlgorithm():
-    def __init__(self, assign_metric='IoU', assign_radius=4, save_output=False, save_folder='', **kwargs):
+class _TrackingAlgorithm:
+    def __init__(
+        self,
+        assign_metric="IoU",
+        assign_radius=4,
+        save_output=False,
+        save_folder="",
+        **kwargs
+    ):
         self.iframe = -1
         self.assign_metric = assign_metric
         self.assign_radius = assign_radius
         self.save = save_output
         self.save_folder = save_folder
         self.save = save_output
-        self.save_folder = os.path.join(save_folder, 'tracking')
+        self.save_folder = os.path.join(save_folder, "tracking")
         if save_output:
             if os.path.exists(self.save_folder):
                 shutil.rmtree(self.save_folder)
@@ -47,14 +57,14 @@ class _TrackingAlgorithm():
                     if dist > self.assign_radius:
                         continue
                 # -- use the metric of choice
-                if self.assign_metric == 'IoU':
+                if self.assign_metric == "IoU":
                     cost = -box1.IoU(box2)  # lower is better
-                elif self.assign_metric == 'center_dist':
+                elif self.assign_metric == "center_dist":
                     cost = dist - self.assign_radius  # lower is better
                 else:
                     raise NotImplementedError(self.assign_metric)
                 # -- store result
-                A[i,j] = cost
+                A[i, j] = cost
         return A
 
     def __call__(self, frame, *args, **kwargs):
@@ -62,16 +72,16 @@ class _TrackingAlgorithm():
         self.iframe += 1
         tracks = self.track(*args, **kwargs)
         if self.save:
-            trk_str = '\n'.join([trk.format_as('avstack') for trk in tracks])
-            fname = os.path.join(self.save_folder, '%06d.txt' % frame)
-            with open(fname, 'w') as f:
+            trk_str = "\n".join([trk.format_as("avstack") for trk in tracks])
+            fname = os.path.join(self.save_folder, "%06d.txt" % frame)
+            with open(fname, "w") as f:
                 f.write(trk_str)
         return tracks
 
 
 class PassthroughTracker(_TrackingAlgorithm):
     def __init__(self, output, **kwargs):
-        super().__init__('PassthroughTracker')
+        super().__init__("PassthroughTracker")
         self.output = output
 
     def __call__(self, detections, *args, **kwargs):

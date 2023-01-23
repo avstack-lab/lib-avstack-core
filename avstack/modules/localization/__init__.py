@@ -9,5 +9,8 @@
 """
 
 from .base import GroundTruthLocalizer
-from .kalmanbasic import BasicGpsKinematicKalmanLocalizer, BasicGpsImuErrorStateKalmanLocalizer
 from .integrity import Chi2Integrity
+from .kalmanbasic import (
+    BasicGpsImuErrorStateKalmanLocalizer,
+    BasicGpsKinematicKalmanLocalizer,
+)

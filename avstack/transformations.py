@@ -4,10 +4,12 @@
 # @Last modified by:   spencer
 # @Last modified time: 2021-03-20
 
-import numpy as np
-from numba import jit
-import quaternion
 import math
+
+import numpy as np
+import quaternion
+from numba import jit
+
 from avstack.geometry.coordinates import StandardCoordinates
 
 
@@ -18,16 +20,17 @@ WGS_a_2 = WGS_a**2
 WGS_e = 8.1819190842622 * (10**-2)
 WGS_e_2 = WGS_e**2
 
-WGS_b = math.sqrt(WGS_a_2 * (1-WGS_e_2))
+WGS_b = math.sqrt(WGS_a_2 * (1 - WGS_e_2))
 WGS_b_2 = WGS_b**2
 
-WGS_ep = math.sqrt((WGS_a_2 - WGS_b_2)/WGS_b_2)
+WGS_ep = math.sqrt((WGS_a_2 - WGS_b_2) / WGS_b_2)
 WGS_ep_2 = WGS_ep**2
 
 
 # =============================================
 # SPHERICAL
 # =============================================
+
 
 @jit(nopython=True, fastmath=True)
 def matrix_cartesian_to_spherical(M):
@@ -38,9 +41,9 @@ def matrix_cartesian_to_spherical(M):
     """
     M_ = M.copy()
     for i in range(M.shape[0]):  # numba is ok with loop
-        M_[i,0] = np.linalg.norm(M[i,:3])
-    M_[:,1] = np.arctan2(M[:,1], M[:,0])
-    M_[:,2] = np.arcsin(M[:,2] / M_[:,0])
+        M_[i, 0] = np.linalg.norm(M[i, :3])
+    M_[:, 1] = np.arctan2(M[:, 1], M[:, 0])
+    M_[:, 2] = np.arcsin(M[:, 2] / M_[:, 0])
     return M_
 
 
@@ -52,10 +55,10 @@ def matrix_spherical_to_cartesian(M):
     elevation: [-pi/2, +pi/2]
     """
     M_ = M.copy()
-    c2 = np.cos(M[:,2])
-    M_[:,0] = M[:,0] * np.cos(M[:,1]) * c2
-    M_[:,1] = M[:,0] * np.sin(M[:,1]) * c2
-    M_[:,2] = M[:,0] * np.sin(M[:,2])
+    c2 = np.cos(M[:, 2])
+    M_[:, 0] = M[:, 0] * np.cos(M[:, 1]) * c2
+    M_[:, 1] = M[:, 0] * np.sin(M[:, 1]) * c2
+    M_[:, 2] = M[:, 0] * np.sin(M[:, 2])
     return M_
 
 
@@ -63,20 +66,21 @@ def spherical_to_cartesian(razel, coordinates=StandardCoordinates):
     x = razel[0] * np.cos(razel[1]) * np.cos(razel[2])
     y = razel[0] * np.sin(razel[1]) * np.cos(razel[2])
     z = razel[0] * np.sin(razel[2])
-    return StandardCoordinates.convert(np.array([x,y,z]), coordinates)
+    return StandardCoordinates.convert(np.array([x, y, z]), coordinates)
 
 
 def cartesian_to_spherical(v, coordinates=StandardCoordinates):
     v2 = coordinates.convert(v, StandardCoordinates)
     rng = np.linalg.norm(v2)
     az = np.arctan2(v2[1], v2[0])
-    el = np.arcsin(v2[2]/ rng)
+    el = np.arcsin(v2[2] / rng)
     return np.array([rng, az, el])
 
 
 # ===========================================
 # Global wrapper function
 # ===========================================
+
 
 def transform_point(x, c_from, c_to, origin=None, t_unix=None):
     """
@@ -89,65 +93,65 @@ def transform_point(x, c_from, c_to, origin=None, t_unix=None):
     if isinstance(x, list):
         x = np.asarray(x)
     if len(x.shape) == 1:
-        x = x[:,None]
+        x = x[:, None]
 
     # Handle required arguments
-    if (FROM in ['ned']) or (TO in ['ned']):
-        assert(origin is not None)
+    if (FROM in ["ned"]) or (TO in ["ned"]):
+        assert origin is not None
 
         if len(origin[0].shape) == 1:
-            org_updated = (origin[0][:,None], origin[1])
+            org_updated = (origin[0][:, None], origin[1])
         else:
             org_updated = origin
 
-        if org_updated[1] == 'lla':
+        if org_updated[1] == "lla":
             check_angle_radians(org_updated[0])
 
-    if (FROM == 'eci') or (TO == 'eci'):
-        assert(t_unix is not None)
+    if (FROM == "eci") or (TO == "eci"):
+        assert t_unix is not None
 
     # Process result
-    if FROM == 'ecef':
-        if TO == 'eci':
+    if FROM == "ecef":
+        if TO == "eci":
             x_out = ecef_to_eci(x, t_unix)
-        elif TO == 'lla':
+        elif TO == "lla":
             x_out = ecef_to_lla(x)
-        elif TO == 'ned':
+        elif TO == "ned":
             x_out = ecef_to_ned(x, org_updated)
-        elif TO == 'ecef':
+        elif TO == "ecef":
             x_out = x
         else:
             raise NotImplementedError
-    elif FROM == 'eci':
-        if TO == 'ecef':
+    elif FROM == "eci":
+        if TO == "ecef":
             x_out = eci_to_ecef(x, t_unix)
-        elif TO == 'lla':
+        elif TO == "lla":
             x_out = eci_to_lla(x, t_unix)
-        elif TO == 'ned':
+        elif TO == "ned":
             x_out = eci_to_ned(x, org_updated, t_unix)
-        elif TO == 'eci':
+        elif TO == "eci":
             x_out = x
         else:
             raise NotImplementedError
-    elif FROM == 'lla':
-        if TO == 'ecef':
+    elif FROM == "lla":
+        if TO == "ecef":
             x_out = lla_to_ecef(x)
-        elif TO == 'eci':
+        elif TO == "eci":
             x_out = lla_to_eci(x, t_unix)
-        elif TO == 'ned':
+        elif TO == "ned":
             x_out = lla_to_ned(x, org_updated)
-        elif TO == 'lla':
+        elif TO == "lla":
             x_out = x
         else:
             raise NotImplementedError
-    elif FROM == 'ned':
-        if TO == 'ecef':
+    elif FROM == "ned":
+        if TO == "ecef":
             x_out = ned_to_ecef(x, org_updated)
-        elif TO == 'eci':
+        elif TO == "eci":
             x_out = ned_to_eci(x, org_updated, t_unix)
-        elif TO == 'lla':
+        elif TO == "lla":
             x_out = ned_to_lla(x, org_updated)
-        elif TO == 'ned':
+        elif TO == "ned":
             x_out = x
         else:
             raise NotImplementedError
@@ -161,6 +165,7 @@ def transform_point(x, c_from, c_to, origin=None, t_unix=None):
 # 3D Transform vectors of coordinates
 # ===========================================
 
+
 def ecef_to_eci(x, t_unix):
     raise NotImplementedError
 
@@ -172,7 +177,7 @@ def ecef_to_ned(x, origin):
 
     if coordinate frame is lla, should be in radians
     """
-    x_origin_ecef = transform_point(origin[0], origin[1], 'ecef')
+    x_origin_ecef = transform_point(origin[0], origin[1], "ecef")
     x_centered = x - x_origin_ecef
     R_ecef_to_ned = get_R_ecef_to_ned(origin)
     return R_ecef_to_ned @ x_centered
@@ -183,17 +188,20 @@ def ecef_to_lla(x):
     :x - 3D vector (or multiple vectors) (3 X N) of point in ECEF (cartesian)
     """
 
-    p = np.sqrt(x[0,:]**2 + x[1,:]**2)
-    th = np.arctan2(WGS_a*x[2,:], WGS_b*p)
+    p = np.sqrt(x[0, :] ** 2 + x[1, :] ** 2)
+    th = np.arctan2(WGS_a * x[2, :], WGS_b * p)
 
-    lat = np.arctan2(x[2,:]+WGS_ep_2*WGS_b*np.sin(th)**3, p-WGS_e_2*WGS_a*np.cos(th)**3)
-    lon = np.arctan2(x[1,:], x[0,:])
-    N = WGS_a / np.sqrt(1 - WGS_e_2*np.sin(lat)**2)
+    lat = np.arctan2(
+        x[2, :] + WGS_ep_2 * WGS_b * np.sin(th) ** 3,
+        p - WGS_e_2 * WGS_a * np.cos(th) ** 3,
+    )
+    lon = np.arctan2(x[1, :], x[0, :])
+    N = WGS_a / np.sqrt(1 - WGS_e_2 * np.sin(lat) ** 2)
     alt = p / np.cos(lat) - N
 
-    which_unstable = np.where( (np.abs(x[0,:])<1) & (np.abs(x[1,:])<1))
-    alt[which_unstable] = np.abs(x[2,which_unstable] - WGS_b)
-    return np.concatenate((lat[:,None].T, lon[:,None].T, alt[:,None].T), axis=0)
+    which_unstable = np.where((np.abs(x[0, :]) < 1) & (np.abs(x[1, :]) < 1))
+    alt[which_unstable] = np.abs(x[2, which_unstable] - WGS_b)
+    return np.concatenate((lat[:, None].T, lon[:, None].T, alt[:, None].T), axis=0)
 
 
 def eci_to_ecef(x, t_unix):
@@ -209,10 +217,15 @@ def eci_to_ned(x, origin, t_unix):
 
 
 def lla_to_ecef(x):
-    N = WGS_a / np.sqrt(1 - WGS_e_2*np.sin(x[0,:])**2)
-    return np.concatenate((((N + x[2,:])*np.cos(x[1,:])*np.cos(x[0,:]))[:,None].T,
-                           ((N + x[2,:])*np.sin(x[1,:])*np.cos(x[0,:]))[:,None].T,
-                           (((1-WGS_e_2)*N+x[2,:])*np.sin(x[0,:]))[:,None].T), axis=0)
+    N = WGS_a / np.sqrt(1 - WGS_e_2 * np.sin(x[0, :]) ** 2)
+    return np.concatenate(
+        (
+            ((N + x[2, :]) * np.cos(x[1, :]) * np.cos(x[0, :]))[:, None].T,
+            ((N + x[2, :]) * np.sin(x[1, :]) * np.cos(x[0, :]))[:, None].T,
+            (((1 - WGS_e_2) * N + x[2, :]) * np.sin(x[0, :]))[:, None].T,
+        ),
+        axis=0,
+    )
 
 
 def lla_to_eci(x, t_unix):
@@ -225,7 +238,7 @@ def lla_to_ned(x, origin):
 
 
 def ned_to_ecef(x, origin):
-    x_origin_ecef = transform_point(origin[0], origin[1], 'ecef')
+    x_origin_ecef = transform_point(origin[0], origin[1], "ecef")
     R_ned_to_ecef = get_R_ned_to_ecef(origin)
     x_ecef_uncenter = R_ned_to_ecef @ x
     return x_ecef_uncenter + x_origin_ecef
@@ -245,7 +258,6 @@ def ned_to_lla(x, origin):
 # ===========================================
 
 
-
 # ===========================================
 # Obtain rotation/transformation matrices
 # ===========================================
@@ -260,7 +272,7 @@ def get_R_ecef_to_eci():
 
 
 def get_q_ned_to_ecef(origin):
-    return transform_orientation(get_R_ned_to_ecef(origin), 'dcm', 'quat')
+    return transform_orientation(get_R_ned_to_ecef(origin), "dcm", "quat")
 
 
 def get_R_ned_to_ecef(origin):
@@ -275,10 +287,22 @@ def get_R_ecef_to_ned(origin):
     """
     :origin - tuple of (x, coordinate_frame)
     """
-    x_o_lla = transform_point(origin[0], origin[1], 'lla')
-    R_ecef_to_ned = np.array([[-np.sin(x_o_lla[0,0])*np.cos(x_o_lla[1,0]), -np.sin(x_o_lla[0,0])*np.sin(x_o_lla[1,0]), np.cos(x_o_lla[0,0])],
-                              [-np.sin(x_o_lla[1,0]), np.cos(x_o_lla[1,0]), 0],
-                              [-np.cos(x_o_lla[0,0])*np.cos(x_o_lla[1,0]), -np.cos(x_o_lla[0,0])*np.sin(x_o_lla[1,0]), -np.sin(x_o_lla[0,0])]])
+    x_o_lla = transform_point(origin[0], origin[1], "lla")
+    R_ecef_to_ned = np.array(
+        [
+            [
+                -np.sin(x_o_lla[0, 0]) * np.cos(x_o_lla[1, 0]),
+                -np.sin(x_o_lla[0, 0]) * np.sin(x_o_lla[1, 0]),
+                np.cos(x_o_lla[0, 0]),
+            ],
+            [-np.sin(x_o_lla[1, 0]), np.cos(x_o_lla[1, 0]), 0],
+            [
+                -np.cos(x_o_lla[0, 0]) * np.cos(x_o_lla[1, 0]),
+                -np.cos(x_o_lla[0, 0]) * np.sin(x_o_lla[1, 0]),
+                -np.sin(x_o_lla[0, 0]),
+            ],
+        ]
+    )
     return R_ecef_to_ned
 
 
@@ -296,18 +320,19 @@ def R_to_euler(R):
           - theta on [-pi/2, pi/2] (pitch)
           - psi on [-pi, pi] (yaw/heading)
     """
+
     def make_euler(R):
-        roll = np.arctan2(R[1,2], R[2,2])
-        pitch = -np.arcsin(R[0,2])
-        yaw = np.arctan2(R[0,1], R[0,0])
+        roll = np.arctan2(R[1, 2], R[2, 2])
+        pitch = -np.arcsin(R[0, 2])
+        yaw = np.arctan2(R[0, 1], R[0, 0])
         return np.array([float(roll), float(pitch), float(yaw)])
 
-    if len(R.shape)  == 2:
+    if len(R.shape) == 2:
         euler = make_euler(R)
     else:
         euler = np.zeros((3, R.shape[2]))
         for i in range(R.shape[2]):
-            euler[:,i] = make_euler(R[:,:,i])
+            euler[:, i] = make_euler(R[:, :, i])
     return euler
 
 
@@ -327,25 +352,37 @@ def euler_to_R(euler):
     could also get this by composing individual axis rotations in sequence, but
     explicitly writing it out is more efficient
     """
+
     def make_DCM(euler):
         R = float(euler[0])
         P = float(euler[1])
         Y = float(euler[2])
         # This is DCM of global level --> body
-        DCM = np.array([[np.cos(P)*np.cos(Y), np.sin(R)*np.sin(P)*np.cos(Y) - np.cos(R)*np.sin(Y), np.cos(R)*np.sin(P)*np.cos(Y) + np.sin(R)*np.sin(Y)],
-                        [np.cos(P)*np.sin(Y), np.sin(R)*np.sin(P)*np.sin(Y) + np.cos(R)*np.cos(Y), np.cos(R)*np.sin(P)*np.sin(Y) - np.sin(R)*np.cos(Y)],
-                        [-np.sin(P), np.sin(R)*np.cos(P), np.cos(R)*np.cos(P)]])
+        DCM = np.array(
+            [
+                [
+                    np.cos(P) * np.cos(Y),
+                    np.sin(R) * np.sin(P) * np.cos(Y) - np.cos(R) * np.sin(Y),
+                    np.cos(R) * np.sin(P) * np.cos(Y) + np.sin(R) * np.sin(Y),
+                ],
+                [
+                    np.cos(P) * np.sin(Y),
+                    np.sin(R) * np.sin(P) * np.sin(Y) + np.cos(R) * np.cos(Y),
+                    np.cos(R) * np.sin(P) * np.sin(Y) - np.sin(R) * np.cos(Y),
+                ],
+                [-np.sin(P), np.sin(R) * np.cos(P), np.cos(R) * np.cos(P)],
+            ]
+        )
         return DCM.T
 
     if len(euler.shape) == 1:
         DCM = make_DCM(euler)
     else:
-        DCM = np.zeros((3,3,euler.shape[1]))
+        DCM = np.zeros((3, 3, euler.shape[1]))
         for i in range(euler.shape[1]):
-            DCM[:,:,i] = make_DCM(euler[:,i])
+            DCM[:, :, i] = make_DCM(euler[:, i])
 
     return DCM
-
 
 
 # ===========================================
@@ -365,9 +402,9 @@ def transform_orientation(x, a_from, a_to):
     FROM = a_from.lower()
     TO = a_to.lower()
 
-    q_list = ['quat', 'quaternion']
-    e_list = ['euler']
-    d_list = ['dcm']
+    q_list = ["quat", "quaternion"]
+    e_list = ["euler"]
+    d_list = ["dcm"]
 
     if isinstance(x, list) and len(x) == 3:
         x = np.asarray([float(xi) for xi in x])
@@ -376,7 +413,7 @@ def transform_orientation(x, a_from, a_to):
         if TO in q_list:
             DCM = euler_to_R(x)
             if len(DCM.shape) == 3:
-                DCM = np.transpose(DCM, (2,0,1))
+                DCM = np.transpose(DCM, (2, 0, 1))
             x_out = quaternion.from_rotation_matrix(DCM)
         elif TO in d_list:
             x_out = euler_to_R(x)
@@ -388,11 +425,11 @@ def transform_orientation(x, a_from, a_to):
         if TO in d_list:
             x_out = quaternion.as_rotation_matrix(x)
             if len(x_out.shape) == 3:
-                x_out = np.transpose(x_out, (1,2,0))
+                x_out = np.transpose(x_out, (1, 2, 0))
         elif TO in e_list:
             DCM = quaternion.as_rotation_matrix(x)
             if len(DCM.shape) == 3:
-                DCM = np.transpose(DCM, (1,2,0))
+                DCM = np.transpose(DCM, (1, 2, 0))
             x_out = R_to_euler(DCM)
         elif TO in q_list:
             x_out = x
@@ -403,7 +440,7 @@ def transform_orientation(x, a_from, a_to):
             x_out = R_to_euler(x)
         elif TO in q_list:
             if len(x.shape) == 3:
-                x = np.transpose(x, (2,0,1))
+                x = np.transpose(x, (2, 0, 1))
             x_out = quaternion.from_rotation_matrix(x)
         elif TO in d_list:
             x_out = x
@@ -421,7 +458,7 @@ def transform_orientation(x, a_from, a_to):
 
 
 def check_angle_radians(vector):
-    assert(np.all(vector < (2*math.pi)))
+    assert np.all(vector < (2 * math.pi))
 
 
 def sign_corrected_q(q0, q1):
@@ -451,11 +488,11 @@ def align_x_to_vec(vec):
 
 
 def cart2hom(pts_3d):
-    ''' Input: nx3 points in Cartesian
-        Oupput: nx4 points in Homogeneous by appending 1
-    '''
+    """Input: nx3 points in Cartesian
+    Oupput: nx4 points in Homogeneous by appending 1
+    """
     n = pts_3d.shape[0]
-    pts_3d_hom = np.hstack((pts_3d, np.ones((n,1))))
+    pts_3d_hom = np.hstack((pts_3d, np.ones((n, 1))))
     return pts_3d_hom
 
 
@@ -471,66 +508,59 @@ def get_yaw_from_bev_corners(bev_corners):
     """
 
     # Center coordinates
-    centered = bev_corners - np.mean(bev_corners, axis=0)[:,None].T
-    side_1 = np.linalg.norm(centered[0,:] - centered[1,:])
-    side_2 = np.linalg.norm(centered[0,:] - centered[2,:])
+    centered = bev_corners - np.mean(bev_corners, axis=0)[:, None].T
+    side_1 = np.linalg.norm(centered[0, :] - centered[1, :])
+    side_2 = np.linalg.norm(centered[0, :] - centered[2, :])
 
     # The shorter side is the front/back sides
     if side_1 <= side_2:
-        idx_front_to_back = [(0,1), (2,3)]
+        idx_front_to_back = [(0, 1), (2, 3)]
     else:
-        idx_front_to_back = [(0,2), (1,3)]
+        idx_front_to_back = [(0, 2), (1, 3)]
 
     # Get the line to the center of the short side
-    vec_mid = np.mean(centered[idx_front_to_back[0],:], axis=0)
+    vec_mid = np.mean(centered[idx_front_to_back[0], :], axis=0)
 
     # Yaw calculation
     return np.arctan2(vec_mid[0], vec_mid[1])
 
 
 def rotx(t):
-    ''' 3D Rotation about the x-axis. '''
+    """3D Rotation about the x-axis."""
     c = np.cos(t)
     s = np.sin(t)
-    return np.array([[1,  0,  0],
-                     [0,  c, -s],
-                     [0,  s,  c]])
+    return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
 
 
 def roty(t):
-    ''' Rotation about the y-axis. '''
+    """Rotation about the y-axis."""
     c = np.cos(t)
     s = np.sin(t)
-    return np.array([[c,  0,  s],
-                     [0,  1,  0],
-                     [-s, 0,  c]])
+    return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
 
 
 def rotz(t):
-    ''' Rotation about the z-axis. '''
+    """Rotation about the z-axis."""
     c = np.cos(t)
     s = np.sin(t)
-    return np.array([[c, -s,  0],
-                     [s,  c,  0],
-                     [0,  0,  1]])
+    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
 
 def rotz_2d(t):
-    ''' Rotation about the z-axis. '''
+    """Rotation about the z-axis."""
     c = np.cos(t)
     s = np.sin(t)
-    return np.array([[c, -s],
-                     [s,  c]])
+    return np.array([[c, -s], [s, c]])
 
 
 def get_rot_yaw_matrix(rot, up):
-    if up == '+y':
+    if up == "+y":
         M = roty(-rot)
-    elif up == '-y':
+    elif up == "-y":
         M = roty(rot)
-    elif up == '+z':
+    elif up == "+z":
         M = rotz(-rot)
-    elif up == '-z':
+    elif up == "-z":
         M = rotz(rot)
     else:
         raise NotImplementedError
@@ -538,24 +568,24 @@ def get_rot_yaw_matrix(rot, up):
 
 
 def transform_from_rot_trans(R, t):
-    ''' Transforation matrix from rotation matrix and translation vector. '''
+    """Transforation matrix from rotation matrix and translation vector."""
     R = R.reshape(3, 3)
     t = t.reshape(3, 1)
     return np.vstack((np.hstack([R, t]), [0, 0, 0, 1]))
 
 
 def inverse_rigid_trans(Tr):
-    ''' Inverse a rigid body transform matrix (3x4 as [R|t])
-        [R'|-R't; 0|1]
-    '''
-    inv_Tr = np.zeros_like(Tr) # 3x4
-    inv_Tr[0:3,0:3] = np.transpose(Tr[0:3,0:3])
-    inv_Tr[0:3,3] = np.dot(-np.transpose(Tr[0:3,0:3]), Tr[0:3,3])
+    """Inverse a rigid body transform matrix (3x4 as [R|t])
+    [R'|-R't; 0|1]
+    """
+    inv_Tr = np.zeros_like(Tr)  # 3x4
+    inv_Tr[0:3, 0:3] = np.transpose(Tr[0:3, 0:3])
+    inv_Tr[0:3, 3] = np.dot(-np.transpose(Tr[0:3, 0:3]), Tr[0:3, 3])
     return inv_Tr
 
 
 def project_to_image(pts_3d, P):
-    ''' Project 3d points to image plane.
+    """Project 3d points to image plane.
 
     Usage: pts_2d = projectToImage(pts_3d, P)
       input: pts_3d: nx3 matrix
@@ -567,14 +597,14 @@ def project_to_image(pts_3d, P):
 
       <=> pts_3d_extended(nx4) dot P'(4x3) = projected_pts_2d(nx3)
           => normalize projected_pts_2d(nx2)
-    '''
+    """
     n = pts_3d.shape[0]
-    pts_3d_extend = np.hstack((pts_3d, np.ones((n,1))))
+    pts_3d_extend = np.hstack((pts_3d, np.ones((n, 1))))
     # print(('pts_3d_extend shape: ', pts_3d_extend.shape))
-    pts_2d = np.dot(pts_3d_extend, np.transpose(P)) # nx3
-    pts_2d[:,0] /= pts_2d[:,2]
-    pts_2d[:,1] /= pts_2d[:,2]
-    return pts_2d[:,0:2]
+    pts_2d = np.dot(pts_3d_extend, np.transpose(P))  # nx3
+    pts_2d[:, 0] /= pts_2d[:, 2]
+    pts_2d[:, 1] /= pts_2d[:, 2]
+    return pts_2d[:, 0:2]
 
 
 def project_cartesian_to_5_channel_spherical(point_cloud, nchan_h=64, nchan_w=512):
@@ -588,27 +618,32 @@ def project_cartesian_to_5_channel_spherical(point_cloud, nchan_h=64, nchan_w=51
     Coordinate system: LiDAR is x forward, y left, z up
     """
     # Project to spherical
-    r_3d = np.linalg.norm(point_cloud[:,:3], axis=1)
-    r_2d = np.linalg.norm(point_cloud[:,:2], axis=1)
-    zen = np.arcsin(point_cloud[:,2] / r_3d)
-    az = np.arcsin(point_cloud[:,1] / r_2d)
+    r_3d = np.linalg.norm(point_cloud[:, :3], axis=1)
+    r_2d = np.linalg.norm(point_cloud[:, :2], axis=1)
+    zen = np.arcsin(point_cloud[:, 2] / r_3d)
+    az = np.arcsin(point_cloud[:, 1] / r_2d)
 
     # Only include within front-view (define as a 90 degree azimuth pyramid??)
     half_ang_az = math.pi / 180 * 45
 
     # Define the bin width
-    del_w = 2*half_ang_az / nchan_w
+    del_w = 2 * half_ang_az / nchan_w
     del_h = (max(zen) - min(zen)) / nchan_h  # just do empirically
 
     # Assign bins
-    bin_w = np.floor((az + math.pi/4) / del_w)
-    bin_h = np.floor( (zen-min(zen)) / del_h)
+    bin_w = np.floor((az + math.pi / 4) / del_w)
+    bin_h = np.floor((zen - min(zen)) / del_h)
 
     # Build the matrix by looping
     spher_img = np.zeros((nchan_h, nchan_w, 5))
     for ipt in range(point_cloud.shape[0]):
         # To filter by viewing angle, ignore bins outside of desired range
-        if (bin_w[ipt] < 0) or (bin_w[ipt] >= nchan_w) or (bin_h[ipt] < 0) or (bin_h[ipt] >= nchan_h):
+        if (
+            (bin_w[ipt] < 0)
+            or (bin_w[ipt] >= nchan_w)
+            or (bin_h[ipt] < 0)
+            or (bin_h[ipt] >= nchan_h)
+        ):
             continue
 
         # Flip x and y by convention (?)
@@ -616,8 +651,8 @@ def project_cartesian_to_5_channel_spherical(point_cloud, nchan_h=64, nchan_w=51
         col = nchan_w - int(bin_w[ipt]) - 1
 
         # Assign features
-        spher_img[row, col, 0:3] = point_cloud[ipt,0:3]
-        spher_img[row, col, 3] = point_cloud[ipt,3]
+        spher_img[row, col, 0:3] = point_cloud[ipt, 0:3]
+        spher_img[row, col, 3] = point_cloud[ipt, 3]
         spher_img[row, col, 4] = r_3d[ipt]
 
     return spher_img

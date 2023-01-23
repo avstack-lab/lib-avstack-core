@@ -9,7 +9,8 @@
 """
 import numpy as np
 import quaternion
-from .transforms import Rotation, Translation, Transform, Origin, NominalOriginStandard
+
+from .transforms import NominalOriginStandard, Origin, Rotation, Transform, Translation
 
 
 def plane_2_transform(plane):
@@ -18,7 +19,7 @@ def plane_2_transform(plane):
     Transform is "sensor to ground"
     """
     dz = plane.p[3]
-    trans_sens_to_ground = Translation([0,0,dz], origin=plane.origin)
+    trans_sens_to_ground = Translation([0, 0, dz], origin=plane.origin)
     up = plane.p[:3]
     forward_tmp = np.array([1, 0, 0])
     left = np.cross(up, forward_tmp)
@@ -40,7 +41,7 @@ def plane_2_transform(plane):
 #         self.p_lidar = np.asarray([plane_coeffs[2], -plane_coeffs[0], -plane_coeffs[1], plane_coeffs[3] + 0.08])
 
 
-class GroundPlane():
+class GroundPlane:
     def __init__(self, plane_coeffs, origin):
         """Creates plane equation in reference frame
 
@@ -53,12 +54,12 @@ class GroundPlane():
         self.normal = self.p[:3] / np.linalg.norm(self.p[:3])
 
     def __str__(self):
-        return f'Ground Plane with cooefficients:\n{self.p} in {self.origin}'
+        return f"Ground Plane with cooefficients:\n{self.p} in {self.origin}"
 
     def angle_between(self, other):
         """Gets the angle between normal vectors of two planes"""
         if isinstance(other, GroundPlane):
-            assert self.origin == other.origin, 'For now origins must be the same'
+            assert self.origin == other.origin, "For now origins must be the same"
             v1 = self.normal
             v2 = other.normal
             angle = np.arccos(np.dot(v1, v2))
@@ -72,7 +73,7 @@ class GroundPlane():
         Transform is "sensor to ground"
         """
         dz = self.p[3]
-        trans_sens_to_ground = Translation([0,0,dz], origin=self.origin)
+        trans_sens_to_ground = Translation([0, 0, dz], origin=self.origin)
         up = self.p[:3]
         forward_tmp = np.array([1, 0, 0])
         left = np.cross(up, forward_tmp)

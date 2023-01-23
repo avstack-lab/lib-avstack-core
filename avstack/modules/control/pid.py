@@ -8,10 +8,12 @@
 
 """
 import math
-import numpy as np
 from collections import deque
 
-from avstack.geometry import Translation, Transform
+import numpy as np
+
+from avstack.geometry import Transform, Translation
+
 
 """
 TODO:
@@ -19,7 +21,7 @@ TODO:
 """
 
 
-class PIDBase():
+class PIDBase:
     def __init__(self, K_P, K_D, K_I, buffer_len=10):
         self._k_p = K_P
         self._k_d = K_D
@@ -29,15 +31,16 @@ class PIDBase():
 
     def __call__(self, t, error, clip_low=None, clip_high=None):
         if len(self._t_buffer) > 0:
-            assert t >= self._t_buffer[-1], f'{t}, {self._t_buffer[-1]}'
+            assert t >= self._t_buffer[-1], f"{t}, {self._t_buffer[-1]}"
             if t == self._t_buffer[-1]:
                 self._t_buffer.pop()
                 self._error_buffer.pop()
         self._t_buffer.append(t)
         self._error_buffer.append(error)
         if len(self._error_buffer) >= 2:
-            _de = (self._error_buffer[-1] - self._error_buffer[-2]) / \
-                  (self._t_buffer[-1] - self._t_buffer[-2])
+            _de = (self._error_buffer[-1] - self._error_buffer[-2]) / (
+                self._t_buffer[-1] - self._t_buffer[-2]
+            )
             _ie = np.trapz(self._error_buffer, self._t_buffer)
         else:
             _de = 0.0
@@ -59,7 +62,7 @@ class PIDBase():
         self._t_buffer = deque(maxlen=self.buffer_len)
 
 
-class _PIDController():
+class _PIDController:
     def __init__(self, K_P, K_D, K_I, buffer_len):
         self.controller = PIDBase(K_P, K_D, K_I, buffer_len)
 
@@ -92,24 +95,29 @@ class PIDLateralController(_PIDController):
         current and target are in global coordinates, standard
         """
         v_begin = current.translation
-        xyz = [math.cos(current.rotation.yaw),
-               math.sin(target.rotation.yaw), 0]
+        xyz = [math.cos(current.rotation.yaw), math.sin(target.rotation.yaw), 0]
         v_end = v_begin + Translation(xyz, origin=v_begin.origin)
         v_vec = np.array([v_end.x - v_begin.x, v_end.y - v_begin.y, 0.0])
-        w_vec = np.array([target.translation.x - v_begin.x,
-                          target.translation.y - v_begin.y, 0.0])
-        error = -math.acos(np.clip(np.dot(w_vec, v_vec) /
-                                 (np.linalg.norm(w_vec) * np.linalg.norm(v_vec)), -1.0, 1.0))
+        w_vec = np.array(
+            [target.translation.x - v_begin.x, target.translation.y - v_begin.y, 0.0]
+        )
+        error = -math.acos(
+            np.clip(
+                np.dot(w_vec, v_vec) / (np.linalg.norm(w_vec) * np.linalg.norm(v_vec)),
+                -1.0,
+                1.0,
+            )
+        )
         _cross = np.cross(v_vec, w_vec)
         if _cross[2] < 0:
             error *= -1.0
 
         # wrap between -pi to pi
-        error = (error + math.pi) % (2*math.pi) - math.pi
+        error = (error + math.pi) % (2 * math.pi) - math.pi
 
         # protect against angle jumps by flushing buffer
         if self.last_error is not None:
-            if abs(self.last_error) > math.pi/2:
+            if abs(self.last_error) > math.pi / 2:
                 if np.sign(error) != np.sign(self.last_error):
                     self.reset_buffer()
         self.last_error = error

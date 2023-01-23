@@ -9,11 +9,13 @@ Template objects
 """
 
 
-class LaneLine():
+class LaneLine:
     pass
 
-class Object3D():
+
+class Object3D:
     pass
 
-class Object2D():
+
+class Object2D:
     pass

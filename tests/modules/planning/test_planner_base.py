@@ -10,8 +10,9 @@
 
 import numpy as np
 import quaternion
+
+from avstack.geometry import NominalOriginStandard, Rotation, Transform, Translation
 from avstack.modules import planning
-from avstack.geometry import Translation, Rotation, Transform, NominalOriginStandard
 
 
 def test_waypoints():

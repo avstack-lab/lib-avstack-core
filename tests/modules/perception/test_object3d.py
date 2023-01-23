@@ -8,15 +8,30 @@
 
 """
 
-import os, sys
+import os
+import sys
+
 import numpy as np
+
 from avstack import GroundTruthInformation
 from avstack.geometry import bbox
 from avstack.modules import perception
 
-sys.path.append('tests/')
-from utilities import get_test_sensor_data, get_ego, get_object_global
-obj, box_calib, lidar_calib, pc, camera_calib, img, box_2d, box_3d = get_test_sensor_data()
+
+sys.path.append("tests/")
+from utilities import get_ego, get_object_global, get_test_sensor_data
+
+
+(
+    obj,
+    box_calib,
+    lidar_calib,
+    pc,
+    camera_calib,
+    img,
+    box_2d,
+    box_3d,
+) = get_test_sensor_data()
 frame = 0
 
 
@@ -30,11 +45,13 @@ def test_groundtruth_perception():
 
     # GT information
     frame = timestamp = 0
-    ground_truth = GroundTruthInformation(frame, timestamp, ego_state=ego_init, objects=[obj1])
+    ground_truth = GroundTruthInformation(
+        frame, timestamp, ego_state=ego_init, objects=[obj1]
+    )
 
     # -- test update
     percep = perception.object3d.GroundTruth3DObjectDetector()
-    detections = percep(frame, ground_truth, 'percep-1')
+    detections = percep(frame, ground_truth, "percep-1")
     assert np.allclose(detections[0].box.t.vector, obj_local.position.vector)
 
 
@@ -42,10 +59,10 @@ def test_mmdet_3d_perception_kitti():
     try:
         import mmdet3d
     except ModuleNotFoundError as e:
-        print('Cannot run mmdet test without the module')
+        print("Cannot run mmdet test without the module")
     else:
         detector = perception.object3d.MMDetObjectDetector3D()
-        detections = detector(frame, pc, 'lidar_objects_3d')
+        detections = detector(frame, pc, "lidar_objects_3d")
         for det in detections:
             if det.box.t.distance(obj.box.t):
                 break

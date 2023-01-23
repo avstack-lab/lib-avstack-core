@@ -8,12 +8,15 @@
 
 """
 
-import os, sys
+import os
 import pickle
+import sys
+
 import avstack
 from avstack.geometry import NominalOriginStandard
 
-sys.path.append('tests/')
+
+sys.path.append("tests/")
 from utilities import get_ego, get_object_global
 
 

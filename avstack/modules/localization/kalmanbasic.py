@@ -10,11 +10,13 @@
 
 import numpy as np
 import quaternion
-from .base import _LocalizationAlgorithm
-from avstack.geometry import NominalOriginStandard
-from avstack.sensors import ImuBuffer, DataBuffer
+
 from avstack import datastructs
 from avstack import transformations as tforms
+from avstack.geometry import NominalOriginStandard
+from avstack.sensors import DataBuffer, ImuBuffer
+
+from .base import _LocalizationAlgorithm
 
 
 def KF_linear_update(xp, Pp, y, H, R, S=None):
@@ -36,6 +38,7 @@ def KF_linear_propagate(x, P, F, Q):
 # WITHOUT IMU
 # =============================================================
 
+
 class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
     """
     Extremely simple state estimator
@@ -45,8 +48,19 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
     Does not necessarily perform state estimation in any coordinate frame.
     ECEF/ENU/NED all the same.
     """
-    def __init__(self, t_init, ego_init, rate, integrity, integrity_delay=5,
-            predict_model='cv', sigma_m=1, tau_m=5, origin=NominalOriginStandard):
+
+    def __init__(
+        self,
+        t_init,
+        ego_init,
+        rate,
+        integrity,
+        integrity_delay=5,
+        predict_model="cv",
+        sigma_m=1,
+        tau_m=5,
+        origin=NominalOriginStandard,
+    ):
         super().__init__(t_init, ego_init, rate)
         self.ego_template = ego_init
         self.origin = origin
@@ -60,12 +74,15 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
 
         # Dynamics model
         self.predict_model = predict_model
-        self.q = 2*sigma_m**2*tau_m
-        if self.predict_model == 'cv':
+        self.q = 2 * sigma_m**2 * tau_m
+        if self.predict_model == "cv":
             self.n_states = 6
             self.P0 = np.diag([vR, vR, vR, vV, vV, vV])
             self.F = lambda dt: np.kron(np.array([[1, dt], [0, 1]]), np.eye(3))
-            self.Q = lambda dt: np.kron(self.q * np.array([[dt**3/3, dt**2/2],[dt**2/2, dt]]), np.eye(3))
+            self.Q = lambda dt: np.kron(
+                self.q * np.array([[dt**3 / 3, dt**2 / 2], [dt**2 / 2, dt]]),
+                np.eye(3),
+            )
         else:
             raise NotImplementedError
 
@@ -101,25 +118,29 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
         self._t_last_update = t
         self.y = z - self.H @ self.x
         S = self.H @ self.P @ self.H.T + R
-        if (self.integrity is not None) and (t-self.t0 > self.integrity_delay):
+        if (self.integrity is not None) and (t - self.t0 > self.integrity_delay):
             pass_integrity = self.integrity(y=self.y, S=S)
         else:
             pass_integrity = True
         if pass_integrity:
-            self.x, self.P, self.K, self.S = KF_linear_update(self.x, self.P, self.y, self.H, R, S=S)
+            self.x, self.P, self.K, self.S = KF_linear_update(
+                self.x, self.P, self.y, self.H, R, S=S
+            )
         else:
-            print('msmt rejected')
+            print("msmt rejected")
 
     def execute(self, t, gps_data, *args, **kwargs):
         # Pull off data
         if gps_data is not None:
-            assert np.linalg.norm(t - gps_data.timestamp) <= 2e-1, f'{t}, {gps_data.timestamp}'
+            assert (
+                np.linalg.norm(t - gps_data.timestamp) <= 2e-1
+            ), f"{t}, {gps_data.timestamp}"
             t = gps_data.timestamp
             if self.attitude is not None:
-                z = gps_data.data['z'] - self.attitude.T @ gps_data.levar
+                z = gps_data.data["z"] - self.attitude.T @ gps_data.levar
             else:
-                z = gps_data.data['z']
-            R = gps_data.data['R']
+                z = gps_data.data["z"]
+            R = gps_data.data["R"]
         else:
             z = R = None
 
@@ -138,28 +159,36 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
                 self._update(t, z, R)
 
             # Make vehicle state object
-            self.position = self.x[:3]   # in ENU
+            self.position = self.x[:3]  # in ENU
             self.velocity = self.x[3:6]  # in ENU
             self.acceleration = None
             if np.linalg.norm(self.velocity) > 0:
                 forward = self.velocity / np.linalg.norm(self.velocity)  # in ENU
             elif self.attitude is None:
-                forward = np.array([1,0,0])
+                forward = np.array([1, 0, 0])
             else:
                 forward = self.attitude.forward_vector
-            up = np.array([0,0,1])
+            up = np.array([0, 0, 1])
             left = np.cross(up, forward)
             up = np.cross(forward, left)
             R_enu_2_body = np.array([forward, left, up])  # R_enu_2_body
             self.attitude = R_enu_2_body  # from velocity
             self.angular_velocity = None
-            self.ego_template.set(self.t, self.position, self.box, self.velocity,
-                self.acceleration, self.attitude, self.angular_velocity, origin=self.origin)
+            self.ego_template.set(
+                self.t,
+                self.position,
+                self.box,
+                self.velocity,
+                self.acceleration,
+                self.attitude,
+                self.angular_velocity,
+                origin=self.origin,
+            )
             ego_loc = self.ego_template
 
         # Error checking
         if (t - self._t_last_update) > 10:
-            raise RuntimeError('Has not been updated in too long.')
+            raise RuntimeError("Has not been updated in too long.")
 
         return ego_loc
 
@@ -168,12 +197,14 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
 # WITH IMU GYRO AND ACCEL
 # =============================================================
 
+
 class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
     """
     Simple state estimator
 
     Uses GPS and IMU measurements to perform navigation
     """
+
     def __init__(self, t_init, ego_init, integrity, origin=NominalOriginStandard):
         rate = 1e4  # some large number
         super().__init__(t_init, ego_init, rate)
@@ -194,7 +225,7 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
 
         # initialize
         self._t_last_update = None
-        eulers = tforms.transform_orientation(ego_init.attitude.q, 'quat', 'euler')
+        eulers = tforms.transform_orientation(ego_init.attitude.q, "quat", "euler")
         x0 = np.concatenate((ego_init.position.vector, np.zeros((3,)), eulers), axis=0)
         self._initialize(t_init, x0)
         self.imu_buffer = ImuBuffer()
@@ -220,11 +251,11 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
 
     @property
     def qN2B(self):
-        return tforms.transform_orientation(self.x[6:9], 'euler', 'quat')
+        return tforms.transform_orientation(self.x[6:9], "euler", "quat")
 
     @qN2B.setter
     def qN2B(self, qN2B):
-        self.x[6:9] = tforms.transform_orientation(qN2B, 'quat', 'euler')
+        self.x[6:9] = tforms.transform_orientation(qN2B, "quat", "euler")
 
     def _initialize(self, t0, x0):
         self.initialized = True
@@ -248,15 +279,17 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
         rE = self.rE  # if you get an error here, you must not be initialized yet
         vE = self.vE
         qN2B = self.qN2B
-        qE2N = tforms.get_q_ecef_to_ned((rE, 'ecef'))
+        qE2N = tforms.get_q_ecef_to_ned((rE, "ecef"))
         qB2E = (qN2B * qE2N).conjugate()
 
         # --------------------
         # Update covariance
         # --------------------
-        if (t - self._t_last_cov_prop) >= (1/self.cov_prop_rate):
-            F = PhiFromIMU(imu_data.data['dt'], imu_data.data['dv'], imu_data.data['dth'], rE, qB2E)
-            Q = QFromImu(imu_data.data['dt'], imu_data.data['R'])
+        if (t - self._t_last_cov_prop) >= (1 / self.cov_prop_rate):
+            F = PhiFromIMU(
+                imu_data.data["dt"], imu_data.data["dv"], imu_data.data["dth"], rE, qB2E
+            )
+            Q = QFromImu(imu_data.data["dt"], imu_data.data["R"])
             self.P = F @ self.P @ F.T + Q
             self.xerr = F @ self.xerr
             self.t_cov_prop = t
@@ -265,32 +298,37 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
         # --------------------
         # Update states
         # --------------------
-        self.t += imu_data.data['dt']
+        self.t += imu_data.data["dt"]
 
         # ----- velocity
         v_old = self.vE
-        self.vE = v_old + imu_data.data['dv']
+        self.vE = v_old + imu_data.data["dv"]
         v_avg = (v_old + vE) / 2
 
         # ----- position
-        self.rE = self.rE + v_avg*imu_data.data['dt']
+        self.rE = self.rE + v_avg * imu_data.data["dt"]
 
         # ----- attitude
-        q_Bkm1_2_Bk = quaternion.from_rotation_vector(imu_data.data['dth'])
+        q_Bkm1_2_Bk = quaternion.from_rotation_vector(imu_data.data["dth"])
         q_Bkm1_2_E = qB2E
         qB2E = q_Bkm1_2_E * q_Bkm1_2_Bk.conjugate()
-        qE2N = quaternion.from_rotation_matrix(tforms.get_R_ecef_to_ned((self.rE, 'ecef')))
+        qE2N = quaternion.from_rotation_matrix(
+            tforms.get_R_ecef_to_ned((self.rE, "ecef"))
+        )
         self.qN2B = (qE2N * qB2E).conjugate()
 
     def _update(self, gps_data):
         """Update with gps measurement at time t"""
-        assert abs(gps_data.timestamp - self.t) < 1e-2, f'{gps_data.timestamp}, {self.t}'
-        z, R = gps_data.data['z'], gps_data.data['R']
+        assert (
+            abs(gps_data.timestamp - self.t) < 1e-2
+        ), f"{gps_data.timestamp}, {self.t}"
+        z, R = gps_data.data["z"], gps_data.data["R"]
         y = z - self.rE  # z - H @ self.x
 
         # -- update error state
-        self.xerr, self.P, self._K, self._S = \
-            KF_linear_update(self.xerr, self.P, y, self.H, R)
+        self.xerr, self.P, self._K, self._S = KF_linear_update(
+            self.xerr, self.P, y, self.H, R
+        )
         # -- correct error states
         self.rE += self.xerr[0:3]
         self.vE += self.xerr[3:6]
@@ -300,7 +338,6 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
 
         self.t = gps_data.timestamp
         self.n_msmt_updates += 1
-
 
     def execute(self, t, gps_data, imu_data, *args, **kwargs):
         # Pull off data
@@ -321,12 +358,13 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
 
         # -- ensure propagation up to date for high-rate
         if abs(t - self.t) > 1e-1:
-            raise RuntimeError(f'Time out of date {t} {self.t}')
+            raise RuntimeError(f"Time out of date {t} {self.t}")
 
         # -- set outputs
-        dcm_n2b = tforms.transform_orientation(self.qN2B, 'quat', 'dcm')
-        self.ego_template.set(self.t, self.rE, self.box, self.vE,
-            None, dcm_n2b, None, origin=self.origin)
+        dcm_n2b = tforms.transform_orientation(self.qN2B, "quat", "dcm")
+        self.ego_template.set(
+            self.t, self.rE, self.box, self.vE, None, dcm_n2b, None, origin=self.origin
+        )
 
         return self.ego_template
 
@@ -335,7 +373,7 @@ def PhiFromIMU(dt, dv, dth, rE, qB2E):
     """
     Get state transition and process noise matrices from IMU data
     """
-    grav_grad = np.zeros((3,3))
+    grav_grad = np.zeros((3, 3))
     fRaw_i_i = dv / dt
     OmRaw_b_b = dth / dt
 
@@ -344,9 +382,9 @@ def PhiFromIMU(dt, dv, dth, rE, qB2E):
     ci2b = quaternion.as_rotation_matrix(qB2E).T @ ce2i.T
 
     # State transitions
-    A = np.zeros((9,9))
-    A[0:3, 3:6] = np.eye(3)          # kinematics
-    A[3:6, 0:3] = grav_grad          # gravity gradient
+    A = np.zeros((9, 9))
+    A[0:3, 3:6] = np.eye(3)  # kinematics
+    A[3:6, 0:3] = grav_grad  # gravity gradient
     A[3:6, 6:9] = -skew(fRaw_i_i)
 
     # -----------------
@@ -361,32 +399,30 @@ def PhiFromIMU(dt, dv, dth, rE, qB2E):
 
 def QFromImu(dt, R):
     # Process noise
-    B = np.zeros((9,6))
+    B = np.zeros((9, 6))
     B[3:6, 0:3] = np.eye(3)
     B[6:9, 3:6] = np.eye(3)
-    Q = B @ (R*dt) @ B.T
+    Q = B @ (R * dt) @ B.T
     return Q
 
 
 def A_to_STM(A, dt, order=2):
     """Get state transition matrix from dynamics matrix, A"""
-    assert(order <= 2)
-    assert(order >= 0)
+    assert order <= 2
+    assert order >= 0
 
     STM = np.eye(A.shape[0])
 
     if order >= 1:
-        STM += 0.5*np.linalg.matrix_power(A,2)*dt**2
+        STM += 0.5 * np.linalg.matrix_power(A, 2) * dt**2
 
     if order >= 2:
-        STM += (1/6)*np.linalg.matrix_power(A,3)*dt**3
+        STM += (1 / 6) * np.linalg.matrix_power(A, 3) * dt**3
 
     return STM
 
 
 def skew(v):
     """Make skew-symmetric matrix from vector"""
-    v = np.array([[0, -v[2], v[1]],
-                  [v[2], 0, -v[0]],
-                  [-v[1],v[0], 0]])
+    v = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     return v

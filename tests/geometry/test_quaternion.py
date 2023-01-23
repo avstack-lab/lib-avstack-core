@@ -10,7 +10,8 @@ My custom tests for the quaternion package
 
 import numpy as np
 import quaternion
-from avstack.geometry import Rotation, NominalOriginStandard
+
+from avstack.geometry import NominalOriginStandard, Rotation
 
 
 def test_compose_rotations():
