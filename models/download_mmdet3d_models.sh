@@ -2,7 +2,7 @@
 
 set -e
 
-SAVEFOLDER=${1:-/data/$(whoami)/models/mmdet}
+SAVEFOLDER=${1:-/data/$(whoami)/models/mmdet3d}
 SAVEFOLDER=${SAVEFOLDER%/}  # remove trailing slash
 
 echo "Downloading models and saving to $SAVEFOLDER"
