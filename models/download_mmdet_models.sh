@@ -2,10 +2,16 @@
 
 set -e
 
+SAVEFOLDER=${1:-/data/$(whoami)/models/mmdet}
+SAVEFOLDER=${SAVEFOLDER%/}  # remove trailing slash
+
+echo "Downloading models and saving to $SAVEFOLDER"
+
 MODEL_PATH="https://download.openmmlab.com/mmdetection/v2.0"
-MMDET_CKPT="mmdet/checkpoints"
+
+MMDET_CKPT="${SAVEFOLDER}/checkpoints"
+MMDET_WKDIR="${SAVEFOLDER}/work_dirs"
 mkdir -p "$MMDET_CKPT"
-MMDET_WKDIR="mmdet/work_dirs"
 mkdir -p "$MMDET_WKDIR"
 
 download_models () {
@@ -23,6 +29,8 @@ download_models () {
     fi
 }
 
+COCOPERSON_FRCNN="faster_rcnn_r50_fpn_1x_coco-person/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
+download_models "coco-person" "faster_rcnn" "$COCOPERSON_FRCNN"
 CITYSCAPES_FRCNN="faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
 download_models "cityscapes" "cityscapes" "$CITYSCAPES_FRCNN"
 CITYSCAPES_MRCNN="mask_rcnn_r50_fpn_1x_cityscapes/mask_rcnn_r50_fpn_1x_cityscapes_20201211_133733-d2858245.pth"

@@ -2,11 +2,17 @@
 
 set -e
 
+SAVEFOLDER=${1:-/data/$(whoami)/models/mmdet}
+SAVEFOLDER=${SAVEFOLDER%/}  # remove trailing slash
+
+echo "Downloading models and saving to $SAVEFOLDER"
+
 MODEL_PATH="https://download.openmmlab.com/mmdetection3d/v1.0.0_models"
 OLD_MODELPATH="https://download.openmmlab.com/mmdetection3d/v0.1.0_models"
-MMDET3D_CKPT="mmdet3d/checkpoints"
+
+MMDET3D_CKPT="${SAVEFOLDER}/checkpoints"
+MMDET3D_WKDIR="${SAVEFOLDER}/work_dirs"
 mkdir -p "$MMDET3D_CKPT"
-MMDET3D_WKDIR="mmdet3d/work_dirs"
 mkdir -p "$MMDET3D_WKDIR"
 
 download_models () {
@@ -28,6 +34,7 @@ download_models () {
 
     fi
 }
+
 
 KITTI_PILLARS="hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class_20220301_150306-37dc2420.pth"
 download_models "kitti" "pointpillars" "$KITTI_PILLARS"
