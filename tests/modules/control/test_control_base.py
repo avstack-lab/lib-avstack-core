@@ -10,6 +10,7 @@
 
 import numpy as np
 
+from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     NominalTransform,
     Rotation,
@@ -20,7 +21,6 @@ from avstack.geometry import (
     bbox,
 )
 from avstack.modules import control
-from avstack.objects import VehicleState
 
 
 def get_object(seed):

@@ -8,8 +8,8 @@ import numpy as np
 import quaternion
 from filterpy.kalman import KalmanFilter
 
-from avstack import transformations as tforms
 from avstack.geometry import Box2D, Box3D
+from avstack.geometry import transformations as tforms
 
 
 class EagerMOTTrack:

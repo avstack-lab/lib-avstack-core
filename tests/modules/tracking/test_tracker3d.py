@@ -52,7 +52,7 @@ def test_groundtruth_tracking():
         frame, timestamp, ego_state=ego, objects=[obj1]
     )
     tracker = tracking.tracker3d.GroundTruthTracker()
-    tracks = tracker(frame, ground_truth, "tracker-1")
+    tracks = tracker(ground_truth, frame=frame, identifier="tracker-1")
     assert np.all(tracks[0].position == obj1.position)
     assert np.all(tracks[0].velocity == obj1.velocity)
 
@@ -119,7 +119,7 @@ def test_basic_box_tracker():
     dets_3d_all = make_kitti_tracking_data(n_frames=n_frames)
     tracker = tracking.tracker3d.BasicBoxTracker(framerate=10)
     for frame, dets_3d in enumerate(dets_3d_all):
-        tracks = tracker(frame, dets_3d)
+        tracks = tracker(dets_3d, frame=frame, identifier='tracker-1')
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
         for det in dets_3d_all[-1]:
@@ -136,7 +136,7 @@ def test_basic_joint_box_tracker():
     )
     tracker = tracking.tracker3d.BasicBoxTrackerFusion3Stage(framerate=10)
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
-        tracks = tracker(frame, dets_2d, dets_3d, "tracker-1")
+        tracks = tracker(dets_2d, dets_3d, frame=frame, identifier="tracker-1")
     assert len(tracks) == n_targs
 
 
@@ -145,7 +145,7 @@ def test_ab3dmot_kitti():
     dets_3d_all = make_kitti_tracking_data(n_frames=n_frames)
     tracker = tracking.tracker3d.Ab3dmotTracker(framerate=10)
     for frame, dets_3d in enumerate(dets_3d_all):
-        tracks = tracker(frame, dets_3d)
+        tracks = tracker(dets_3d, frame=frame, identifier='tracker-1')
 
 
 def test_eagermot_fusion_kitti():
@@ -215,7 +215,7 @@ def test_eagermot_associations():
             assert len(assign_1) == len(dets_2d) == len(dets_3d)
 
         # run for real
-        tracks = tracker(frame, dets_2d, dets_3d, "tracker-1")
+        tracks = tracker(dets_2d, dets_3d, frame=frame, identifier="tracker-1")
         if i == 1:
             assert (
                 len(tracks) == tracker.n_tracks_confirmed == 0
@@ -234,7 +234,7 @@ def test_eagermot_performance():
     tracker = tracking.tracker3d.EagermotTracker(framerate=10)
     tracks = tracker.tracker
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
-        tracks = tracker(frame, dets_2d, dets_3d, "tracker-1")
+        tracks = tracker(dets_2d, dets_3d, frame=frame, tracker="tracker-1")
     assert len(tracks) == n_targs
     for i, trk in enumerate(tracks):
         for det in dets_3d:

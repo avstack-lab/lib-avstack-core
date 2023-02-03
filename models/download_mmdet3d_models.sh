@@ -2,10 +2,13 @@
 
 set -e
 
-SAVEFOLDER=${1:-/data/$(whoami)/models/mmdet3d}
+SAVEFOLDER=${1:-/data/$(whoami)/models}
 SAVEFOLDER=${SAVEFOLDER%/}  # remove trailing slash
+SAVEFOLDER="$SAVEFOLDER/mmdet3d"
 
 echo "Downloading models and saving to $SAVEFOLDER"
+
+THISDIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 MODEL_PATH="https://download.openmmlab.com/mmdetection3d/v1.0.0_models"
 OLD_MODELPATH="https://download.openmmlab.com/mmdetection3d/v0.1.0_models"
@@ -49,5 +52,5 @@ download_models "nuscenes" "pgd" "$NUSC_PGD"
 
 
 echo "Adding symbolic link to mmdet3d directory"
-ln -sfnT $(realpath "$MMDET3D_CKPT") ../third_party/mmdetection3d/checkpoints
-ln -sfnT $(realpath "$MMDET3D_WKDIR") ../third_party/mmdetection3d/work_dirs
+ln -sfnT $(realpath "$MMDET3D_CKPT") "$THISDIR/../third_party/mmdetection3d/checkpoints"
+ln -sfnT $(realpath "$MMDET3D_WKDIR") "$THISDIR/../third_party/mmdetection3d/work_dirs"

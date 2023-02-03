@@ -8,15 +8,13 @@
 
 """
 
-from copy import copy, deepcopy
-
 import numpy as np
 import quaternion
 from numba import jit
 from numba.types import float64, int64
 
-from avstack import transformations as tforms
 from avstack.geometry import CameraCoordinates, StandardCoordinates
+from avstack.geometry import transformations as tforms
 
 from .base import q_mult_vec
 
@@ -396,7 +394,7 @@ class Rotation:
         if hash(q1.tobytes()) == hash(q2.tobytes()):
             return True
         else:
-            return quaternion.allclose(q1, q2)
+            return quaternion.allclose(q1, q2, atol=1e-8, rtol=1e-7)
 
     def __eq__(self, other):
         if isinstance(other, np.quaternion):

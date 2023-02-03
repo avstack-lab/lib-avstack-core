@@ -1,0 +1,16 @@
+site_name: AVstack-core
+site_url: https://avstack.org
+docs_dir: docs
+theme:
+  name: material
+
+plugins:
+  - search  # To have search functionality on the document
+  - mkdocstrings  # To generate documentation from the code docstrings
+
+nav: # Setting up the navigation. Te below list will be tabs on left panel
+  - Sensors: core/sensors.md
+  - About:
+    - Installation: about/installation.md
+    - License: about/license.md
+    - Release Notes: about/release-notes.md

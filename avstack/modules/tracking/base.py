@@ -13,8 +13,8 @@ import shutil
 
 import numpy as np
 
+from avstack.environment.objects import VehicleState
 from avstack.modules.perception.detections import BoxDetection
-from avstack.objects import VehicleState
 
 
 class _TrackingAlgorithm:
@@ -67,13 +67,13 @@ class _TrackingAlgorithm:
                 A[i, j] = cost
         return A
 
-    def __call__(self, frame, *args, **kwargs):
-        self.frame = frame
+    def __call__(self, *args, **kwargs):
+        self.frame = kwargs.get('frame')
         self.iframe += 1
         tracks = self.track(*args, **kwargs)
         if self.save:
             trk_str = "\n".join([trk.format_as("avstack") for trk in tracks])
-            fname = os.path.join(self.save_folder, "%06d.txt" % frame)
+            fname = os.path.join(self.save_folder, "%06d.txt" % self.frame)
             with open(fname, "w") as f:
                 f.write(trk_str)
         return tracks

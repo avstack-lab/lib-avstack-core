@@ -14,13 +14,13 @@ import quaternion
 
 import avstack
 from avstack import GroundTruthInformation
-from avstack import transformations as tforms
 from avstack.environment import EnvironmentState
+from avstack.environment.objects import VehicleState
 from avstack.geometry import NominalOriginStandard, bbox
+from avstack.geometry import transformations as tforms
 from avstack.modules import planning, prediction, tracking
 from avstack.modules.perception.detections import LaneLineInSpace
 from avstack.modules.planning.components import CollisionDetection
-from avstack.objects import VehicleState
 
 
 sys.path.append("tests/")
@@ -118,10 +118,10 @@ def test_collision_detection():
         frame, timestamp, ego_state=ego, objects=[obj0, obj1, obj2]
     )
     tracker = tracking.tracker3d.GroundTruthTracker()
-    tracks = tracker(frame, ground_truth)
-    pred_ego = predictor(frame, tracks)
+    tracks = tracker(ground_truth, frame=frame)
+    pred_ego = predictor(tracks, frame=frame)
     pred_ego = pred_ego[list(pred_ego.keys())[0]]
-    preds_3d = predictor(frame, tracks)
+    preds_3d = predictor(tracks, frame=frame)
     collision_detection = CollisionDetection(ego, tracks)
     collision_records = collision_detection.collision_monitor(pred_ego, preds_3d)
 

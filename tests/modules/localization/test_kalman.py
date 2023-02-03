@@ -14,12 +14,12 @@ import pickle
 import numpy as np
 import quaternion
 
-from avstack import transformations as tforms
 from avstack.calibration import NominalCalibration as nom_calib
 from avstack.datastructs import DataManager
+from avstack.environment.objects import VehicleState
 from avstack.geometry import NominalOriginStandard, StandardCoordinates
+from avstack.geometry import transformations as tforms
 from avstack.modules import localization
-from avstack.objects import VehicleState
 from avstack.sensors import GpsData, ImuData
 
 

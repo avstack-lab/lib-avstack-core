@@ -11,7 +11,7 @@ from copy import copy, deepcopy
 
 import numpy as np
 
-import avstack.utils.maskfilters as maskfilters
+import avstack.maskfilters as maskfilters
 
 
 sys.path.append("tests/")

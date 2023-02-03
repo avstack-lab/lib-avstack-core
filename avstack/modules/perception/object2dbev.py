@@ -14,7 +14,7 @@ import numpy as np
 import scipy.spatial.distance
 from scipy import stats
 
-from avstack.utils import maskfilters
+from avstack import maskfilters
 
 from .base import _PerceptionAlgorithm
 from .detections import CentroidDetection

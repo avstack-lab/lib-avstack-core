@@ -38,4 +38,4 @@ def test_mmdet_2d_perception():
         print("Cannot run mmdet test without the module")
     else:
         detector = perception.object2dfv.MMDetObjectDetector2D()
-        detections = detector(frame, img, "camera_objects_2d")
+        detections = detector(img, frame=frame, identifier="camera_objects_2d")

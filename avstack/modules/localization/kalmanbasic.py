@@ -11,9 +11,8 @@
 import numpy as np
 import quaternion
 
-from avstack import datastructs
-from avstack import transformations as tforms
 from avstack.geometry import NominalOriginStandard
+from avstack.geometry import transformations as tforms
 from avstack.sensors import DataBuffer, ImuBuffer
 
 from .base import _LocalizationAlgorithm

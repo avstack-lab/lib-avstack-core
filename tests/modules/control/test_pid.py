@@ -11,7 +11,7 @@
 import numpy as np
 import quaternion
 
-import avstack.transformations as tforms
+from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     NominalOriginStandard,
     Rotation,
@@ -20,9 +20,9 @@ from avstack.geometry import (
     Vector,
     bbox,
 )
+from avstack.geometry import transformations as tforms
 from avstack.modules import control
 from avstack.modules.planning import Waypoint, WaypointPlan
-from avstack.objects import VehicleState
 
 
 def test_pid_base():

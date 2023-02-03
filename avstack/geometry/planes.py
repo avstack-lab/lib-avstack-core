@@ -10,7 +10,7 @@
 import numpy as np
 import quaternion
 
-from .transforms import NominalOriginStandard, Origin, Rotation, Transform, Translation
+from .primitives import NominalOriginStandard, Origin, Rotation, Transform, Translation
 
 
 def plane_2_transform(plane):

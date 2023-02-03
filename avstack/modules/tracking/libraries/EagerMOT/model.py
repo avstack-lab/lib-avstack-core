@@ -8,6 +8,7 @@ import numpy as np
 
 import avstack
 from avstack.datastructs import DataContainer, OneEdgeBipartiteGraph
+from avstack.environment.objects import IOU_2d, IOU_3d
 from avstack.geometry import Box2D, Box3D
 from avstack.modules import assignment
 from avstack.modules.perception.detections import (
@@ -15,7 +16,6 @@ from avstack.modules.perception.detections import (
     JointBoxDetection,
     JointBoxDetectionAndOther,
 )
-from avstack.objects import IOU_2d, IOU_3d
 
 from .kalman import EagerMOTTrack
 

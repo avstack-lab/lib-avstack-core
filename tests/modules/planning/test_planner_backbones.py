@@ -12,8 +12,8 @@ import sys
 import numpy as np
 
 import avstack
-from avstack import transformations as tforms
 from avstack.environment import EnvironmentState
+from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     NominalOriginStandard,
     Rotation,
@@ -22,10 +22,10 @@ from avstack.geometry import (
     Vector,
     bbox,
 )
+from avstack.geometry import transformations as tforms
 from avstack.modules import planning
 from avstack.modules.perception.detections import LaneLineInSpace
 from avstack.modules.planning.vehicle import components
-from avstack.objects import VehicleState
 
 
 sys.path.append("tests/")

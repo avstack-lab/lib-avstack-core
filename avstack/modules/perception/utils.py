@@ -7,8 +7,11 @@
 
 import numpy as np
 
-import avstack
-from avstack.geometry import q_mult_vec
+from avstack.geometry import q_cam_to_stan
+from avstack.geometry.bbox import Box2D, Box3D, SegMask2D
+from avstack.geometry.transformations import transform_orientation
+
+from .detections import BoxDetection, MaskDetection
 
 
 car_classes = ["car", "Car", "vehicle"]
@@ -95,18 +98,16 @@ def convert_mm2d_to_avstack(
     # -- make objects
     if segms is None:
         dets = [
-            avstack.modules.perception.detections.BoxDetection(
-                source_identifier, avstack.geometry.Box2D(bbox, calib), obj_type, score
-            )
+            BoxDetection(source_identifier, Box2D(bbox, calib), obj_type, score)
             for bbox, obj_type, score in zip(bboxes, obj_type_text, scores)
             if obj_type in whitelist
         ]
     else:
         dets = [
-            avstack.modules.perception.detections.MaskDetection(
+            MaskDetection(
                 source_identifier,
-                avstack.geometry.Box2D(bbox, calib),
-                avstack.geometry.SegMask2D(segm, calib),
+                Box2D(bbox, calib),
+                SegMask2D(segm, calib),
                 obj_type,
                 score,
             )
@@ -169,9 +170,7 @@ def convert_mm3d_to_avstack(
                     h, w, l = ten[5].item(), ten[4].item(), ten[3].item()
                     if dataset == "kitti":
                         yaw = box.yaw.item()
-                        q_S_2_obj = avstack.transformations.transform_orientation(
-                            [0, 0, yaw], "euler", "quat"
-                        )
+                        q_S_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         q_O_2_obj = q_S_2_obj  # sensor is our origin
                         x_O_2_obj_in_O = cent
                         if "ssn" in model_3d.cfg.filename:
@@ -183,15 +182,15 @@ def convert_mm3d_to_avstack(
                     elif dataset == "nuscenes":
                         yaw = box.yaw.item()
                         if "pointpillars" in model_3d.cfg.filename:
-                            q_O1_2_obj = avstack.transformations.transform_orientation(
+                            q_O1_2_obj = transform_orientation(
                                 [0, 0, -yaw], "euler", "quat"
                             )
-                            q_O_2_O1 = avstack.transformations.transform_orientation(
+                            q_O_2_O1 = transform_orientation(
                                 [0, 0, -np.pi / 2], "euler", "quat"
                             )
                             q_O_2_obj = q_O1_2_obj * q_O_2_O1
                         else:
-                            q_O1_2_obj = avstack.transformations.transform_orientation(
+                            q_O1_2_obj = transform_orientation(
                                 [0, 0, yaw], "euler", "quat"
                             )
                             q_O_2_obj = q_O1_2_obj
@@ -200,18 +199,14 @@ def convert_mm3d_to_avstack(
                         origin = calib.origin
                     elif dataset == "carla":
                         yaw = box.yaw.item()
-                        q_O_2_obj = avstack.transformations.transform_orientation(
-                            [0, 0, yaw], "euler", "quat"
-                        )
+                        q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += h  # whoops
                         where_is_t = "center"
                         origin = calib.origin
                     elif dataset == "carla-infrastructure":
                         yaw = box.yaw.item()  # yaw is in O's frame here!!
-                        q_O_2_obj = avstack.transformations.transform_orientation(
-                            [0, 0, yaw], "euler", "quat"
-                        )
+                        q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += 1.8
                         where_is_t = "bottom"
@@ -222,19 +217,15 @@ def convert_mm3d_to_avstack(
                     w, h, l = ten[5].item(), ten[4].item(), ten[3].item()
                     if dataset == "kitti":
                         yaw = box.yaw.item() - np.pi / 2
-                        q_L_2_obj = avstack.transformations.transform_orientation(
-                            [0, 0, -yaw], "euler", "quat"
-                        )
-                        q_C_2_obj = q_L_2_obj * avstack.geometry.q_cam_to_stan
+                        q_L_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
+                        q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
                         where_is_t = "bottom"
                         origin = calib.origin  # camera origin
                     elif dataset == "nuscenes":
                         yaw = box.yaw.item() - np.pi / 2
-                        q_L_2_obj = avstack.transformations.transform_orientation(
-                            [0, 0, -yaw], "euler", "quat"
-                        )
-                        q_C_2_obj = q_L_2_obj * avstack.geometry.q_cam_to_stan
+                        q_L_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
+                        q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
                         where_is_t = "bottom"
                         origin = calib.origin
@@ -246,7 +237,7 @@ def convert_mm3d_to_avstack(
                     raise NotImplementedError(model_3d.cfg.filename)
 
                 # make box output
-                box3d = avstack.geometry.bbox.Box3D(
+                box3d = Box3D(
                     [h, w, l, x_O_2_obj_in_O, q_O_2_obj],
                     origin=origin,
                     where_is_t=where_is_t,
@@ -272,9 +263,5 @@ def convert_mm3d_to_avstack(
                 # ---- we made it!
                 prev_locs.append(x_O_2_obj_in_O)
                 score = obj_base["scores_3d"][i_box].item()
-                dets.append(
-                    avstack.modules.perception.detections.BoxDetection(
-                        source_identifier, box3d, obj_type, score
-                    )
-                )
+                dets.append(BoxDetection(source_identifier, box3d, obj_type, score))
     return dets

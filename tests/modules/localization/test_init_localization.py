@@ -14,9 +14,9 @@ import numpy as np
 import quaternion
 
 from avstack import GroundTruthInformation
+from avstack.environment.objects import VehicleState
 from avstack.geometry import NominalOriginStandard, bbox
 from avstack.modules import localization
-from avstack.objects import VehicleState
 
 
 def test_init_ground_truth():

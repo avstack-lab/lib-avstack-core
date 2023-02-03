@@ -14,8 +14,8 @@ import numpy as np
 import quaternion
 from cv2 import imread
 
-from avstack import transformations as tforms
 from avstack.calibration import Calibration, CameraCalibration
+from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     Box3D,
     NominalOriginCamera,
@@ -27,8 +27,8 @@ from avstack.geometry import (
     q_cam_to_stan,
     q_stan_to_cam,
 )
+from avstack.geometry import transformations as tforms
 from avstack.modules.perception import detections
-from avstack.objects import VehicleState
 from avstack.sensors import ImageData, LidarData
 
 

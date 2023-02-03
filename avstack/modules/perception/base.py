@@ -29,9 +29,9 @@ class _PerceptionAlgorithm:
             os.makedirs(self.save_folder)
         self.iframe = -1
 
-    def __call__(self, frame, *args, **kwargs):
+    def __call__(self, data, frame=-1, identifier='', *args, **kwargs):
         self.iframe += 1
-        detections = self._execute(*args, **kwargs)
+        detections = self._execute(data, frame=frame, identifier=identifier, *args, **kwargs)
         if self.save:
             per_str = "\n".join([det.format_as_string() for det in detections])
             fname = os.path.join(self.save_folder, "%06i.txt" % frame)

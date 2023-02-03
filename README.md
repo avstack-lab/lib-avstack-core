@@ -44,7 +44,7 @@ This will download the models to the `models` folder and will *attempt* to estab
 
 ### RSS w/ Python Bindings (optional)
 
-To use the safety library, build `ad-lib-rss` with python bindings. Try running `rebuild.sh` in `ad-lib-rss` submodule. Otherwise, follow the instructions [HERE](https://intel.github.io/ad-rss-lib/BUILDING/) and [HERE](https://intel.github.io/ad-rss-lib/ad_rss/ad_rss_python/index.html). Make sure to build with a python version that `poetry` is using for this project (check `pyproject.toml`.). To verify your installation is compatible with `avstack`, once installed, try running
+To use the safety library, build `ad-lib-rss` with python bindings. Try running `rebuild.sh` in `ad-lib-rss` submodule. Otherwise, follow the instructions [HERE](https://intel.github.io/ad-rss-lib/BUILDING/) and [HERE](https://intel.github.io/ad-rss-lib/ad_rss/ad_rss_python/index.html). Make sure to build with a python version that `poetry` is using for this project (check `pyproject.toml`.). *NOTE: You may need to install ROS2 for a successful build of RSS*. To verify your installation is compatible with `avstack`, once installed, try running
 ```
 poetry run pytest tests/modules/safety
 ```

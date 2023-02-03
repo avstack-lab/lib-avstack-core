@@ -51,7 +51,7 @@ def test_groundtruth_perception():
 
     # -- test update
     percep = perception.object3d.GroundTruth3DObjectDetector()
-    detections = percep(frame, ground_truth, "percep-1")
+    detections = percep(ground_truth, frame=frame, identifier="percep-1")
     assert np.allclose(detections[0].box.t.vector, obj_local.position.vector)
 
 
@@ -62,7 +62,7 @@ def test_mmdet_3d_perception_kitti():
         print("Cannot run mmdet test without the module")
     else:
         detector = perception.object3d.MMDetObjectDetector3D()
-        detections = detector(frame, pc, "lidar_objects_3d")
+        detections = detector(pc, frame=frame, identifier="lidar_objects_3d")
         for det in detections:
             if det.box.t.distance(obj.box.t):
                 break

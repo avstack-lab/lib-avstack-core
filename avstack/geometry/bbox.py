@@ -14,13 +14,13 @@ from scipy import sparse
 from scipy.spatial import ConvexHull
 from scipy.spatial.qhull import QhullError
 
-import avstack.transformations as tforms
 from avstack import calibration, exceptions
+from avstack.geometry import transformations as tforms
 
 from ..calibration import read_calibration_from_line
 from .base import q_mult_vec
 from .coordinates import CameraCoordinates, LidarCoordinates, StandardCoordinates
-from .transforms import (
+from .primitives import (
     Origin,
     Rotation,
     Transform,
@@ -167,6 +167,9 @@ class Box2D:
     def __eq__(self, other):
         return np.allclose(self.box2d, other.box2d)
 
+    def deepcopy(self):
+        return deepcopy(self)
+
     def check_valid(self, im_h, im_w):
         return self._x_valid(im_w) and self._y_valid(im_h)
 
@@ -263,7 +266,7 @@ class Box3D:
 
     def __str__(self):
         return (
-            "Box3D=[h: %.2f, w: %.2f, l: %.2f] x (x: %.2f y: %.2f, z: %.2f)\n  q: %s with origin: %s\n"
+            "Box3D=[h: %.2f, w: %.2f, l: %.2f] x (x: %.2f y: %.2f, z: %.2f)\n  q: %s with origin: %s"
             % (
                 self.h,
                 self.w,
@@ -281,6 +284,9 @@ class Box3D:
         c2 = self.t == other.t
         c3 = self.q == other.q
         return c1 and c2 and c3
+
+    def deepcopy(self):
+        return deepcopy(self)
 
     def allclose(self, other):
         c1 = (
@@ -451,7 +457,7 @@ class Box3D:
                 raise RuntimeError("Invalid iou output")
         else:
             raise NotImplementedError(metric)
-        return iou
+        return max(0.0, min(1.0, iou))
 
     def rotate(self, q):
         """Rotates the attitude AND the translation of the box"""

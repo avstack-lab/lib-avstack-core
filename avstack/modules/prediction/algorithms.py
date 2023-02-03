@@ -27,7 +27,7 @@ class _PredictionAlgorithm:
                 shutil.rmtree(self.save_folder)
             os.makedirs(self.save_folder)
 
-    def __call__(self, frame, objects, *args, **kwargs):
+    def __call__(self, objects, frame, *args, **kwargs):
         """
         TODO: could make saving faster with multiproc too
         """

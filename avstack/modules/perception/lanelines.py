@@ -16,7 +16,7 @@ from avstack.modules.perception.base import _PerceptionAlgorithm
 class GroundTruthLaneLineDetector(_PerceptionAlgorithm):
     MODE = "lane lines"
 
-    def __call__(self, frame, ground_truth, *args, **kwargs):
+    def __call__(self, ground_truth, *args, **kwargs):
         """Wrap ground truths to detections"""
         return ground_truth.lane_lines
 

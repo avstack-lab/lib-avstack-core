@@ -15,6 +15,7 @@ import numpy as np
 
 from avstack.calibration import Calibration, CameraCalibration
 from avstack.datastructs import DataManager
+from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     Box3D,
     CameraCoordinates,
@@ -25,7 +26,6 @@ from avstack.geometry import (
     bbox,
 )
 from avstack.modules import perception
-from avstack.objects import VehicleState
 from avstack.sensors import LidarData
 
 

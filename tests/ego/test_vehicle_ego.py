@@ -16,7 +16,8 @@ import quaternion
 
 from avstack import GroundTruthInformation
 from avstack import datastructs as ds
-from avstack import ego, objects
+from avstack import ego
+from avstack.environment import objects
 from avstack.geometry import Rotation, Transform, Translation, Vector, bbox
 
 

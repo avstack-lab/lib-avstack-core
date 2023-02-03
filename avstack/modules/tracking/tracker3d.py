@@ -13,10 +13,10 @@ from copy import deepcopy
 import numpy as np
 from filterpy.kalman import KalmanFilter
 
-from avstack import transformations as tforms
+from avstack.environment.objects import VehicleState
 from avstack.geometry import Box2D, Box3D
+from avstack.geometry import transformations as tforms
 from avstack.modules.perception.detections import BoxDetection
-from avstack.objects import VehicleState
 
 from ..assignment import build_A_from_iou, gnn_single_frame_assign, greedy_assignment
 from . import libraries
@@ -28,14 +28,13 @@ class GroundTruthTracker(_TrackingAlgorithm):
         self.is_ground_truth = True
         super().__init__(**kwargs)
 
-    def __call__(self, frame, ground_truth, *args, **kwargs):
+    def __call__(self, ground_truth, *args, **kwargs):
         return ground_truth.objects
 
 
 # ==============================================================
 # BASIC BOX TRACKER
 # ==============================================================
-
 
 class BasicBoxTracker(_TrackingAlgorithm):
     def __init__(

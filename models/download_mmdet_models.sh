@@ -2,8 +2,11 @@
 
 set -e
 
-SAVEFOLDER=${1:-/data/$(whoami)/models/mmdet}
+SAVEFOLDER=${1:-/data/$(whoami)/models}
 SAVEFOLDER=${SAVEFOLDER%/}  # remove trailing slash
+SAVEFOLDER="$SAVEFOLDER/mmdet"
+
+THISDIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 echo "Downloading models and saving to $SAVEFOLDER"
 
@@ -37,5 +40,5 @@ CITYSCAPES_MRCNN="mask_rcnn_r50_fpn_1x_cityscapes/mask_rcnn_r50_fpn_1x_cityscape
 download_models "cityscapes" "cityscapes" "$CITYSCAPES_MRCNN"
 
 echo "Adding symbolic link to mmdet directory"
-ln -sf $(realpath "$MMDET_CKPT") ../third_party/mmdetection/checkpoints
-ln -sf $(realpath "$MMDET_WKDIR") ../third_party/mmdetection/work_dirs
+ln -sf $(realpath "$MMDET_CKPT") "$THISDIR/../third_party/mmdetection/checkpoints"
+ln -sf $(realpath "$MMDET_WKDIR") "$THISDIR/../third_party/mmdetection/work_dirs"

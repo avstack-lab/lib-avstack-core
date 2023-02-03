@@ -5,28 +5,28 @@
 # @Last Modified date: 2022-10-22
 # @Description:
 """
-
+Custom sensor data structures to standardize interfaces to data
+and provide maximal forward, backward compatibility.
 """
+from __future__ import annotations
+
 import os
-from copy import copy, deepcopy
-from operator import itemgetter
+from copy import deepcopy
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-from scipy.sparse import coo_matrix
-from scipy.sparse.csgraph import maximum_bipartite_matching
-from tqdm import tqdm
 
-from avstack import datastructs, messages
-from avstack import transformations as tforms
+from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration
-from avstack.geometry import Origin, q_mult_vec
-from avstack.utils import maskfilters
+from avstack.geometry import Origin
+from avstack.geometry import transformations as tforms
 
 
 class SensorData:
+    """Base class for sensor data structure"""
+
     def __init__(
         self, timestamp, frame, data, calibration, source_ID, source_name, **kwargs
     ):
@@ -42,10 +42,12 @@ class SensorData:
 
     @property
     def shape(self):
+        """list: Returns the shape of the data."""
         return self.data.shape
 
     @property
     def origin(self):
+        """avstack.calibration.Origin: Returns origin of the sensor when data captured."""
         return self.calibration.origin
 
     @property
@@ -53,6 +55,7 @@ class SensorData:
         return self.source_identifier
 
     def __getitem__(self, index):
+        """Indexes into sensor data list/array"""
         s = deepcopy(self)
         s.data = s.data[index]
         return s
@@ -62,12 +65,6 @@ class SensorData:
         creates a transformation object that transforms
         """
         raise NotImplementedError
-
-    def change_origin(self, origin_new):
-        raise NotImplementedError
-
-    def project(self, calib_other):
-        raise NotImplementedError(f"{type(self)} has not implemented project")
 
     def view(self):
         raise NotImplementedError
@@ -87,11 +84,49 @@ class SensorData:
 
 
 class ImuData(SensorData):
+    """IMU datastructure
+
+    Attributes:
+        timestamp (float):
+            The time of the sensor data capture
+        frame (int):
+            The discrete frame when data were captured
+        source_ID (int):
+            Unique identifier for this sensor
+        source_name (str):
+            Name characterizing the sensor
+        source_identifier (str):
+            Concatenation of the source name and ID
+        data (dict):
+            Dictionary containing: dt, dv, dth, R
+        calibration (str):
+            A calibration class describing the sensor's state
+    """
+
     def __init__(self, *args, source_name="imu", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
 
 class GpsData(SensorData):
+    """GPS datastructure
+
+    Attributes:
+        timestamp (float):
+            The time of the sensor data capture
+        frame (int):
+            The discrete frame when data were captured
+        source_ID (int):
+            Unique identifier for this sensor
+        source_name (str):
+            Name characterizing the sensor
+        source_identifier (str):
+            Concatenation of the source name and ID
+        data (np.ndarray):
+            Data for this sensor
+        calibration (str):
+            A calibration class describing the sensor's state
+    """
+
     def __init__(
         self,
         *args,
@@ -104,6 +139,25 @@ class GpsData(SensorData):
 
 
 class ImageData(SensorData):
+    """Image datastructure
+
+    Attributes:
+        timestamp (float):
+            The time of the sensor data capture
+        frame (int):
+            The discrete frame when data were captured
+        source_ID (int):
+            Unique identifier for this sensor
+        source_name (str):
+            Name characterizing the sensor
+        source_identifier (str):
+            Concatenation of the source name and ID
+        data (np.ndarray):
+            Data for this sensor. Monocular would be [N x M x 1], color [N x M x 3]
+        calibration (str):
+            A calibration class describing the sensor's state
+    """
+
     def __init__(self, *args, source_name="image", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
@@ -120,6 +174,25 @@ class ImageData(SensorData):
 
 
 class DepthImageData(SensorData):
+    """Depth image datastructure
+
+    Attributes:
+        timestamp (float):
+            The time of the sensor data capture
+        frame (int):
+            The discrete frame when data were captured
+        source_ID (int):
+            Unique identifier for this sensor
+        source_name (str):
+            Name characterizing the sensor
+        source_identifier (str):
+            Concatenation of the source name and ID
+        data (np.ndarray):
+            Depth image in format of [N x M x 1]
+        calibration (str):
+            A calibration class describing the sensor's state
+    """
+
     def __init__(self, *args, source_name="depthimage", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
         self.depth_in_meters = None
@@ -135,9 +208,11 @@ class DepthImageData(SensorData):
         return self.depth_in_meters
 
     def save_to_file(self, filepath):
+        """Save image to file with opencv"""
         save_image_file(self.data, filepath, self.source_name)
 
     def view(self, axis=False, extent=None):
+        """View image using matplotlib"""
         pil_im = Image.fromarray(self.depths)
         plt.figure(figsize=[2 * x for x in plt.rcParams["figure.figsize"]])
         plt.imshow(pil_im, extent=extent)
@@ -147,6 +222,27 @@ class DepthImageData(SensorData):
 
 
 class LidarData(SensorData):
+    """LiDAR point cloud datastructure
+
+    Attributes:
+        timestamp (float):
+            The time of the sensor data capture
+        frame (int):
+            The discrete frame when data were captured
+        source_ID (int):
+            Unique identifier for this sensor
+        source_name (str):
+            Name characterizing the sensor
+        source_identifier (str):
+            Concatenation of the source name and ID
+        data (np.ndarray):
+            Point cloud matrix of size [# points, # features]
+        calibration (str):
+            A calibration class describing the sensor's state
+        n_features (int):
+            Number of features for the LiDAR data (e.g., (X, Y, Z, Int))
+    """
+
     def __init__(self, *args, source_name="lidar", n_features=4, **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
         self.n_features = n_features
@@ -154,15 +250,15 @@ class LidarData(SensorData):
     def __len__(self):
         return self.data.shape[0]
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: tuple | int):
         if isinstance(key, tuple):
             return self.data[key[0], key[1]]
         elif isinstance(key, int):
-            return self.data[key[0], :]
+            return self.data[key, :]
         else:
             raise NotImplementedError(key)
 
-    def filter_by_range(self, min_range, max_range, inplace=True):
+    def filter_by_range(self, min_range: float, max_range: float, inplace=True):
         if (min_range is not None) or (max_range is not None):
             min_range = 0 if min_range is None else min_range
             max_range = np.inf if max_range is None else max_range
@@ -172,7 +268,7 @@ class LidarData(SensorData):
             if not inplace:
                 return deepcopy(self)
 
-    def filter(self, mask, inplace=True):
+    def filter(self, mask, inplace: bool = True):
         if inplace:
             self.data = self.data[mask, :]
         else:
@@ -219,7 +315,7 @@ class LidarData(SensorData):
         )
         self.calibration.change_origin(origin_new)
 
-    def save_to_file(self, filepath, flipy=False, as_ply=False):
+    def save_to_file(self, filepath: str, flipy: bool = False, as_ply: bool = False):
         if isinstance(self.data, np.ndarray):
             if as_ply:
                 if not filepath.endswith(".ply"):
@@ -258,8 +354,8 @@ class LidarData(SensorData):
                 pass
             raise NotImplementedError(self.data)
 
-    def as_spherical_matrix(self, rate, sensor):
-        """Converts data to spherical matrix"""
+    def as_spherical_matrix(self, rate: float, sensor: str):
+        """Converts cartesian point cloud data to spherical matrix"""
         if sensor.lower() == "kitti":
             sensor = "hdl-64e"
         elif sensor.lower() == "nuscenes":
@@ -357,72 +453,29 @@ class LidarData(SensorData):
                 still_conflict.append(conflict)
         return AE_M, azimuths, elevations
 
-    def as_pseudo_packets(self, rate, sensor=None):
-        """Converts lidar data to pseudo-packets in velodyne format
-
-        KITTI uses:
-            - Velodyne HDL-64E
-            - 64 lines
-            - 10 Hz capture
-            - single return mode
-
-        nuScenes uses:
-            - Velodyne 32
-            - 32-line lidar
-            - vertical FOV from -30 to 10 degrees
-            - range of 70m
-            - 20 Hz capture rate
-            - single return mode
-
-        WaymoOpenDataset uses
-            - range of 75m
-            - 10 Hz capture rate
-            - vertical FOV from -17.6 to 2.4 degrees
-            - dual return mode
-
-        Steps:
-        1. convert cartesian to spherical
-        2. bin along elevation
-        3. bin along azimuth
-        """
-
-        # get number of things that will be computed
-        n_el_per_block = min(len(elevations), packet_height)
-        n_az_per_block = packet_height / n_el_per_block
-        n_az_per_packet = (packet_height * packet_width) / len(elevations)
-        n_packets_per_sweep = int(len(azimuths) / n_az_per_packet)
-
-        # make pseudo packets incrementally
-        pseudo_packets = []
-        t0 = self.timestamp
-        for i in range(n_packets_per_sweep):
-            header = messages.VelodyneHeader()
-            data_blocks = []
-            timestamp = t0 + firing_time * n_az_per_block * packet_width * i
-            for j in range(0, len(elevations), n_el_per_block):
-                el_this = np.array(
-                    list(range(j * n_el_per_block, (j + 1) * n_el_per_block))
-                )
-                for k in range(0, n_az_per_packet):
-                    az_this = n_az_per_packet + k * n_az_per_block  # a single entry
-                    data = np.reshape(AE_M[az_this, el_this], -1)
-                    assert (
-                        len(data) == packet_height
-                    ), "Number of data elements must be packet height"
-                    data_blocks.append(
-                        messages.VelodyneDataBlock(azimuths[az_this], data)
-                    )
-            factory = messages.VelodyneFactory("StrongestReturn", sensor)
-            pseudo_packets.append(
-                messages.VelodynePseudoPacket(header, data_blocks, timestamp, factory)
-            )
-        return pseudo_packets
-
-    def as_packets(self, sensor=""):
-        raise NotImplementedError
-
 
 class ProjectedLidarData(SensorData):
+    """LiDAR point cloud projected into a 2D view
+
+    Attributes:
+        timestamp (float):
+            The time of the sensor data capture
+        frame (int):
+            The discrete frame when data were captured
+        source_ID (int):
+            Unique identifier for this sensor
+        source_name (str):
+            Name characterizing the sensor
+        source_identifier (str):
+            Concatenation of the source name and ID
+        data (np.ndarray):
+            Point cloud matrix of size [# points, # features]
+        calibration (str):
+            A calibration class describing the sensor's state
+        n_features (int):
+            Number of features for the LiDAR data (e.g., (X, Y, Z, Int))
+    """
+
     def __init__(self, *args, source_name="projected-lidar", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
@@ -439,11 +492,42 @@ class ProjectedLidarData(SensorData):
 
 
 class RadarDataRazelRRT(SensorData):
+    """Classic RADAR datastructure
+
+    Attributes:
+        timestamp (float):
+            The time of the sensor data capture
+        frame (int):
+            The discrete frame when data were captured
+        source_ID (int):
+            Unique identifier for this sensor
+        source_name (str):
+            Name characterizing the sensor
+        source_identifier (str):
+            Concatenation of the source name and ID
+        data (np.ndarray):
+            TODO
+        calibration (str):
+            A calibration class describing the sensor's state
+        n_features (int):
+            Number of features for the LiDAR data (e.g., (X, Y, Z, Int))
+    """
+
     def __init__(self, *args, source_name="radar", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
 
-def save_image_file(data, filepath, source_name, ext=".png"):
+def save_image_file(
+    data: np.ndarray, filepath: str, is_depth: bool = False, ext: str = ".png"
+):
+    """Saves image to a file with opencv
+
+    Args:
+        data (np.ndarray): Image matrix
+        filepath (str): File path to save image
+        is_depth (bool): True if image is depth image, false otherwise
+        ext (str): Image format extension
+    """
     ext_check = [".png", ".jpg", ".jpeg", ".tiff", ".tif"]
     for ext_c in ext_check:
         if filepath.endswith(ext_c):
@@ -455,7 +539,7 @@ def save_image_file(data, filepath, source_name, ext=".png"):
     else:
         try:
             if isinstance(data.raw_data, memoryview):
-                if source_name == "depthimage":
+                if is_depth:
                     data.save_to_disk(filepath)  # possibly convert to carla.Depth (?)
                 else:
                     data.save_to_disk(filepath)
@@ -469,18 +553,30 @@ def save_image_file(data, filepath, source_name, ext=".png"):
 # DATA BUFFERS
 # ==============================================
 
-
-class DataBuffer(datastructs.PriorityQueue):
-    TYPE = "DataBuffer"
+DataBuffer = datastructs.PriorityQueue
 
 
-class ImuBuffer(DataBuffer):
+class ImuBuffer(datastructs.PriorityQueue):
+    """IMU data buffer
+
+    Can perform accurate integration of IMU data up to some time.
+    Instantiated as a min-heap priority queue
+    """
+
     TYPE = "ImuBuffer"
 
     def __init__(self):
         super().__init__(max_size=None, max_heap=False)  # pop "earliest" first
 
-    def integrate_up_to(self, t_up_to):
+    def integrate_up_to(self, t_up_to: float):
+        """Integrate the IMU data in the buffer
+
+        Args:
+            t_up_to: time to integrate up to (exclusive)
+
+        Returns:
+            ImuData object with the integrated data.
+        """
         imu_elements = self.pop_all_below(t_up_to)
         dt_total = 0.0
         dv_total = np.zeros((3,))

@@ -10,9 +10,9 @@
 
 import numpy as np
 
+from avstack.environment.objects import VehicleState
 from avstack.geometry import StandardCoordinates, bbox
 from avstack.modules import tracking
-from avstack.objects import VehicleState
 
 
 def get_ego():

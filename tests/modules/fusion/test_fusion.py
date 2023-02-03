@@ -26,6 +26,6 @@ def test_track_to_track_CI():
     box2 = deepcopy(box1)
     track_1 = tracking.tracker3d.BasicBoxTrack3D(t0, box1, obj_type, framerate)
     track_2 = tracking.tracker3d.BasicBoxTrack3D(t0, box2, obj_type, framerate)
-    track_fused = fuser(frame, [track_1], [track_2])[0]
+    track_fused = fuser([track_1], [track_2], frame=frame)[0]
     assert fuser.ID_registry == {track_1.ID: {track_2.ID: track_fused.ID}}
     assert track_fused.box3d == box1

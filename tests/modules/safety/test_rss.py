@@ -9,8 +9,8 @@ from copy import copy, deepcopy
 
 import numpy as np
 
+from avstack.environment.objects import VehicleState
 from avstack.modules import localization, safety
-from avstack.objects import VehicleState
 
 
 sys.path.append("tests/")
