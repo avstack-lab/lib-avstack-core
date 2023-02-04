@@ -196,14 +196,12 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/nuscenes/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_nus-3d_20201021_120719-269f9dd6.pth"
             elif dataset == "carla":
                 threshold = 0.5
-                config_file = (
-                    "configs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-3d.py"
-                )
-                checkpoint_file = f"work_dirs/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-3d/{epoch_str}.pth"
+                config_file = "work_dirs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-3d.py"
+                checkpoint_file = f"work_dirs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-3d.pth"
             elif dataset == "carla-infrastructure":
                 threshold = 0.5
-                config_file = "configs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-infrastructure-3d.py"
-                checkpoint_file = f"work_dirs/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-infrastructure-3d/{epoch_str}.pth"
+                config_file = "work_dirs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-infrastructure-3d.py"
+                checkpoint_file = f"work_dirs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-infrastructure-3d.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
             input_data = "lidar"
@@ -219,9 +217,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             elif dataset == "carla-infrastructure":
                 threshold = 0.5
                 config_file = "configs/carla/3dssd_4x4_carla-infrastructure-3d.py"
-                checkpoint_file = (
-                    f"work_dirs/3dssd_4x4_carla-infrastructure-3d/{epoch_str}.pth"
-                )
+                checkpoint_file = f"work_dirs/3dssd_4x4_carla-infrastructure-3d/{epoch_str}.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
             input_data = "lidar"
@@ -229,16 +225,12 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             if dataset == "kitti":
                 obj_class_dataset_override = "carla"
                 threshold = 0.3
-                config_file = "work_dirs/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d.py"
-                checkpoint_file = (
-                    f"work_dirs/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d/{epoch_str}.pth"
-                )
+                config_file = "work_dirs/carla/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d.py"
+                checkpoint_file = f"work_dirs/carla/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d.pth"
             elif dataset == "carla":
                 threshold = 0.5
-                config_file = "work_dirs/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d.py"
-                checkpoint_file = (
-                    f"work_dirs/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d/{epoch_str}.pth"
-                )
+                config_file = "work_dirs/carla/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d.py"
+                checkpoint_file = "work_dirs/carla/hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d.pth"
             elif dataset == "carla-infrastructure":
                 raise NotImplementedError
             elif dataset == "nuscenes":
@@ -251,9 +243,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         elif model == "pgd":
             if dataset == "kitti":
                 threshold = 5
-                config_file = (
-                    "configs/pgd/pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d.py"
-                )
+                config_file = "configs/pgd/pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d.py"
                 checkpoint_file = "checkpoints/kitti/pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d_20211022_102608-8a97533b.pth"
             elif dataset == "nuscenes":
                 threshold = 0.1

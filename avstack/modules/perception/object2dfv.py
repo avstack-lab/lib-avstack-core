@@ -221,35 +221,16 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
             elif dataset == "nuscenes":
                 threshold = 0.7
-                pth_file = (
-                    "latest.pth" if epoch == "latest" else "epoch_{}.pth".format(epoch)
-                )
-                config_file = "configs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.py"
-                checkpoint_file = "work_dirs/faster_rcnn_r50_fpn_1x_nuscenes/{}".format(
-                    pth_file
-                )
+                config_file = "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.py"
+                checkpoint_file = "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.pth"
             elif dataset == "carla":
                 threshold = 0.7
-                pth_file = (
-                    "latest.pth" if epoch == "latest" else "epoch_{}.pth".format(epoch)
-                )
-                config_file = "configs/carla/faster_rcnn_r50_fpn_1x_carla.py"
-                checkpoint_file = "work_dirs/faster_rcnn_r50_fpn_1x_carla/{}".format(
-                    pth_file
-                )
+                config_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla.py"
+                checkpoint_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla.pth"
             elif dataset == "carla-infrastructure":
                 threshold = 0.7
-                pth_file = (
-                    "latest.pth" if epoch == "latest" else "epoch_{}.pth".format(epoch)
-                )
-                config_file = (
-                    "configs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.py"
-                )
-                checkpoint_file = (
-                    "work_dirs/faster_rcnn_r50_fpn_1x_carla_infrastructure/{}".format(
-                        pth_file
-                    )
-                )
+                config_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.py"
+                checkpoint_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.pth"
             elif dataset == "cityscapes":
                 threshold = 0.5
                 config_file = "configs/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes.py"
