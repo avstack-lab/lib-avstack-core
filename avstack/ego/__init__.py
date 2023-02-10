@@ -24,6 +24,10 @@ def get_ego(obj_class, obj_stack):
             stack = avstack.ego.vehicle.GroundTruthMapPlanner
         elif obj_stack.lower() == "passthroughautopilotvehicle":
             stack = avstack.ego.vehicle.PassthroughAutopilotVehicle
+        elif obj_stack.lower() == "gostraightego":
+            stack = avstack.ego.vehicle.GoStraightEgo
+        elif obj_stack.lower() == "autopilotwithcameraperception":
+            stack = avstack.ego.vehicle.AutopilotWithCameraPerception
         else:
             raise NotImplementedError(obj_stack.lower())
     else:

@@ -9,7 +9,6 @@
 """
 
 import numpy as np
-
 from avstack import environment, geometry, modules
 
 
@@ -50,6 +49,10 @@ class VehicleEgoStack:
         raise NotImplementedError
 
 
+# ==========================================================
+# AUTOPILOT AV'S
+# ==========================================================
+
 class PassthroughAutopilotVehicle(VehicleEgoStack):
     """Vehicle should be set to autopilot externally"""
 
@@ -63,16 +66,10 @@ class PassthroughAutopilotVehicle(VehicleEgoStack):
         return None
 
 
-# ==========================================================
-# AUTOPILOT AV'S
-# ==========================================================
-
-
-class GroundTruthMapPlanner(VehicleEgoStack):
+class GroundTruthBehaviorAgent(VehicleEgoStack):
     """Based on the provided carla example files"""
 
     def _initialize_modules(self, t_init, ego_init, map_data, *args, **kwargs):
-        # self.planning = modules.planning.carla.BehaviorAgent(ego_init, behavior='normal')
         self.planning = modules.planning.vehicle.MapBasedPlanningAndControl(
             ego_init, map_data
         )
@@ -93,112 +90,167 @@ class GroundTruthMapPlanner(VehicleEgoStack):
 
 
 # ==========================================================
-# LEVEL 2 AV'S
+# TEST AV'S
 # ==========================================================
 
+class GoStraightEgo(VehicleEgoStack):
+    """A silly ego vehicle that just goes straight"""
 
-class Level2LidarBasedVehicle(VehicleEgoStack):
-    def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
-        integrity = modules.localization.integrity.Chi2Integrity(p_thresh=0.95)
-        self.localization = modules.localization.BasicGpsKinematicKalmanLocalizer(
-            t_init, ego_init, rate=10, integrity=integrity
-        )
-        self.perception = {
-            "object_3d": modules.perception.object3d.MMDet3D(algorithm="second"),
-            "lane_lines": modules.perception.lanelines.LaneNet(),
-        }
-        self.tracking = modules.tracking.AB3DMOT()
-        self.prediction = modules.prediction.KinematicPrediction()
-        self.planning = modules.planning.AdaptiveCruiseControl()
+    def _initialize_modules(self, *args, **kwargs):
+        self.plan = modules.planning.WaypointPlan()
+        self.planning = modules.planning.vehicle.GoStraightPlanner()
         ctrl_lat = {"K_P": 1.2, "K_D": 0.1, "K_I": 0.02}
         ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
         self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
 
-    def _tick_modules(self, frame, timestamp, data_manager, *args, **kwargs):
-        ego_state = self.localization(timestamp, data_manager.pop("gps-0"))
-        objects_3d = self.perception["object_3d"](
-            data_manager.pop("lidar-0"), frame=frame, identifier="objects_3d"
-        )
-        objects_3d = self.tracking(objects_3d, frame=frame, identifier='tracker-0')
-        lanes = self.perception["lane_lines"](
-            frame, data_manager.pop("camera-0"), "lane_lines"
-        )
-        preds_3d = self.prediction(objects_3d, frame=frame)
-        plan = self.planning(ego_state, objects_3d, lanes)
-        ctrl = self.control(ego_state, plan)
-        return ctrl
-
-
-class Level2GroundTruthPerception(VehicleEgoStack):
-    def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
-        integrity = modules.localization.integrity.Chi2Integrity(p_thresh=0.95)
-        self.localization = modules.localization.BasicGpsKinematicKalmanLocalizer(
-            t_init=t_init, ego_init=ego_init, rate=10, integrity=integrity
-        )
-        self.perception = {
-            "object_3d": modules.perception.object3d.GroundTruth3DObjectDetector(),
-            "lane_lines": modules.perception.lanelines.GroundTruthLaneLineDetector(),
-        }
-        self.tracking = modules.tracking.tracker3d.Ab3dmotTracker(framerate=10)
-        self.prediction = modules.prediction.KinematicPrediction(
-            dt_pred=0.1, t_pred_forward=3
-        )
-        self.plan = modules.planning.WaypointPlan()
-        self.planning = modules.planning.vehicle.AdaptiveCruiseControl()
-        ctrl_lat = {"K_P": 1.2, "K_D": 0.2, "K_I": 0.05}
-        ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
-        self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
+    def set_destination(self, *args, **kwargs):
+        print('This ego does not take a destination')
 
     def _tick_modules(
         self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
     ):
-        ego_state = self.localization(timestamp, data_manager.pop("gps-0"))
-        objects_3d = self.perception["object_3d"](ground_truth, frame=frame, identifier="objects_3d")
-        objects_2d = []
-        objects_3d = self.tracking(objects_3d, frame=frame, identifier='tracker-0')
-        lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier= "lane_lines")
-        preds_3d = self.prediction(objects_3d, frame=frame)
-        self.plan = self.planning(
-            self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
-        )
+        ego_state = ground_truth.ego_state
+        self.plan = self.planning(self.plan, ego_state)
         ctrl = self.control(ego_state, self.plan)
         return ctrl
 
 
-class Level2GtPerceptionGtLocalization(VehicleEgoStack):
-    def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
-        integrity = modules.localization.integrity.Chi2Integrity(p_thresh=0.95)
-        self.localization = modules.localization.GroundTruthLocalizer(
-            t_init=t_init, ego_init=ego_init, rate=10
-        )
+class AutopilotWithCameraPerception(VehicleEgoStack):
+    """An autopilot vehicle that runs camera perception for fun"""
+
+    def _initialize_modules(self, *args, camera_perception='fasterrcnn', dataset='nuscenes', **kwargs):
+        self.is_passthrough = True
         self.perception = {
-            "object_3d": modules.perception.object3d.GroundTruth3DObjectDetector(),
-            "lane_lines": modules.perception.lanelines.GroundTruthLaneLineDetector(),
+            "object_2d": modules.perception.object2dfv.MMDetObjectDetector2D(
+                model=camera_perception, dataset=dataset, **kwargs
+            ),
         }
-        self.tracking = modules.tracking.tracker3d.Ab3dmotTracker(framerate=10)
-        self.prediction = modules.prediction.KinematicPrediction(
-            dt_pred=0.1, t_pred_forward=3
-        )
-        self.plan = modules.planning.WaypointPlan()
-        self.planning = modules.planning.vehicle.AdaptiveCruiseControl()
-        ctrl_lat = {"K_P": 1.2, "K_D": 0.2, "K_I": 0.05}
-        ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
-        self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
+
+    def set_destination(self, *args, **kwargs):
+        raise RuntimeError("Cannot set destination with autopilot AV")
 
     def _tick_modules(
-        self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
+            self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
     ):
-        ego_state = self.localization(timestamp, ground_truth)
-        objects_3d = self.perception["object_3d"](ground_truth, frame=frame, identifier="objects_3d")
-        objects_2d = []
-        objects_3d = self.tracking(objects_3d, frame=frame, identifier='tracker-0')
-        lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier="lane_lines")
-        preds_3d = self.prediction(objects_3d, frame=frame)
-        self.plan = self.planning(
-            self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
-        )
-        ctrl = self.control(ego_state, self.plan)
-        return ctrl
+        if data_manager.has_data("camera-0"):
+            dets_2d = self.perception["object_2d"](
+                data_manager.pop("camera-0"), frame=frame, identifier="camera_objects_2d"
+            )
+            print('Detected {} objects with our camera     '.format(len(dets_2d)))
+        return None
+
+
+# ==========================================================
+# LEVEL 2 AV'S
+# ==========================================================
+
+
+# class Level2LidarBasedVehicle(VehicleEgoStack):
+#     def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
+#         integrity = modules.localization.integrity.Chi2Integrity(p_thresh=0.95)
+#         self.localization = modules.localization.BasicGpsKinematicKalmanLocalizer(
+#             t_init, ego_init, rate=10, integrity=integrity
+#         )
+#         self.perception = {
+#             "object_3d": modules.perception.object3d.MMDet3D(algorithm="second"),
+#             "lane_lines": modules.perception.lanelines.LaneNet(),
+#         }
+#         self.tracking = modules.tracking.AB3DMOT()
+#         self.prediction = modules.prediction.KinematicPrediction()
+#         self.planning = modules.planning.AdaptiveCruiseControl()
+#         ctrl_lat = {"K_P": 1.2, "K_D": 0.1, "K_I": 0.02}
+#         ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
+#         self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
+
+#     def _tick_modules(self, frame, timestamp, data_manager, *args, **kwargs):
+#         ego_state = self.localization(timestamp, data_manager.pop("gps-0"))
+#         objects_3d = self.perception["object_3d"](
+#             data_manager.pop("lidar-0"), frame=frame, identifier="objects_3d"
+#         )
+#         objects_3d = self.tracking(objects_3d, frame=frame, identifier='tracker-0')
+#         lanes = self.perception["lane_lines"](
+#             frame, data_manager.pop("camera-0"), "lane_lines"
+#         )
+#         preds_3d = self.prediction(objects_3d, frame=frame)
+#         plan = self.planning(ego_state, objects_3d, lanes)
+#         ctrl = self.control(ego_state, plan)
+#         return ctrl
+
+
+# class Level2GroundTruthPerception(VehicleEgoStack):
+#     def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
+#         integrity = modules.localization.integrity.Chi2Integrity(p_thresh=0.95)
+#         self.localization = modules.localization.BasicGpsKinematicKalmanLocalizer(
+#             t_init=t_init, ego_init=ego_init, rate=10, integrity=integrity
+#         )
+#         self.perception = {
+#             "object_3d": modules.perception.object3d.GroundTruth3DObjectDetector(),
+#             "lane_lines": modules.perception.lanelines.GroundTruthLaneLineDetector(),
+#         }
+#         self.tracking = modules.tracking.tracker3d.Ab3dmotTracker(framerate=10)
+#         self.prediction = modules.prediction.KinematicPrediction(
+#             dt_pred=0.1, t_pred_forward=3
+#         )
+#         self.plan = modules.planning.WaypointPlan()
+#         self.planning = modules.planning.vehicle.AdaptiveCruiseControl()
+#         ctrl_lat = {"K_P": 1.2, "K_D": 0.2, "K_I": 0.05}
+#         ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
+#         self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
+
+#     def _tick_modules(
+#         self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
+#     ):
+#         ego_state = self.localization(timestamp, data_manager.pop("gps-0"))
+#         objects_3d = self.perception["object_3d"](ground_truth, frame=frame, identifier="objects_3d")
+#         objects_2d = []
+#         objects_3d = self.tracking(objects_3d, frame=frame, identifier='tracker-0')
+#         lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier= "lane_lines")
+#         preds_3d = self.prediction(objects_3d, frame=frame)
+#         self.plan = self.planning(
+#             self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
+#         )
+#         ctrl = self.control(ego_state, self.plan)
+#         return ctrl
+
+
+# class Level2GtPerceptionGtLocalization(VehicleEgoStack):
+#     def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
+#         self.localization = modules.localization.GroundTruthLocalizer(
+#             t_init=t_init, ego_init=ego_init, rate=10
+#         )
+#         self.perception = {
+#             "object_3d": modules.perception.object3d.GroundTruth3DObjectDetector(),
+#             "lane_lines": modules.perception.lanelines.GroundTruthLaneLineDetector(),
+#         }
+#         self.tracking = modules.tracking.tracker3d.Ab3dmotTracker(framerate=10)
+#         self.prediction = modules.prediction.KinematicPrediction(
+#             dt_pred=0.1, t_pred_forward=3
+#         )
+#         self.plan = modules.planning.WaypointPlan()
+#         self.planning = modules.planning.vehicle.AdaptiveCruiseControl()
+#         ctrl_lat = {"K_P": 1.2, "K_D": 0.2, "K_I": 0.05}
+#         ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
+#         self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
+
+#     def _tick_modules(
+#         self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
+#     ):
+#         ego_state = self.localization(timestamp, ground_truth)
+#         objects_3d = self.perception["object_3d"](ground_truth, frame=frame, identifier="objects_3d")
+#         objects_2d = []
+#         # filter to objects within 30 m
+#         objects_3d = [obj for obj in objects_3d if ego_state.position.distance(obj.box.t) < 30]
+#         objects_3d = self.tracking(objects_3d, frame=frame, identifier='tracker-0')
+#         lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier="lane_lines")
+#         preds_3d = self.prediction(objects_3d, frame=frame)
+#         self.plan = self.planning(
+#             self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
+#         )
+#         ctrl = self.control(ego_state, self.plan)
+#         return ctrl
+    
+#     def set_destination(self, *args, **kwargs):
+#         print("Ignoring destination...this type of vehicle does not take a destination")
 
 
 # ==========================================================

@@ -8,15 +8,94 @@
 
 """
 
-from copy import copy, deepcopy
-
+from copy import deepcopy
 import numpy as np
-
 from avstack.geometry import Rotation, Transform
 from avstack.geometry import transformations as tforms
 
 from . import components
-from .base import Waypoint, WaypointPlan, _PlanningAlgorithm
+from .base import Waypoint, _PlanningAlgorithm
+
+
+class GoStraightPlanner(_PlanningAlgorithm):
+    """Moves forward"""
+
+    def __init__(self, *args, d_forward=3, target_speed=20, verbose=False, **kwargs):
+        self.d_forward = d_forward
+        self.target_speed = target_speed
+        self.verbose = verbose
+        self.i_waypoint = 0
+
+    def __call__(self, plan, ego_state, **kwargs):
+        plan.update(ego_state)
+        if plan.needs_waypoint():
+            plan.push(*self._get_waypoint(ego_state))
+            self.i_waypoint += 1
+        return plan
+
+    def _get_waypoint(self, ego_state):
+        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
+        target_loc = ego_state.position + self.d_forward * forward_vec
+        target_point = Transform(ego_state.attitude, target_loc)
+        dist_wpt = ego_state.position.distance(target_point)
+        return dist_wpt, Waypoint(target_point, self.target_speed)
+
+
+class RandomPlanner(_PlanningAlgorithm):
+    """Finds random waypoints to go to"""
+
+    def __init__(
+        self,
+        max_lateral_dist=2,
+        min_forward_dist=5,
+        max_forward_dist=10,
+        max_speed=20,
+        verbose=False,
+    ):
+        self.min_forward_dist = min_forward_dist
+        self.max_forward_dist = max_forward_dist
+        self.max_lateral_dist = max_lateral_dist
+        self.max_speed = max_speed
+        self.verbose = verbose
+
+    def __call__(self, plan, ego_state, **kwargs):
+        plan.update(ego_state)
+        if plan.needs_waypoint():
+            plan.push(*self._get_waypoint(ego_state))
+        return plan
+
+    def _get_waypoint(self, ego_state):
+        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
+        d1 = self.min_forward_dist
+        d2 = self.max_forward_dist
+        da = ((d2 - d1) * np.random.rand() + d1) * forward_vec
+        db = self.max_lateral_dist * (2 * (np.random.rand(3) - 1 / 2))
+        d_pos = da + db
+        target_loc = ego_state.position + d_pos
+        target_rot = deepcopy(ego_state.attitude)
+        target_point = Transform(target_rot, target_loc)
+        target_speed = ((1 - 0.2) * np.random.rand() + 0.2) * self.max_speed
+        dist_wpt = ego_state.position.distance(target_point)
+        return dist_wpt, Waypoint(target_point, target_speed)
+
+
+class StationaryPlanner(_PlanningAlgorithm):
+    """Stays in the same spot"""
+
+    def __init__(self, verbose=False, *args, **kwargs):
+        self.init_state = None
+        self.verbose = verbose
+
+    def __call__(self, plan, ego_state, **kwargs):
+        if self.init_state is None:
+            plan.push(*self._get_waypoint(ego_state))
+        return plan
+
+    def _get_waypoint(self, ego_state):
+        target_point = Transform(ego_state.attitude, ego_state.position)
+        target_speed = 0
+        dist_wpt = ego_state.position.distance(target_point)
+        return dist_wpt, Waypoint(target_point, target_speed)
 
 
 class AdaptiveCruiseControl(_PlanningAlgorithm):
@@ -138,149 +217,70 @@ class LaneKeepingPlanner(_PlanningAlgorithm):
         return distance, Waypoint(target_point, target_speed)
 
 
-class RandomPlanner(_PlanningAlgorithm):
-    """Finds random waypoints to go to"""
-
-    def __init__(
-        self,
-        max_lateral_dist=2,
-        min_forward_dist=5,
-        max_forward_dist=10,
-        max_speed=20,
-        verbose=False,
-    ):
-        self.min_forward_dist = min_forward_dist
-        self.max_forward_dist = max_forward_dist
-        self.max_lateral_dist = max_lateral_dist
-        self.max_speed = max_speed
-        self.verbose = verbose
-
-    def __call__(self, plan, ego_state, **kwargs):
-        plan.update(ego_state)
-        if plan.needs_waypoint():
-            plan.push(*self._get_waypoint(ego_state))
-        return plan
-
-    def _get_waypoint(self, ego_state):
-        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
-        d1 = self.min_forward_dist
-        d2 = self.max_forward_dist
-        da = ((d2 - d1) * np.random.rand() + d1) * forward_vec
-        db = self.max_lateral_dist * (2 * (np.random.rand(3) - 1 / 2))
-        d_pos = da + db
-        target_loc = ego_state.position + d_pos
-        target_rot = deepcopy(ego_state.attitude)
-        target_point = Transform(target_rot, target_loc)
-        target_speed = ((1 - 0.2) * np.random.rand() + 0.2) * self.max_speed
-        dist_wpt = ego_state.position.distance(target_point)
-        return dist_wpt, Waypoint(target_point, target_speed)
-
-
-class StationaryPlanner(_PlanningAlgorithm):
-    """Stays in the same spot"""
-
-    def __init__(self, verbose=False, *args, **kwargs):
-        self.init_state = None
-        self.verbose = verbose
-
-    def __call__(self, plan, ego_state, **kwargs):
-        if self.init_state is None:
-            plan.push(*self._get_waypoint(ego_state))
-        return plan
-
-    def _get_waypoint(self, ego_state):
-        target_point = Transform(ego_state.attitude, ego_state.position)
-        target_speed = 0
-        dist_wpt = ego_state.position.distance(target_point)
-        return dist_wpt, Waypoint(target_point, target_speed)
-
-
-class GoStraightPlanner(_PlanningAlgorithm):
-    """Moves forward"""
-
-    def __init__(self, *args, d_forward=3, target_speed=20, verbose=False, **kwargs):
-        self.d_forward = d_forward
-        self.target_speed = target_speed
-        self.verbose = verbose
-
-    def __call__(self, plan, ego_state, **kwargs):
-        plan.update(ego_state)
-        if plan.needs_waypoint():
-            plan.push(self._get_waypoint(ego_state))
-        return plan
-
-    def _get_waypoint(self, ego_state):
-        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
-        target_loc = ego_state.position + self.d_forward * forward_vec
-        target_point = Transform(ego_state.attitude, target_loc)
-        dist_wpt = ego_state.position.distance(target_point)
-        return dist_wpt, Waypoint(target_point, self.target_speed)
-
 
 # ===========================================================
 # MAP-BASED PLANNER -- BASED ON THE CARLA EXAMPLES FILES
 # ===========================================================
 
 
-class MapBasedPlanningAndControl(_PlanningAlgorithm):
-    """Uses map information to get to destination
+# class MapBasedPlanningAndControl(_PlanningAlgorithm):
+#     """Uses map information to get to destination
 
-    initially based on the CARLA examples by removing
-    all ground truth information from the planner and using
-    inputs instead
+#     initially based on the CARLA examples by removing
+#     all ground truth information from the planner and using
+#     inputs instead
 
-    BehaviorAgent implements an agent that navigates scenes to reach a given
-    target destination, by computing the shortest possible path to it.
-    This agent can correctly follow traffic signs, speed limitations,
-    traffic lights, while also taking into account nearby vehicles. Lane changing
-    decisions can be taken by analyzing the surrounding environment,
-    such as overtaking or tailgating avoidance. Adding to these are possible
-    behaviors, the agent can also keep safety distance from a car in front of it
-    by tracking the instantaneous time to collision and keeping it in a certain range.
-    Finally, different sets of behaviors are encoded in the agent, from cautious
-    to a more aggressive ones.
-    """
+#     BehaviorAgent implements an agent that navigates scenes to reach a given
+#     target destination, by computing the shortest possible path to it.
+#     This agent can correctly follow traffic signs, speed limitations,
+#     traffic lights, while also taking into account nearby vehicles. Lane changing
+#     decisions can be taken by analyzing the surrounding environment,
+#     such as overtaking or tailgating avoidance. Adding to these are possible
+#     behaviors, the agent can also keep safety distance from a car in front of it
+#     by tracking the instantaneous time to collision and keeping it in a certain range.
+#     Finally, different sets of behaviors are encoded in the agent, from cautious
+#     to a more aggressive ones.
+#     """
 
-    def __init__(self, ego_state, map_data, ignore_traffic_light=True, verbose=False):
-        information = {
-            "vehicles": "objects_3d",
-            "pedestrians": "objects_3d",
-            "traffic_lights": None,
-        }
-        # deferred import to here for path reasons
-        self.destination = None
-        raise NotImplementedError("Have not implemented and validated behavior agent")
-        self.agent = carla_components.behavior_agent.BehaviorAgent(
-            ego_state=ego_state,
-            map_data=map_data,
-            information=information,
-            ignore_traffic_light=ignore_traffic_light,
-            behavior="normal",
-        )
+#     def __init__(self, ego_state, map_data, ignore_traffic_light=True, verbose=False):
+#         information = {
+#             "vehicles": "objects_3d",
+#             "pedestrians": "objects_3d",
+#             "traffic_lights": None,
+#         }
+#         # deferred import to here for path reasons
+#         self.destination = None
+#         self.agent = carla_components.behavior_agent.BehaviorAgent(
+#             ego_state=ego_state,
+#             map_data=map_data,
+#             information=information,
+#             ignore_traffic_light=ignore_traffic_light,
+#             behavior="normal",
+#         )
 
-    def set_destination(self, destination, coordinates="avstack", clean=True):
-        """
-        input in standard coordinates becomes carla coordinates
-        """
-        self.destination = destination
-        if coordinates == "avstack":
-            dest = [destination[0], -destination[1], destination[2]]
-        elif coordinates == "carla":
-            dest = destination
-        else:
-            raise NotImplementedError(coordinates)
-        e_loc = self.agent.ego_state.get_location(format_as="carla")
-        dest_true_avstack = self.agent.set_destination(e_loc, dest, clean=clean)
-        return dest_true_avstack
+#     def set_destination(self, destination, coordinates="avstack", clean=True):
+#         """
+#         input in standard coordinates becomes carla coordinates
+#         """
+#         self.destination = destination
+#         if coordinates == "avstack":
+#             dest = [destination[0], -destination[1], destination[2]]
+#         elif coordinates == "carla":
+#             dest = destination
+#         else:
+#             raise NotImplementedError(coordinates)
+#         e_loc = self.agent.ego_state.get_location(format_as="carla")
+#         dest_true_avstack = self.agent.set_destination(e_loc, dest, clean=clean)
+#         return dest_true_avstack
 
-    def __call__(self, ego_state, environment, objects_3d, objects_2d):
-        if self.destination is None:
-            raise RuntimeError("Must set destination first")
-        self.agent.update_information(
-            ego_state,
-            environment.speed_limit,
-            objects_3d=objects_3d,
-            objects_2d=objects_2d,
-        )
-        ctrl = self.agent.run_step()
-        return ctrl
+#     def __call__(self, ego_state, environment, objects_3d, objects_2d):
+#         if self.destination is None:
+#             raise RuntimeError("Must set destination first")
+#         self.agent.update_information(
+#             ego_state,
+#             environment.speed_limit,
+#             objects_3d=objects_3d,
+#             objects_2d=objects_2d,
+#         )
+#         ctrl = self.agent.run_step()
+#         return ctrl

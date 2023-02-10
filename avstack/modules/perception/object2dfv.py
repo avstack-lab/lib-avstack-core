@@ -137,7 +137,6 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 else:
                     imwrite(data_file, data.data)
                 result_ = inference_detector(model, data_file)
-
         elif eval_method == "data":
             result_ = inference_detector(
                 model, data.data if not is_rgb else data.data[:, :, ::-1]
