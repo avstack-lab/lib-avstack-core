@@ -26,11 +26,11 @@ class _FusionAlgorithm:
 
     def __call__(self, *args, **kwargs):
         self.iframe += 1
-        self.frame = kwargs.get('frame')
+        self.frame = kwargs.get("frame")
         tracks = self.fuse(*args, **kwargs)
         if self.save:
             trk_str = "\n".join([trk.format_as("avstack") for trk in tracks])
-            fname = os.path.join(self.save_folder, "%06d.txt" % kwargs.get('frame'))
+            fname = os.path.join(self.save_folder, "%06d.txt" % kwargs.get("frame"))
             with open(fname, "w") as f:
                 f.write(trk_str)
         return tracks

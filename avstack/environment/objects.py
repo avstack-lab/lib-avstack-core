@@ -598,4 +598,3 @@ def IOU_3d(corners1, corners2):
     inter = bbox.box_intersection(corners1, corners2)
     union = bbox.box_union(corners1, corners2)
     return inter / union
-

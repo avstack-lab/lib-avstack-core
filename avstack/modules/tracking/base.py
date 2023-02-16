@@ -68,7 +68,7 @@ class _TrackingAlgorithm:
         return A
 
     def __call__(self, *args, **kwargs):
-        self.frame = kwargs.get('frame')
+        self.frame = kwargs.get("frame")
         self.iframe += 1
         tracks = self.track(*args, **kwargs)
         if self.save:

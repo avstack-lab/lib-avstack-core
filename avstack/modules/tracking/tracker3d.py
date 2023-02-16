@@ -36,6 +36,7 @@ class GroundTruthTracker(_TrackingAlgorithm):
 # BASIC BOX TRACKER
 # ==============================================================
 
+
 class BasicBoxTracker(_TrackingAlgorithm):
     def __init__(
         self,

@@ -221,15 +221,21 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             elif dataset == "nuscenes":
                 threshold = 0.7
                 config_file = "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.py"
-                checkpoint_file = "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.pth"
+                checkpoint_file = (
+                    "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.pth"
+                )
             elif dataset == "carla":
                 threshold = 0.7
                 config_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla.py"
                 checkpoint_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla.pth"
             elif dataset == "carla-infrastructure":
                 threshold = 0.7
-                config_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.py"
-                checkpoint_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.pth"
+                config_file = (
+                    "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.py"
+                )
+                checkpoint_file = (
+                    "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.pth"
+                )
             elif dataset == "cityscapes":
                 threshold = 0.5
                 config_file = "configs/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes.py"

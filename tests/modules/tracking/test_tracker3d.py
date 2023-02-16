@@ -119,7 +119,7 @@ def test_basic_box_tracker():
     dets_3d_all = make_kitti_tracking_data(n_frames=n_frames)
     tracker = tracking.tracker3d.BasicBoxTracker(framerate=10)
     for frame, dets_3d in enumerate(dets_3d_all):
-        tracks = tracker(dets_3d, frame=frame, identifier='tracker-1')
+        tracks = tracker(dets_3d, frame=frame, identifier="tracker-1")
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
         for det in dets_3d_all[-1]:
@@ -145,7 +145,7 @@ def test_ab3dmot_kitti():
     dets_3d_all = make_kitti_tracking_data(n_frames=n_frames)
     tracker = tracking.tracker3d.Ab3dmotTracker(framerate=10)
     for frame, dets_3d in enumerate(dets_3d_all):
-        tracks = tracker(dets_3d, frame=frame, identifier='tracker-1')
+        tracks = tracker(dets_3d, frame=frame, identifier="tracker-1")
 
 
 def test_eagermot_fusion_kitti():

@@ -9,6 +9,7 @@
 """
 
 import numpy as np
+
 from avstack import environment, geometry, modules
 
 
@@ -53,6 +54,7 @@ class VehicleEgoStack:
 # AUTOPILOT AV'S
 # ==========================================================
 
+
 class PassthroughAutopilotVehicle(VehicleEgoStack):
     """Vehicle should be set to autopilot externally"""
 
@@ -93,6 +95,7 @@ class GroundTruthBehaviorAgent(VehicleEgoStack):
 # TEST AV'S
 # ==========================================================
 
+
 class GoStraightEgo(VehicleEgoStack):
     """A silly ego vehicle that just goes straight"""
 
@@ -104,7 +107,7 @@ class GoStraightEgo(VehicleEgoStack):
         self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
 
     def set_destination(self, *args, **kwargs):
-        print('This ego does not take a destination')
+        print("This ego does not take a destination")
 
     def _tick_modules(
         self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
@@ -118,7 +121,9 @@ class GoStraightEgo(VehicleEgoStack):
 class AutopilotWithCameraPerception(VehicleEgoStack):
     """An autopilot vehicle that runs camera perception for fun"""
 
-    def _initialize_modules(self, *args, camera_perception='fasterrcnn', dataset='nuscenes', **kwargs):
+    def _initialize_modules(
+        self, *args, camera_perception="fasterrcnn", dataset="nuscenes", **kwargs
+    ):
         self.is_passthrough = True
         self.perception = {
             "object_2d": modules.perception.object2dfv.MMDetObjectDetector2D(
@@ -130,13 +135,15 @@ class AutopilotWithCameraPerception(VehicleEgoStack):
         raise RuntimeError("Cannot set destination with autopilot AV")
 
     def _tick_modules(
-            self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
+        self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
     ):
         if data_manager.has_data("camera-0"):
             dets_2d = self.perception["object_2d"](
-                data_manager.pop("camera-0"), frame=frame, identifier="camera_objects_2d"
+                data_manager.pop("camera-0"),
+                frame=frame,
+                identifier="camera_objects_2d",
             )
-            print('Detected {} objects with our camera     '.format(len(dets_2d)))
+            print("Detected {} objects with our camera     ".format(len(dets_2d)))
         return None
 
 
@@ -248,7 +255,7 @@ class AutopilotWithCameraPerception(VehicleEgoStack):
 #         )
 #         ctrl = self.control(ego_state, self.plan)
 #         return ctrl
-    
+
 #     def set_destination(self, *args, **kwargs):
 #         print("Ignoring destination...this type of vehicle does not take a destination")
 
@@ -283,7 +290,7 @@ class LidarPerceptionAndTrackingVehicle(VehicleEgoStack):
         dets_3d = self.perception["object_3d"](
             data_manager.pop("lidar-0"), frame=frame, identifier="lidar_objects_3d"
         )
-        tracks_3d = self.tracking(dets_3d, frame=frame, identifier='tracker-0')
+        tracks_3d = self.tracking(dets_3d, frame=frame, identifier="tracker-0")
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
 
@@ -332,7 +339,7 @@ class LidarCollabPerceptionAndTrackingVehicle(VehicleEgoStack):
                         dets_3d[name] = dets_collab_keep
         if self.verbose:
             print("Added {} collab detections".format(n_collab))
-        tracks_3d = self.tracking(dets_3d, frame=frame, identifier='tracker-0')
+        tracks_3d = self.tracking(dets_3d, frame=frame, identifier="tracker-0")
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
 
@@ -367,11 +374,13 @@ class LidarCameraPerceptionAndTrackingVehicle(VehicleEgoStack):
             img = data_manager.pop("image-0")
         except KeyError as e:
             img = data_manager.pop("image-2")
-        dets_2d = self.perception["object_2d"](img, frame=frame, identifier="camera_objects_2d")
+        dets_2d = self.perception["object_2d"](
+            img, frame=frame, identifier="camera_objects_2d"
+        )
         dets_3d = self.perception["object_3d"](
             data_manager.pop("lidar-0"), frame=frame, identifier="lidar_objects_3d"
         )
-        tracks_3d = self.tracking(dets_2d, dets_3d, frame=frame, identifier='tracker-0')
+        tracks_3d = self.tracking(dets_2d, dets_3d, frame=frame, identifier="tracker-0")
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {
             "object_3d": dets_3d,
@@ -406,7 +415,7 @@ class LidarCamera3DFusionVehicle(VehicleEgoStack):
             "lidar": init_tracking(lidar_tracking, framerate, **kwargs),
             "camera": init_tracking(camera_tracking, framerate, **kwargs),
         }
-        if fusion == 'boxtrack-to-boxtrack':
+        if fusion == "boxtrack-to-boxtrack":
             self.fusion = modules.fusion.BoxTrackToBoxTrackFusion3D(
                 association="IoU", assignment="gnn", algorithm="CI", **kwargs
             )
@@ -421,7 +430,9 @@ class LidarCamera3DFusionVehicle(VehicleEgoStack):
             img = data_manager.pop("image-0")
         except KeyError as e:
             img = data_manager.pop("image-2")
-        dets_3d_cam = self.perception["object_3d_cam"](img, frame=frame, identifier="camera_objects_3d")
+        dets_3d_cam = self.perception["object_3d_cam"](
+            img, frame=frame, identifier="camera_objects_3d"
+        )
         dets_3d_lid = self.perception["object_3d_lid"](
             data_manager.pop("lidar-0"), frame=frame, identifier="lidar_objects_3d"
         )
@@ -429,8 +440,12 @@ class LidarCamera3DFusionVehicle(VehicleEgoStack):
         for dets in [dets_3d_cam, dets_3d_lid]:
             for det in dets:
                 det.change_origin(geometry.NominalOriginStandard)
-        tracks_camera = self.tracking["camera"](dets_3d_cam, frame=frame, identifier='tracker-0')
-        tracks_lidar = self.tracking["lidar"](dets_3d_lid, frame=frame, identifier='tracker-1')
+        tracks_camera = self.tracking["camera"](
+            dets_3d_cam, frame=frame, identifier="tracker-0"
+        )
+        tracks_lidar = self.tracking["lidar"](
+            dets_3d_lid, frame=frame, identifier="tracker-1"
+        )
         tracks_fused = self.fusion(tracks_camera, tracks_lidar, frame=frame)
         predictions = self.prediction(tracks_fused, frame=frame)
 

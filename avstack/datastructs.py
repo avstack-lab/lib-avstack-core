@@ -5,19 +5,21 @@
 # @Last Modified date: 2022-09-29
 # @Description:
 """
-
+Custom data structures. Some based on the heapq library.
 """
+from __future__ import annotations
 
 import heapq
-from copy import copy, deepcopy
+from copy import deepcopy
 from functools import total_ordering
+from typing import Any, Dict, List
 
 import numpy as np
 
 
 def is_iterable(item):
     try:
-        iterator = iter(item)
+        _ = iter(item)
     except TypeError:
         return False
     else:
@@ -38,7 +40,9 @@ def custom_chain(*it):
 
 
 class _Priority:
-    def __init__(self, max_size, max_heap):
+    """Base class for priority queue-type objects"""
+
+    def __init__(self, max_size: int, max_heap: bool):
         self.max_size = max_size
         self.heap = []
         self.is_max = max_heap
@@ -110,6 +114,7 @@ class _Priority:
         """
         NOTE: THIS IS SLOW FOR MIN HEAP
         """
+        all_things = []
         while (
             self.is_max and (not self.empty()) and (self.top()[0] >= priority_min)
         ) or (
@@ -122,9 +127,27 @@ class _Priority:
 
 
 class PriorityQueue(_Priority):
+    """Priority queue
+
+    Attributes:
+        max_size (int):
+            Maximum number of elements to be stored in the queue
+        max_heap (bool):
+            If True, is a max-heap where the "top" item has the "highest" priority,
+            if False, is a min-heap where the "top" item has the "lowest" priority.
+        empty_returns_none (bool):
+            If True, popping when empty returns "None",
+            if False, popping when empty causes an error.
+    """
+
     TYPE = "PriorityQueue"
 
-    def __init__(self, max_size=None, max_heap=False, empty_returns_none=False):
+    def __init__(
+        self,
+        max_size: int = None,
+        max_heap: bool = False,
+        empty_returns_none: bool = False,
+    ):
         super().__init__(max_size, max_heap)
         self.empty_returns_none = empty_returns_none
 
@@ -160,14 +183,40 @@ class PriorityQueue(_Priority):
 
 
 class PrioritySet(_Priority):
+    """Priority set
+
+    Differs from a PriorityQueue in that duplicate items are not allowed.
+    Duplicate priorities for different items are allowed.
+
+    Attributes:
+        max_size (int):
+            Maximum number of elements to be stored in the queue
+        max_heap (bool):
+            If True, is a max-heap where the "top" item has the "highest" priority,
+            if False, is a min-heap where the "top" item has the "lowest" priority.
+        empty_returns_none (bool):
+            If True, popping when empty returns "None",
+            if False, popping when empty causes an error.
+        allow_priority_update (bool):
+            If True, adding a duplicate item will update the priority to the new value,
+            If False, adding a duplicate entry will do nothing.
+    """
+
     TYPE = "PrioritySet"
 
-    def __init__(self, max_size=None, max_heap=False, allow_priority_update=False):
+    def __init__(
+        self,
+        max_size: int = None,
+        max_heap: bool = False,
+        empty_returns_none: bool = False,
+        allow_priority_update: bool = False,
+    ):
         """Min/Max heap wrapper for priority set"""
         super().__init__(max_size, max_heap)
         self.allow_priority_update = allow_priority_update
         if allow_priority_update:
             raise NotImplementedError
+        self.empty_returns_none = empty_returns_none
         self.item_set = set()
         self.item_priority_map = {}
 
@@ -186,10 +235,13 @@ class PrioritySet(_Priority):
 
     def pop(self):
         """Pop top-priority item from set (smallest in min-heap)"""
-        priority, item = heapq.heappop(self.heap)
-        self.item_set.remove(item)
-        del self.item_priority_map[item]
-        return self.mult * priority, item
+        if self.empty() and self.empty_returns_none:
+            return None, None
+        else:
+            priority, item = heapq.heappop(self.heap)
+            self.item_set.remove(item)
+            del self.item_priority_map[item]
+            return self.mult * priority, item
 
     def pushpop(self, priority, item):
         """Push item then return item
@@ -214,7 +266,10 @@ class PrioritySet(_Priority):
 
 @total_ordering
 class BipartiteGraph:
-    """Base class for assignment solution"""
+    """Base class for assignment solution
+
+    A bipartite graph is a mapping between two disjoint sets of nodes
+    """
 
     def __init__(self, row_to_col: dict, nrow: int, ncol: int, cost: float):
         """
@@ -304,28 +359,21 @@ class BipartiteGraph:
         return self._row_to_col[row][col]
 
 
-class MultiEdgeBipartiteGraph(BipartiteGraph):
-    """Data structure permitting assignment of multiple rows to a single column"""
-
-    def __init__(self, row_to_col: dict, nrow: int, ncol: int, cost: float):
-        """
-        :row_to_col - must be in the format of dictionary with assignments and weights
-        """
-        super().__init__(row_to_col, nrow, ncol, cost)
-
-    def copy(self):
-        return MultiEdgeBipartiteGraph(
-            self._row_to_col, self.nrow, self.ncol, self.cost
-        )
-
-    def deepcopy(self):
-        return MultiEdgeBipartiteGraph(
-            deepcopy(self._row_to_col), self.nrow, self.ncol, self.cost
-        )
-
-
 class OneEdgeBipartiteGraph(BipartiteGraph):
-    """Data structure permitting only single linkage between rows and columns"""
+    """Data structure permitting only single linkage between rows and columns
+
+    Attributes:
+        row_to_col (dict):
+            The dictionary mapping indices of rows to indices of columns. Can be
+            formatted as {i:j, p:q} or {i:{j: 1.0}, p:{q: 1.0}} where the 1.0
+            represents the weight of edge. It must be 1.0 in a one-edge graph.
+        nrow (int):
+            Number of items in the rows set of nodes.
+        ncol (int):
+            Number of items in the cols set of nodes
+        cost (float):
+            Total cost of the assignment matching.
+    """
 
     def __init__(self, row_to_col: dict, nrow: int, ncol: int, cost: float):
         """
@@ -358,12 +406,59 @@ class OneEdgeBipartiteGraph(BipartiteGraph):
         )
 
 
+class MultiEdgeBipartiteGraph(BipartiteGraph):
+    """Data structure permitting assignment of multiple rows to a single column
+
+    Similar to the OneEdgeBipartiteGraph except in this case we allow for multiple
+    edges between a "row" node to "column" nodes. In this case, we must specify the
+    weights for each edge.
+
+    Attributes:
+        row_to_col (dict):
+            The dictionary mapping indices of rows to indices of columns. Must be
+            formatted as {i:{j:0.75, k:0.25}, p:{q:0.5, r:0.5}} where the weights
+            for a given row node must sum to 1.0.
+        nrow (int):
+            Number of items in the rows set of nodes.
+        ncol (int):
+            Number of items in the cols set of nodes
+        cost (float):
+            Total cost of the assignment matching.
+    """
+
+    def __init__(self, row_to_col: dict, nrow: int, ncol: int, cost: float):
+        """
+        :row_to_col - must be in the format of dictionary with assignments and weights
+        """
+        super().__init__(row_to_col, nrow, ncol, cost)
+
+    def copy(self):
+        return MultiEdgeBipartiteGraph(
+            self._row_to_col, self.nrow, self.ncol, self.cost
+        )
+
+    def deepcopy(self):
+        return MultiEdgeBipartiteGraph(
+            deepcopy(self._row_to_col), self.nrow, self.ncol, self.cost
+        )
+
+
 class DataManager:
-    """Manages data buckets, generally"""
+    """Manages data buckets where each data bucket is treated as a PriorityQueue
+
+    Each push input must be something that has a "source identifier" so a
+    suitable data bucket can be created. For example, using a SensorData
+    derived class will suffice. Each time you add sensor data, it will
+    be stored into its own sensor's DataBucket.
+
+    Attributes:
+        max_size (int):
+            Maximum size for each data bucket.
+    """
 
     TYPE = "DataManager"
 
-    def __init__(self, max_size=10):
+    def __init__(self, max_size: int = 10):
         self.data = {}
         self.max_size = max_size
 
@@ -424,11 +519,29 @@ class DataManager:
 
 
 class DataBucket(PriorityQueue):
-    """Manages data elements over time"""
+    """Manages data elements over time
+
+    A priority queue with some sugar on top
+
+    Attributes:
+        source_identifier (string):
+            The identifier of this data bucket. Should be a unique string
+        max_size (int):
+            Maximum number of elements to be stored in the queue
+        empty_returns_none (bool):
+            If True, popping when empty returns "None",
+            if False, popping when empty causes an error.
+
+    """
 
     TYPE = "DataBucket"
 
-    def __init__(self, source_identifier, max_size=10, empty_returns_none=True):
+    def __init__(
+        self,
+        source_identifier: str,
+        max_size: int = 10,
+        empty_returns_none: bool = True,
+    ):
         super().__init__(max_size, empty_returns_none=empty_returns_none)
         self.source_identifier = source_identifier
 
@@ -446,11 +559,27 @@ class DataBucket(PriorityQueue):
 
 
 class DataContainer:
-    """Manages data elements at single snapshot in time"""
+    """Manages data elements at single snapshot in time
+
+    For example, a collection of detection results can be stored
+    in a data container. Anything in a data container is assumed (forced)
+    to have the same "fundamentals" which includes frame, timestamp, and
+    source identifier.
+
+    Attributes:
+        frame (int):
+            Frame that the data were captured
+        timestamp (float):
+            Timestamp that the data were captured
+        data (iterable):
+            The collection of data (e.g., a list of detections)
+        source_identifier (string):
+            The identifier of the source of data
+    """
 
     TYPE = "DataContainer"
 
-    def __init__(self, frame, timestamp, data, source_identifier):
+    def __init__(self, frame: int, timestamp: float, data: Any, source_identifier: str):
         self.frame = frame
         self.timestamp = timestamp
         self.data = data
@@ -527,7 +656,7 @@ class DataContainer:
         elif isinstance(other, list):
             self.data.extend(other)
         else:
-            raise NotImplementedError(type(other_array))
+            raise NotImplementedError(type(other))
 
     def _check_fundamentals(self, other):
         if isinstance(other, DataContainer):

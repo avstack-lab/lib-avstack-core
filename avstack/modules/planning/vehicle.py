@@ -9,7 +9,9 @@
 """
 
 from copy import deepcopy
+
 import numpy as np
+
 from avstack.geometry import Rotation, Transform
 from avstack.geometry import transformations as tforms
 
@@ -215,7 +217,6 @@ class LaneKeepingPlanner(_PlanningAlgorithm):
         distance = ego_state.position.distance(target_loc)
         target_point = Transform(target_rot, target_loc)
         return distance, Waypoint(target_point, target_speed)
-
 
 
 # ===========================================================
