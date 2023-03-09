@@ -32,8 +32,9 @@ download_models () {
     fi
 }
 
-download_aws_models () {
-    AWS_MODEL_PATH="https://avstack-public-data.s3.amazonaws.com/models/mmdet"
+download_custom_models () {
+    CUSTOM_MODEL_PATH="https://g-b0ef78.1d0d8d.03c0.data.globus.org/models/mmdet"
+
     SUBFOLDER=$1  # Input 1: subfolder (e.g., "carla")
     MODEL_TYPE=$2 # Input 2: model type
     MODEL=$3      # Input 3: model name
@@ -42,9 +43,9 @@ download_aws_models () {
         echo -e "$MODEL exists.\n"
     else 
         echo "Downloading model and configuration for $MODEL"
-        MODPATH="$AWS_MODEL_PATH"
-        wget -P "${MMDET_WKDIR}/${SUBFOLDER}" "${MODPATH}/${MODEL_TYPE}/${MODEL}.pth"
-        wget -P "${MMDET_WKDIR}/${SUBFOLDER}" "${MODPATH}/${MODEL_TYPE}/${MODEL}.py"
+        MODPATH="$CUSTOM_MODEL_PATH"
+        wget -P "${MMDET_WKDIR}/${SUBFOLDER}" "${MODPATH}/work_dirs/${MODEL_TYPE}/${MODEL}.pth"
+        wget -P "${MMDET_WKDIR}/${SUBFOLDER}" "${MODPATH}/work_dirs/${MODEL_TYPE}/${MODEL}.py"
     fi
 }
 
@@ -56,12 +57,12 @@ CITYSCAPES_MRCNN="mask_rcnn_r50_fpn_1x_cityscapes/mask_rcnn_r50_fpn_1x_cityscape
 download_models "cityscapes" "cityscapes" "$CITYSCAPES_MRCNN"
 
 CARLA_FRCNN="faster_rcnn_r50_fpn_1x_carla"
-download_aws_models "carla" "carla" "$CARLA_FRCNN"
+download_custom_models "carla" "carla" "$CARLA_FRCNN"
 CARLA_FRCNN_INF="faster_rcnn_r50_fpn_1x_carla_infrastructure"
-download_aws_models "carla" "carla" "$CARLA_FRCNN_INF"
+download_custom_models "carla" "carla" "$CARLA_FRCNN_INF"
 
 NUSC_FRCNN="faster_rcnn_r50_fpn_1x_nuscenes"
-download_aws_models "nuscenes" "nuscenes" "$NUSC_FRCNN"
+download_custom_models "nuscenes" "nuscenes" "$NUSC_FRCNN"
 
 
 echo "Adding symbolic link to mmdet directory"

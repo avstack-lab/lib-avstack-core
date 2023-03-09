@@ -37,8 +37,8 @@ download_models () {
     fi
 }
 
-download_aws_models () {
-    AWS_MODEL_PATH="https://avstack-public-data.s3.amazonaws.com/models/mmdet3d"
+download_custom_models () {
+    CUSTOM_MODEL_PATH="https://g-b0ef78.1d0d8d.03c0.data.globus.org/models/mmdet3d"
     SUBFOLDER=$1  # Input 1: subfolder (e.g., "carla")
     MODEL_TYPE=$2 # Input 2: model type
     MODEL=$3      # Input 3: model name
@@ -47,9 +47,9 @@ download_aws_models () {
         echo -e "$MODEL exists.\n"
     else 
         echo "Downloading model and configuration for $MODEL"
-        MODPATH="$AWS_MODEL_PATH"
-        wget -P "${MMDET3D_WKDIR}/${SUBFOLDER}" "${MODPATH}/${MODEL_TYPE}/${MODEL}.pth"
-        wget -P "${MMDET3D_WKDIR}/${SUBFOLDER}" "${MODPATH}/${MODEL_TYPE}/${MODEL}.py"
+        MODPATH="$CUSTOM_MODEL_PATH"
+        wget -P "${MMDET3D_WKDIR}/${SUBFOLDER}" "${MODPATH}/work_dirs/${MODEL_TYPE}/${MODEL}.pth"
+        wget -P "${MMDET3D_WKDIR}/${SUBFOLDER}" "${MODPATH}/work_dirs/${MODEL_TYPE}/${MODEL}.py"
     fi
 }
 
@@ -69,11 +69,11 @@ NUSC_SSN="hv_ssn_secfpn_sbn-all_2x16_2x_nus-3d/hv_ssn_secfpn_sbn-all_2x16_2x_nus
 download_models "nuscenes" "ssn" "$NUSC_SSN"
 
 CARLA_SSN="hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d"
-download_aws_models "carla" "carla" $CARLA_SSN
+download_custom_models "carla" "carla" $CARLA_SSN
 CARLA_PILLARS="hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-3d"
-download_aws_models "carla" "carla" $CARLA_PILLARS
+download_custom_models "carla" "carla" $CARLA_PILLARS
 CARLA_INF_PILLARS="hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-infrastructure-3d"
-download_aws_models "carla" "carla" $CARLA_INF_PILLARS
+download_custom_models "carla" "carla" $CARLA_INF_PILLARS
 
 echo "Adding symbolic link to mmdet3d directory"
 ln -sfnT $(realpath "$MMDET3D_CKPT") "$THISDIR/../third_party/mmdetection3d/checkpoints"
