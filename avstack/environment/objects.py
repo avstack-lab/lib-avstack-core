@@ -465,8 +465,14 @@ def global_to_local(v_self, v_other):
     R_g_to_s = v_self.attitude
     R_g_to_v = v_other.attitude
     pos = R_g_to_s @ (v_other.position - v_self.position)
-    vel = R_g_to_s @ (v_other.velocity - v_self.velocity)
-    acc = R_g_to_s @ (v_other.acceleration - v_self.acceleration)
+    if (v_other.velocity is None) or (v_self.velocity is None):
+        vel = None
+    else:
+        vel = R_g_to_s @ (v_other.velocity - v_self.velocity)
+    if (v_other.acceleration is None) or (v_self.acceleration is None):
+        acc = None
+    else:
+        acc = R_g_to_s @ (v_other.acceleration - v_self.acceleration)
     att = R_g_to_v @ R_g_to_s.T
     if (v_other.angular_velocity is None) or (v_self.angular_velocity is None):
         ang = None
