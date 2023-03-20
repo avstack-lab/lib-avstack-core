@@ -150,8 +150,6 @@ class ImageData(SensorData):
             Unique identifier for this sensor
         source_name (str):
             Name characterizing the sensor
-        source_identifier (str):
-            Concatenation of the source name and ID
         data (np.ndarray):
             Data for this sensor. Monocular would be [N x M x 1], color [N x M x 3]
         calibration (str):
