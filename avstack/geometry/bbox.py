@@ -59,18 +59,22 @@ def get_boxes_from_file(box_file_path):
 
 def get_box_from_line(line):
     items = line.split()
-    box_type = items[0]
-    if box_type == "box2d":
-        xmin, ymin, xmax, ymax = [float(i) for i in items[1:5]]
-        calib = read_calibration_from_line(" ".join(items[5:]))
-        box = Box2D([xmin, ymin, xmax, ymax], calib)
-    elif box_type == "box3d":
-        h, w, l, x, y, z, qw, qx, qy, qz = [float(i) for i in items[1:11]]
-        q = np.quaternion(qw, qx, qy, qz)
-        origin = get_origin_from_line(" ".join(items[11:]))
-        box = Box3D([h, w, l, [x, y, z], q], origin)
-    else:
-        raise NotImplementedError(box_type)
+    try:
+        box_type = items[0]
+        if box_type == "box2d":
+            xmin, ymin, xmax, ymax = [float(i) for i in items[1:5]]
+            calib = read_calibration_from_line(" ".join(items[5:]))
+            box = Box2D([xmin, ymin, xmax, ymax], calib)
+        elif box_type == "box3d":
+            h, w, l, x, y, z, qw, qx, qy, qz = [float(i) for i in items[1:11]]
+            q = np.quaternion(qw, qx, qy, qz)
+            origin = get_origin_from_line(" ".join(items[11:]))
+            box = Box3D([h, w, l, [x, y, z], q], origin)
+        else:
+            raise NotImplementedError(box_type)
+    except Exception as e:
+        print(items)
+        raise e
     return box
 
 

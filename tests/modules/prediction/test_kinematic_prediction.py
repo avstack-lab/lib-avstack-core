@@ -13,8 +13,6 @@ import sys
 import numpy as np
 
 from avstack import GroundTruthInformation
-from avstack.environment.objects import VehicleState
-from avstack.geometry import NominalOriginStandard, bbox
 from avstack.modules import perception, prediction, tracking
 
 
@@ -28,7 +26,7 @@ frame = 0
 def test_kinematic_prediction():
     # -- test prediction
     detector = perception.object3d.GroundTruth3DObjectDetector()
-    tracker = tracking.tracker3d.Ab3dmotTracker(10)
+    tracker = tracking.tracker3d.Ab3dmotTracker()
     predictor = prediction.KinematicPrediction(0.1, 3)
 
     ego = get_ego(2)
@@ -39,7 +37,8 @@ def test_kinematic_prediction():
     )
 
     objects_3d = tracker(
-        detector(ground_truth, frame=frame, identifier="detector-1"),
+        t=0.10 * frame,
+        detections_3d=detector(ground_truth, frame=frame, identifier="detector-1"),
         frame=frame,
         identifier="tracker-1",
     )

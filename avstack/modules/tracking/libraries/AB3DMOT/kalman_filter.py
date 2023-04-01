@@ -12,7 +12,7 @@ class KalmanBoxTracker(object):
 
     count = 0
 
-    def __init__(self, bbox3D, info, framerate):
+    def __init__(self, bbox3D, info):
         """
         Initialises a tracker using initial bounding box.
 
@@ -20,23 +20,7 @@ class KalmanBoxTracker(object):
         [x, y, z, yaw, l, w, h, vx, vy, vz]
         """
         # define constant velocity model
-        self.dt = 1.0 / framerate
         self.kf = KalmanFilter(dim_x=10, dim_z=7)
-        self.kf.F = np.array(
-            [
-                [1, 0, 0, 0, 0, 0, 0, self.dt, 0, 0],  # state transition matrix
-                [0, 1, 0, 0, 0, 0, 0, 0, self.dt, 0],
-                [0, 0, 1, 0, 0, 0, 0, 0, 0, self.dt],
-                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            ]
-        )
-
         self.kf.H = np.array(
             [
                 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # measurement function,
@@ -51,15 +35,9 @@ class KalmanBoxTracker(object):
 
         # -- measurement uncertainty
         self.kf.R = np.diag([1, 1, 1, 10 * np.pi / 180, 0.5, 0.5, 0.5]) ** 2
-
-        # -- state uncertainties independent of framerate
         self.kf.P = np.diag([5, 5, 5, 20 * np.pi / 180, 2, 2, 2, 10, 10, 10]) ** 2
-
-        # -- process noise matrix DOES depend on framerate
-        self.kf.Q = (
-            np.diag([3, 3, 3, 10 * np.pi / 180, 0.5, 0.5, 0.5, 10, 10, 10]) * self.dt
-        ) ** 2
         self.kf.x[:7] = bbox3D.reshape((7, 1))
+        self.t_last_predict = 0
 
         # -- parameters
         self.time_since_update = 0
@@ -76,6 +54,17 @@ class KalmanBoxTracker(object):
     @property
     def n_updates(self):
         return self.hits
+
+    def set_F(self, t):
+        dt = t - self.t_last_predict
+        self.kf.F = np.eye(10)
+        self.kf.F[:3, 7:10] = dt * np.eye(3)
+
+    def set_Q(self, t):
+        dt = t - self.t_last_predict
+        self.kf.Q = (
+            np.diag([3, 3, 3, 10 * np.pi / 180, 0.5, 0.5, 0.5, 10, 10, 10]) * dt
+        ) ** 2
 
     def update(self, bbox3D, info):
         """
@@ -129,10 +118,12 @@ class KalmanBoxTracker(object):
             self.kf.x[3] += np.pi * 2
         self.info = info
 
-    def predict(self):
+    def predict(self, t):
         """
         Advances the state vector and returns the predicted bounding box estimate.
         """
+        self.set_F(t)
+        self.set_Q(t)
         self.kf.predict()
         if self.kf.x[3] >= np.pi:
             self.kf.x[3] -= np.pi * 2

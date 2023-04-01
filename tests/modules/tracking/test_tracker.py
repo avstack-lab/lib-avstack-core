@@ -8,16 +8,14 @@
 
 """
 
-import os
 import sys
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import numpy as np
-import quaternion
 
 import avstack
 from avstack import GroundTruthInformation
-from avstack.datastructs import DataContainer, DataManager
+from avstack.datastructs import DataContainer
 from avstack.geometry import bbox
 from avstack.modules import tracking
 from avstack.modules.perception.detections import BoxDetection
@@ -114,16 +112,37 @@ def test_make_2d3d_tracking_data():
     assert len(dets_2d) == len(dets_3d)
 
 
-def test_basic_box_tracker():
+def test_basic_box_tracker_3d():
     n_frames = 10
     dets_3d_all = make_kitti_tracking_data(n_frames=n_frames)
-    tracker = tracking.tracker3d.BasicBoxTracker(framerate=10)
+    tracker = tracking.tracker3d.BasicBoxTracker3D()
     for frame, dets_3d in enumerate(dets_3d_all):
-        tracks = tracker(dets_3d, frame=frame, identifier="tracker-1")
+        tracks = tracker(
+            t=frame * 0.10, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+        )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
         for det in dets_3d_all[-1]:
             if np.linalg.norm(trk.box3d.t - det.box.t) < 2:
+                break
+        else:
+            raise
+
+
+def test_basic_box_tracker_2d():
+    n_targs = 4
+    dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
+        n_frames=10, n_targs=n_targs
+    )
+    tracker = tracking.tracker2d.BasicBoxTracker2D()
+    for frame, dets_2d in enumerate(dets_2d_all):
+        tracks = tracker(
+            t=frame * 0.10, detections_nd=dets_2d, frame=frame, identifier="tracker-1"
+        )
+    assert len(tracks) == len(dets_3d_all[-1])
+    for i, trk in enumerate(tracks):
+        for det in dets_2d_all[-1]:
+            if np.linalg.norm(trk.box2d.center - det.box.center) < 10:
                 break
         else:
             raise
@@ -134,24 +153,32 @@ def test_basic_joint_box_tracker():
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
         n_frames=10, n_targs=n_targs
     )
-    tracker = tracking.tracker3d.BasicBoxTrackerFusion3Stage(framerate=10)
+    tracker = tracking.tracker3d.BasicBoxTrackerFusion3Stage()
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
-        tracks = tracker(dets_2d, dets_3d, frame=frame, identifier="tracker-1")
+        tracks = tracker(
+            t=frame * 0.10,
+            detections_2d=dets_2d,
+            detections_3d=dets_3d,
+            frame=frame,
+            identifier="tracker-1",
+        )
     assert len(tracks) == n_targs
 
 
 def test_ab3dmot_kitti():
     n_frames = 10
     dets_3d_all = make_kitti_tracking_data(n_frames=n_frames)
-    tracker = tracking.tracker3d.Ab3dmotTracker(framerate=10)
+    tracker = tracking.tracker3d.Ab3dmotTracker()
     for frame, dets_3d in enumerate(dets_3d_all):
-        tracks = tracker(dets_3d, frame=frame, identifier="tracker-1")
+        tracks = tracker(
+            t=frame * 0.10, detections_3d=dets_3d, frame=frame, identifier="tracker-1"
+        )
 
 
 def test_eagermot_fusion_kitti():
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(n_frames=10)
-    tracker_base = avstack.modules.tracking.tracker3d.libraries.EagerMOT.model.EagerMOT(
-        framerate=10
+    tracker_base = (
+        avstack.modules.tracking.tracker3d.libraries.EagerMOT.model.EagerMOT()
     )
     for dets_2d, dets_3d in zip(dets_2d_all, dets_3d_all):
         # add false positives
@@ -170,7 +197,7 @@ def test_eagermot_fusion_kitti():
 
 def test_eagermot_associations():
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(n_frames=10)
-    tracker = tracking.tracker3d.EagermotTracker(framerate=10)
+    tracker = tracking.tracker3d.EagermotTracker()
     trk_base = tracker.tracker
     i = 0
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
@@ -215,7 +242,13 @@ def test_eagermot_associations():
             assert len(assign_1) == len(dets_2d) == len(dets_3d)
 
         # run for real
-        tracks = tracker(dets_2d, dets_3d, frame=frame, identifier="tracker-1")
+        tracks = tracker(
+            t=frame * 0.10,
+            detections_2d=dets_2d,
+            detections_3d=dets_3d,
+            frame=frame,
+            identifier="tracker-1",
+        )
         if i == 1:
             assert (
                 len(tracks) == tracker.n_tracks_confirmed == 0
@@ -231,10 +264,16 @@ def test_eagermot_performance():
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
         n_frames=10, n_targs=n_targs
     )
-    tracker = tracking.tracker3d.EagermotTracker(framerate=10)
+    tracker = tracking.tracker3d.EagermotTracker()
     tracks = tracker.tracker
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
-        tracks = tracker(dets_2d, dets_3d, frame=frame, tracker="tracker-1")
+        tracks = tracker(
+            t=frame * 0.10,
+            detections_2d=dets_2d,
+            detections_3d=dets_3d,
+            frame=frame,
+            tracker="tracker-1",
+        )
     assert len(tracks) == n_targs
     for i, trk in enumerate(tracks):
         for det in dets_3d:

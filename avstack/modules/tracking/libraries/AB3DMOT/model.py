@@ -61,12 +61,11 @@ def associate_detections_to_tracks(detections, trackers, iou_threshold=0.01):
 
 class AB3DMOT(object):  # A baseline of 3D multi-object tracking
     def __init__(
-        self, framerate, max_age=5, min_hits=3
+        self, max_age=5, min_hits=3
     ):  # max age will preserve the bbox does not appear no more than 2 frames, interpolate the detection
         """
         Sets key parameters for SORT
         """
-        self.framerate = framerate
         self.max_age = max_age
         self.min_hits = min_hits
         self.trackers = []
@@ -74,7 +73,7 @@ class AB3DMOT(object):  # A baseline of 3D multi-object tracking
         self.reorder = [3, 4, 5, 6, 2, 1, 0]
         self.reorder_back = [6, 5, 4, 0, 1, 2, 3]
 
-    def update(self, dets_all, z_up=False):
+    def update(self, t, dets_all, z_up=False):
         """
         Params:
           dets_all: dict
@@ -100,8 +99,8 @@ class AB3DMOT(object):  # A baseline of 3D multi-object tracking
         )  # N x 7 , # get predicted locations from existing trackers.
         to_del = []
         ret = []
-        for t, trk in enumerate(trks):
-            pos = self.trackers[t].predict().reshape((-1, 1))
+        for t_ID, trk in enumerate(trks):
+            pos = self.trackers[t_ID].predict(t).reshape((-1, 1))
             trk[:] = [
                 float(p) for p in pos[:7]
             ]  # pos[0], pos[1], pos[2], pos[3], pos[4], pos[5], pos[6]]
@@ -132,7 +131,7 @@ class AB3DMOT(object):  # A baseline of 3D multi-object tracking
 
         # create and initialise new trackers for unmatched detections
         for i in unmatched_dets:  # a scalar of index
-            trk = KalmanBoxTracker(dets[i, :], info[i, :], self.framerate)
+            trk = KalmanBoxTracker(dets[i, :], info[i, :])
             self.trackers.append(trk)
         i = len(self.trackers)
         for trk in reversed(self.trackers):

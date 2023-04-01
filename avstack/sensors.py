@@ -54,6 +54,9 @@ class SensorData:
     def _default_subfolder(self):
         return self.source_identifier
 
+    def __iter__(self):
+        return iter(self.data)
+
     def __getitem__(self, index):
         """Indexes into sensor data list/array"""
         s = deepcopy(self)
@@ -583,7 +586,7 @@ class ImuBuffer(datastructs.PriorityQueue):
         source_ID = None
         imu_calib = None
         R = np.zeros((6, 6))
-        for timestamp, imu_data in imu_elements:
+        for imu_data in imu_elements:
             dt_total += imu_data.data["dt"]
             dv_total += imu_data.data["dv"]
             dth_total += imu_data.data["dth"]

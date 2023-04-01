@@ -45,11 +45,14 @@ carla_clases = [
     ("motorcycle", ["motorcycle"], ("ignore", ignore_classes)),
 ]
 
+coco_person_classes = [("person", ped_classes)]
+
 class_maps = {
     "kitti": {k: ks[0] for ks in k_classes for k in ks[1]},
     "nuscenes": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "nuimages": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "carla": {k: ks[0] for ks in carla_clases for k in ks[1]},
+    "coco-person": {k: ks[0] for ks in coco_person_classes for k in ks[1]},
 }
 
 

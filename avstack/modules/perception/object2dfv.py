@@ -241,7 +241,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 config_file = "configs/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes.py"
                 checkpoint_file = "checkpoints/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
             elif dataset == "coco-person":
-                threshold = 0.5
+                threshold = 0.25
                 config_file = "configs/faster_rcnn/faster_rcnn_r50_caffe_fpn_mstrain_1x_coco-person.py"
                 checkpoint_file = "checkpoints/coco-person/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
             else:

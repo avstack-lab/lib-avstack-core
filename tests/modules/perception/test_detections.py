@@ -10,12 +10,7 @@
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import (
-    Box3D,
-    NominalOriginStandard,
-    StandardCoordinates,
-    Translation,
-)
+from avstack.geometry import Box3D, NominalOriginStandard, Translation
 from avstack.modules.perception import detections
 
 
@@ -23,17 +18,30 @@ alg_ID = 0
 alg_name = "detector-1"
 
 
-def test_detection_container():
+def make_data_container(n_datas):
     frame = 0
     timestamp = 0
-    alg_ID = 0
     alg_name = "detector-1"
     dets = [
         detections.CentroidDetection(alg_name, np.random.randn(3), obj_type="Car")
-        for _ in range(4)
+        for _ in range(n_datas)
     ]
-    DC = DataContainer(frame, timestamp, dets, source_identifier=alg_name)
-    assert len(DC) == 4
+    dc = DataContainer(frame, timestamp, dets, source_identifier=alg_name)
+    return dc
+
+
+def test_detection_container():
+    n_datas = 4
+    dc = make_data_container(n_datas=n_datas)
+    assert len(dc) == n_datas
+
+
+def test_detection_container_as_string():
+    n_datas = 4
+    dc = make_data_container(n_datas=n_datas)
+    dc_string = detections.format_data_container_as_string(dc)
+    dc_reconstruct = detections.get_data_container_from_line(dc_string)
+    assert len(dc_reconstruct) == len(dc)
 
 
 def test_centroid_detection():

@@ -21,11 +21,10 @@ from .kalman import EagerMOTTrack
 
 
 class EagerMOT:
-    def __init__(self, framerate, plus=False, n_box_confirmed=0, n_joint_coast=np.inf):
+    def __init__(self, plus=False, n_box_confirmed=0, n_joint_coast=np.inf):
         self.n_frames = 0
         self.fusion = EagerMOTFusion()
         self.tracker = EagerMOTTracking(
-            framerate,
             plus=plus,
             n_box_confirmed=n_box_confirmed,
             n_joint_coast=n_joint_coast,
@@ -39,7 +38,7 @@ class EagerMOT:
     def tracks_confirmed(self):
         return self.tracker.tracks_confirmed
 
-    def __call__(self, detections_2d, detections_3d):
+    def __call__(self, t, detections_2d, detections_3d):
         """
         detections_2d: dictionary for {sensor_ID: [detections]}
         detections_3d: dictionary for {sensor_ID: [detections]}
@@ -50,7 +49,7 @@ class EagerMOT:
         lone_2d, lone_3d, fused_detections = self.fusion(detections_2d, detections_3d)
 
         # -- track
-        tracks = self.tracker(lone_2d, lone_3d, fused_detections)
+        tracks = self.tracker(t, lone_2d, lone_3d, fused_detections)
 
         return tracks
 
@@ -58,7 +57,6 @@ class EagerMOT:
 class EagerMOTTracking:
     def __init__(
         self,
-        framerate,
         threshold_1=3,
         threshold_2=0.33,
         max_age=5,
@@ -72,7 +70,6 @@ class EagerMOTTracking:
         """
         self.n_frames = 0
         self.tracks = []
-        self.framerate = framerate
         self.threshold_1 = threshold_1
         self.threshold_2 = threshold_2
         self.max_age = max_age
@@ -83,12 +80,12 @@ class EagerMOTTracking:
         self.n_box_confirmed = n_box_confirmed
         self.n_joint_coast = n_joint_coast
 
-    def __call__(self, lone_2d, lone_3d, fused_detections):
+    def __call__(self, t, lone_2d, lone_3d, fused_detections):
         """Main call for EagerMOT tracking"""
         # import ipdb; ipdb.set_trace()
         self.n_frames += 1
         for trk in self.tracks:
-            trk.predict()
+            trk.predict(t)
         assign_1, lone_fused_1, lone_3d_1, lone_track_1 = self._first_data_association(
             lone_3d, fused_detections
         )
@@ -136,11 +133,11 @@ class EagerMOTTracking:
 
         # -- initialize new tracks
         for d_3d in lone_3d_1:
-            self.tracks.append(EagerMOTTrack(None, d_3d.box, self.framerate))
+            self.tracks.append(EagerMOTTrack(None, d_3d.box))
         for d_2d in lone_2d_2:
-            self.tracks.append(EagerMOTTrack(d_2d.box, None, self.framerate))
+            self.tracks.append(EagerMOTTrack(d_2d.box, None))
         for d_2d, d_3d in lone_fused_1:
-            self.tracks.append(EagerMOTTrack(d_2d, d_3d, self.framerate))
+            self.tracks.append(EagerMOTTrack(d_2d, d_3d))
 
     def _update(self, assign_1, assign_2):
         """Update tracks with assignments"""

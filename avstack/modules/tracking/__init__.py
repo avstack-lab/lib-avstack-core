@@ -5,4 +5,5 @@
 # @Last modified time: 2022-01-20
 
 
+import avstack.modules.tracking.tracker2d
 import avstack.modules.tracking.tracker3d

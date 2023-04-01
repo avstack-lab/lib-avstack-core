@@ -15,29 +15,10 @@ from avstack.geometry import transformations as tforms
 class EagerMOTTrack:
     count = 0
 
-    def __init__(self, box2d, box3d, framerate):
+    def __init__(self, box2d, box3d):
         """A new track for eagermot"""
-        self.framerate = framerate
-        self.frame_interval = 1.0 / framerate
-        dt = self.frame_interval
-
         # Set up the 3D kalman filter
         self.kf = KalmanFilter(dim_x=10, dim_z=7)
-        self.kf.F = np.array(
-            [
-                [1, 0, 0, 0, 0, 0, 0, dt, 0, 0],  # state transition matrix
-                [0, 1, 0, 0, 0, 0, 0, 0, dt, 0],
-                [0, 0, 1, 0, 0, 0, 0, 0, 0, dt],
-                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            ]
-        )
-
         self.kf.H = np.array(
             [
                 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # measurement function,
@@ -50,11 +31,9 @@ class EagerMOTTrack:
             ]
         )
 
-        # self.kf.P[7:, 7:] *= 1000.
-        # self.kf.P *= 10.
         self.kf.P = np.diag([4, 4, 4, 2, 2, 2, 1, 10, 10, 10]) ** 2
-        self.kf.Q = np.diag([10, 10, 10, 1, 1, 1, 0.5, 10, 10, 10]) ** 2
         self.kf.R = np.diag([1, 1, 1, 0.5, 0.5, 0.5, 0.1]) ** 2
+        self.t_last_predict = 0
 
         self.time_since_update = 0
         self.id = EagerMOTTrack.count
@@ -110,16 +89,27 @@ class EagerMOTTrack:
         else:
             return None
 
+    def set_F(self, t):
+        dt = t - self.t_last_predict
+        self.kf.F = np.eye(10)
+        self.kf.F[:3, 7:10] = dt * np.eye(3)
+
+    def set_Q(self, t):
+        dt = t - self.t_last_predict
+        self.kf.Q = (np.diag([10, 10, 10, 1, 1, 1, 0.5, 10, 10, 10]) ** 2) * dt
+
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
         return f"EagerMOT track:\nbox3d -- {self.box3d_n_confirmed} confirmed: {self.box3d}\nbox2d -- {self.box2d_n_confirmed} confirmed: {self.box2d}"
 
-    def predict(self):
+    def predict(self, t):
         """Predict the states forward a frame"""
         if self.box3d_initialized:
             # -- predict the 3d box first
+            self.set_F(t)
+            self.set_Q(t)
             self.kf.predict()
             if self.kf.x[3] >= np.pi:
                 self.kf.x[3] -= np.pi * 2

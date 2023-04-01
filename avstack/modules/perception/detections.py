@@ -12,6 +12,7 @@ from typing import List
 import numpy as np
 from scipy.interpolate import interp1d
 
+from avstack.datastructs import DataContainer
 from avstack.geometry import (
     Box2D,
     Box3D,
@@ -49,9 +50,32 @@ def get_detection_from_line(line):
         box = bbox.get_box_from_line(" ".join(items[4:34]))
         mask = bbox.get_segmask_from_line(" ".join(items[34:]))
         det = MaskDetection(sID, box, mask, obj_type, score)
+    elif det_type == "centroid-detection":
+        sID, obj_type, score = items[1:4]
+        n_dims = int(items[4])
+        centroid = np.array([float(d) for d in items[5 : 5 + n_dims]])
+        det = CentroidDetection(sID, centroid, obj_type, score)
     else:
         raise NotImplementedError(det_type)
     return det
+
+
+def format_data_container_as_string(DC):
+    dets_strings = " ".join(["DETECTION " + det.format_as_string() for det in DC.data])
+    return (
+        f"datacontainer {DC.frame} {DC.timestamp} {DC.source_identifier} "
+        f"{dets_strings}"
+    )
+
+
+def get_data_container_from_line(line):
+    items = line.split()
+    assert items[0] == "datacontainer"
+    frame = int(items[1])
+    timestamp = float(items[2])
+    source_identifier = items[3]
+    detections = [get_detection_from_line(det) for det in line.split("DETECTION")[1:]]
+    return DataContainer(frame, timestamp, detections, source_identifier)
 
 
 class Detection_:
@@ -112,6 +136,10 @@ class CentroidDetection(Detection_):
                     f"Input centroid of type {type(centroid)} is not of an acceptable type"
                 )
         self._centroid = centroid
+
+    def format_as_string(self):
+        """Format data elements"""
+        return f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} {' '.join([str(d) for d in self.centroid])}"
 
 
 class JointBoxDetection(Detection_):
