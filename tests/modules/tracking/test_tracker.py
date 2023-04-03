@@ -281,3 +281,7 @@ def test_eagermot_performance():
                 break
         else:
             raise
+
+
+def test_radar_tracker():
+    pass

@@ -25,15 +25,24 @@ class _TrackingAlgorithm:
         self,
         assign_metric="IoU",
         assign_radius=4,
+        threshold_confirmed=3,
+        threshold_coast=3,
+        cost_threshold=0,
+        v_max=None,
         save_output=False,
         save_folder="",
         **kwargs,
     ):
+        self.tracks = []
         self.iframe = -1
         self.frame = 0
         self.t = 0
         self.assign_metric = assign_metric
         self.assign_radius = assign_radius
+        self.cost_threshold = cost_threshold
+        self.threshold_confirmed = threshold_confirmed
+        self.threshold_coast = threshold_coast
+        self.v_max = v_max
         self.save = save_output
         self.save_folder = save_folder
         self.save = save_output
@@ -42,6 +51,14 @@ class _TrackingAlgorithm:
             if os.path.exists(self.save_folder):
                 shutil.rmtree(self.save_folder)
             os.makedirs(self.save_folder)
+
+    @property
+    def tracks(self):
+        return self._tracks
+    
+    @tracks.setter
+    def tracks(self, tracks):
+        self._tracks = tracks
 
     @property
     def confirmed_tracks(self):
@@ -93,24 +110,7 @@ class _TrackingAlgorithm:
                 f.write(trk_str)
         track_data = DataContainer(self.frame, self.t, tracks, "tracker")
         return track_data
-
-
-class _BasicBoxTracker(_TrackingAlgorithm):
-    def __init__(
-        self,
-        threshold_confirmed=3,
-        threshold_coast=3,
-        v_max=60,
-        assign_metric="center_dist",
-        assign_radius=4,
-        **kwargs,
-    ):
-        self.tracks = []
-        self.threshold_confirmed = threshold_confirmed
-        self.threshold_coast = threshold_coast
-        self.v_max = v_max
-        super().__init__(assign_metric, assign_radius, **kwargs)
-
+    
     @property
     def tracks_confirmed(self):
         return [trk for trk in self.tracks if trk.n_updates >= self.threshold_confirmed]
@@ -118,25 +118,18 @@ class _BasicBoxTracker(_TrackingAlgorithm):
     @property
     def tracks_active(self):
         return [trk for trk in self.tracks if trk.active]
-
+    
     def spawn_track_from_detection(self, detection):
         raise NotImplementedError
-
+    
     def track(self, t, detections_nd, *args, **kwargs):
-        """
-        :detections_nd
-
-        Use IoU for association
-
-        HACK: if detections_nd is a dictionary, then it's from multiple sensors...
-        so we need to run over assignment and update for each one
-        """
         # -- propagation
         for trk in self.tracks:
             trk.predict(t)
-            if np.linalg.norm(trk.velocity) > self.v_max:
-                trk.active = False
-
+            if self.v_max is not None:
+                if np.linalg.norm(trk.velocity) > self.v_max:
+                    trk.active = False
+        
         # -- loop over each sensor providing detections
         if not isinstance(detections_nd, dict):
             detections_nd = {"sensor_1": detections_nd}
@@ -144,7 +137,7 @@ class _BasicBoxTracker(_TrackingAlgorithm):
             # -- assignment with active tracks
             trks_active = self.tracks_active
             A = self.assign(detections, trks_active)
-            assign_sol = gnn_single_frame_assign(A, cost_threshold=-0.10)
+            assign_sol = gnn_single_frame_assign(A, cost_threshold=self.cost_threshold)
 
             # -- update tracks with associations
             for i_det, j_trk in assign_sol.assignment_tuples:

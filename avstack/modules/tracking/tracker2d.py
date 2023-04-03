@@ -13,7 +13,7 @@ import numpy as np
 from avstack.geometry import Box2D
 
 from ._sort import Sort
-from .base import _BasicBoxTracker, _TrackingAlgorithm
+from .base import _TrackingAlgorithm
 from .tracks import BasicBoxTrack2D
 
 
@@ -47,22 +47,22 @@ class PassthroughTracker2D(_TrackingAlgorithm):
         return tracks
 
 
-class BasicBoxTracker2D(_BasicBoxTracker):
+class BasicBoxTracker2D(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=2,
         threshold_coast=4,
         v_max=200,  # pixels per second
-        assign_metric="IoU",
-        assign_radius=None,
+        cost_threshold=-0.10,
         **kwargs,
     ):
         super().__init__(
-            threshold_confirmed,
-            threshold_coast,
-            v_max,
-            assign_metric,
-            assign_radius,
+            assign_metric="IoU",
+            assign_radius=None,
+            threshold_confirmed=threshold_confirmed,
+            threshold_coast=threshold_coast,
+            cost_threshold=cost_threshold,
+            v_max=v_max,
             **kwargs,
         )
 

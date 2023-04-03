@@ -17,7 +17,7 @@ from avstack.modules.perception.detections import BoxDetection
 
 from ..assignment import build_A_from_iou, gnn_single_frame_assign, greedy_assignment
 from . import libraries
-from .base import _BasicBoxTracker, _TrackingAlgorithm
+from .base import _TrackingAlgorithm
 from .tracks import BasicBoxTrack3D, BasicJointBoxTrack
 
 
@@ -35,7 +35,7 @@ class GroundTruthTracker(_TrackingAlgorithm):
 # ==============================================================
 
 
-class BasicBoxTracker3D(_BasicBoxTracker):
+class BasicBoxTracker3D(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=3,
@@ -46,11 +46,12 @@ class BasicBoxTracker3D(_BasicBoxTracker):
         **kwargs,
     ):
         super().__init__(
-            threshold_confirmed,
-            threshold_coast,
-            v_max,
-            assign_metric,
-            assign_radius,
+            assign_metric=assign_metric,
+            assign_radius=assign_radius,
+            threshold_confirmed=threshold_confirmed,
+            threshold_coast=threshold_coast,
+            cost_threshold=assign_radius,
+            v_max=v_max,
             **kwargs,
         )
 
@@ -253,6 +254,34 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
         return self.tracks_confirmed
 
 
+class BasicRadarTracker(_TrackingAlgorithm):
+    def __init__(
+        self,
+        threshold_confirmed=3,
+        threshold_coast=3,
+        v_max=60,  # meters per second
+        assign_metric="center_dist",
+        assign_radius=4,
+        **kwargs,
+    ):
+        super().__init__(
+            assign_metric=assign_metric,
+            assign_radius=assign_radius,
+            threshold_confirmed=threshold_confirmed,
+            threshold_coast=threshold_coast,
+            cost_threshold=assign_radius,
+            v_max=v_max,
+            **kwargs,
+        )
+
+    # def spawn_track_from_detection(self, detection):
+    #     return BasicCentroidTrack3D(
+    #         self.t,
+    #         detection.box3d,
+    #         detection.obj_type,
+    #     )
+
+
 # ==============================================================
 # EXTERNALS
 # ==============================================================
@@ -279,6 +308,10 @@ class Ab3dmotTracker(_TrackingAlgorithm):
     @property
     def tracks(self):
         return self.tracker.trackers
+    
+    @tracks.setter
+    def tracks(self, tracks):
+        self.tracker.trackers = tracks
 
     def track(self, t, detections_3d, *args, **kwargs):
         """
@@ -414,10 +447,6 @@ class Chaser3DBoxTracker(_TrackingAlgorithm):
         msmts = self._convert_dets_to_msmts(detections_3d)
         self.tracker.process_msmts(msmts)
         return self._format_tracks(self.tracker.confirmed_tracks, detections_3d)
-
-    @property
-    def tracks(self):
-        return {trk.ID: trk for trk in self.tracker.confirmed_tracks}
 
     def _convert_dets_to_msmts(self, dets):
         msmts = []
