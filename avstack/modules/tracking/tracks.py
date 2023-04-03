@@ -69,8 +69,12 @@ def get_data_container_from_line(line, identifier_override=None):
 
 class _TrackBase:
     ID_counter = 0
-
-    def __init__(self, t0, ID, obj_type, t=None, coast=0, n_updates=1, age=0) -> None:
+    def __init__(self, t0, x, P, obj_type, ID_force=None, t=None, coast=0, n_updates=1, age=0) -> None:
+        if ID_force is None:
+            ID = _TrackBase.ID_counter
+            _TrackBase.ID_counter += 1
+        else:
+            ID = ID_force
         self.obj_type = obj_type
         self.coast = coast
         self.active = True
@@ -79,6 +83,9 @@ class _TrackBase:
         self.ID = ID
         self.t0 = t0
         self.t = t0 if t is None else t
+        self.t_last_predict = self.t
+        self.x = x
+        self.P = P
 
     @staticmethod
     def f(x, dt):
@@ -109,9 +116,6 @@ class _TrackBase:
         self.age += 1
         self.coast += 1
 
-    def predict(self):
-        raise NotImplementedError
-
     def _update(self, z, R):
         y = z - self.h(self.x)
         H = self.H(self.x)
@@ -120,9 +124,16 @@ class _TrackBase:
         K = self.P @ H.T @ Sinv
         self.x = self.x + K @ y
         self.P = (np.eye(self.P.shape[0]) - K @ H) @ self.P
+        self.coast = 0
+        self.n_updates += 1
 
-    def update(self):
-        raise NotImplementedError
+    def predict(self, t):
+        """Can override this in subclass"""
+        self._predict(t)
+
+    def update(self, z, R):
+        """Can override this in subclass"""
+        self._update(z, R)
 
 
 class RadarCentroidTrack(_TrackBase):
@@ -152,22 +163,12 @@ class RadarCentroidTrack(_TrackBase):
         Track state is: [x, y, z, vx, vy, vz]
         Measurement is: [range, azimuth, elevation, range rate]
         """
-        if ID_force is None:
-            ID = _TrackBase.ID_counter
-            _TrackBase.ID_counter += 1
-        else:
-            ID = ID_force
-        super().__init__(t0, ID, obj_type, t, coast, n_updates, age)
-        
-        # -- initialize filter
-        self.R = np.diag([10, 1e-2, 5e-2, 2]) ** 2
-
         # Position can be initialized fairly well
         # Velocity can only be initialized along the range rate 
         # This means along the "-x axis" (see above for a note explaining this)
         x, y, z = spherical_to_cartesian(razelrrt[:3])
         vx, vy, vz = razelrrt[3], 0, 0
-        self.x = np.array(
+        x = np.array(
             [
                 x,
                 y,
@@ -177,11 +178,10 @@ class RadarCentroidTrack(_TrackBase):
                 vz
             ]
         )
-        # Note the uncertainty on transverse velocities is larger (see note above)
         if P is None:
+            # Note the uncertainty on transverse velocities is larger (see note above)
             P = np.diag([5, 5, 5, 2, 10, 10]) ** 2
-        self.P = P
-        self.t_last_predict = t0
+        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
 
     @staticmethod
     def H(x):
@@ -230,7 +230,11 @@ class RadarCentroidTrack(_TrackBase):
     
     @staticmethod
     def Q(x, dt):
-        raise NotImplementedError
+        """This is most definitely not optimal and should be tuned in the future"""
+        return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
+    
+    def update(self, z, R=np.diag([10, 1e-2, 5e-2, 2])**2):
+        self._update(z, R)
 
 
 class BasicBoxTrack3D(_TrackBase):
@@ -248,20 +252,9 @@ class BasicBoxTrack3D(_TrackBase):
         age=0,
     ):
         """Box state is: [x, y, z, h, w, l, vx, vy, vz] w/ yaw as attribute"""
-        if ID_force is None:
-            ID = _TrackBase.ID_counter
-            _TrackBase.ID_counter += 1
-        else:
-            ID = ID_force
-        super().__init__(t0, ID, obj_type, t, coast, n_updates, age)
-        self.origin = box3d.origin
-        self.where_is_t = box3d.where_is_t
-        if P is None:
-            P = np.diag([5, 5, 5, 2, 2, 2, 10, 10, 10]) ** 2
-        self.P = P
         if v is None:
             v = np.array([0, 0, 0])
-        self.x = np.array(
+        x = np.array(
             [
                 box3d.t[0],
                 box3d.t[1],
@@ -274,9 +267,12 @@ class BasicBoxTrack3D(_TrackBase):
                 v[2],
             ]
         )
+        if P is None:
+            P = np.diag([5, 5, 5, 2, 2, 2, 10, 10, 10]) ** 2
+        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
+        self.origin = box3d.origin
+        self.where_is_t = box3d.where_is_t
         self.q = box3d.q
-        self.t_last_predict = t0
-        # self.R = np.diag([1, 1, 1, 0.5, 0.5, 0.5]) ** 2
 
     @staticmethod
     def f(x, dt):
@@ -329,7 +325,7 @@ class BasicBoxTrack3D(_TrackBase):
     def yaw(self):
         return self.box3d.yaw
 
-    def update(self, box3d):
+    def update(self, box3d, R=np.diag([1, 1, 1, 0.5, 0.5, 0.5])**2):
         if box3d.origin != self.origin:
             box3d.change_origin(self.origin)
         if self.where_is_t != box3d.where_is_t:
@@ -338,10 +334,8 @@ class BasicBoxTrack3D(_TrackBase):
                     self.where_is_t, box3d.where_is_t
                 )
             )
-        self.coast = 0
-        self.n_updates += 1
         det = np.array([box3d.t[0], box3d.t[1], box3d.t[2], box3d.h, box3d.w, box3d.l])
-        self._update(det)
+        self._update(det, R)
         self.q = box3d.q
 
     def as_object(self):
@@ -384,26 +378,9 @@ class BasicBoxTrack2D(_TrackBase):
         age=0,
     ):
         """Box state is: [x, y, w, h, vx, vy]"""
-        if ID_force is None:
-            ID = _TrackBase.ID_counter
-            _TrackBase.ID_counter += 1
-        else:
-            ID = ID_force
-        super().__init__(t0, ID, obj_type, t, coast, n_updates, age)
-        self.calibration = box2d.calibration
-        # self.source_identifier = box2d.source_identifier
-
-        # -- initialize filter
-        self.kf = KalmanFilter(dim_x=6, dim_z=4)
-        if P is None:
-            P = np.diag([10, 10, 10, 10, 10, 10]) ** 2
-        self.kf.P = P
-        self.kf.H = np.zeros((4, 6))
-        self.kf.H[:4, :4] = np.eye(4)
-        self.kf.R = np.diag([5, 5, 5, 5]) ** 2
         if v is None:
             v = np.array([0, 0])
-        self.kf.x = np.array(
+        x = np.array(
             [
                 box2d.center[0],
                 box2d.center[1],
@@ -413,39 +390,42 @@ class BasicBoxTrack2D(_TrackBase):
                 v[1],
             ]
         )
-        self.t_last_predict = t0
+        if P is None:
+            P = np.diag([10, 10, 10, 10, 10, 10]) ** 2
+        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
+        self.calibration = box2d.calibration
 
     @property
     def position(self):
-        return self.kf.x[:2]
+        return self.x[:2]
 
     @property
     def velocity(self):
-        return self.kf.x[4:6]
+        return self.x[4:6]
 
     @property
-    def w(self):
-        return self.kf.x[2]
+    def width(self):
+        return self.x[2]
 
     @property
-    def h(self):
-        return self.kf.x[3]
+    def height(self):
+        return self.x[3]
 
     @property
     def xmin(self):
-        return self.position[0] - self.w / 2
+        return self.position[0] - self.width / 2
 
     @property
     def xmax(self):
-        return self.position[0] + self.w / 2
+        return self.position[0] + self.width / 2
 
     @property
     def ymin(self):
-        return self.position[1] - self.h / 2
+        return self.position[1] - self.height / 2
 
     @property
     def ymax(self):
-        return self.position[1] + self.h / 2
+        return self.position[1] + self.height / 2
 
     @property
     def box2d(self):
@@ -455,30 +435,47 @@ class BasicBoxTrack2D(_TrackBase):
     def box(self):
         return self.box2d
 
-    def set_F(self, t):
-        dt = t - self.t_last_predict
-        self.kf.F = np.eye(6)
-        self.kf.F[:2, 4:6] = dt * np.eye(2)
+    @staticmethod
+    def f(x, dt):
+        """Box state is: [x, y, w, h, vx, vy]"""
+        return np.array([x[0] + x[4]*dt,
+                         x[1] + x[5]*dt,
+                         x[2], x[3],
+                         x[4], x[5]])
+    
+    @staticmethod
+    def F(x, dt):
+        F = np.eye(6)
+        F[:2, 4:6] = dt * np.eye(2)
+        return F
 
-    def set_Q(self, t):
-        dt = t - self.t_last_predict
-        self.kf.Q = (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
+    @staticmethod
+    def h(x):
+        return x[:4]
+    
+    @staticmethod
+    def H(x):
+        H = np.zeros((4, 6))
+        H[:4, :4] = np.eye(4)
+        return H
 
-    def update(self, box2d):
+    @staticmethod
+    def Q(dt):
+        return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
+
+    def update(self, box2d, R=np.diag([5, 5, 5, 5])**2):
         # if box2d.source_identifier != self.source_identifier:
         #     raise NotImplementedError("Sensor sources must be the same for now")
-        self.coast = 0
-        self.n_updates += 1
         det = np.array([box2d.center[0], box2d.center[1], box2d.w, box2d.h])
-        self.kf.update(det)
+        self._update(det, R)
 
     def format_as_string(self):
-        v_str = " ".join(map(str, self.kf.x[4:6]))
-        P_str = " ".join(map(str, self.kf.P.ravel()))
+        v_str = " ".join(map(str, self.x[4:6]))
+        P_str = " ".join(map(str, self.P.ravel()))
         return (
             f"boxtrack2d {self.obj_type} {self.t0} {self.t} {self.ID} "
             f"{self.coast} {self.n_updates} {self.age} "
-            f"{len(self.kf.x)} {v_str} {P_str} {self.box2d.format_as_string()}"
+            f"{len(self.x)} {v_str} {P_str} {self.box2d.format_as_string()}"
         )
 
 

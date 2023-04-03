@@ -27,8 +27,8 @@ def test_boxtrack3d_as_string():
     random_track = tracks.BasicBoxTrack3D(t0, box3d, obj_type)
     trk_string = random_track.format_as_string()
     random_track_reconstruct = tracks.get_track_from_line(trk_string)
-    assert np.allclose(random_track.kf.x, random_track_reconstruct.kf.x)
-    assert np.allclose(random_track.kf.P, random_track_reconstruct.kf.P)
+    assert np.allclose(random_track.x, random_track_reconstruct.x)
+    assert np.allclose(random_track.P, random_track_reconstruct.P)
 
 
 def test_boxtrack2d_as_string():
@@ -39,8 +39,8 @@ def test_boxtrack2d_as_string():
     random_track = tracks.BasicBoxTrack2D(t0, box2d, obj_type)
     trk_string = random_track.format_as_string()
     random_track_reconstruct = tracks.get_track_from_line(trk_string)
-    assert np.allclose(random_track.kf.x, random_track_reconstruct.kf.x)
-    assert np.allclose(random_track.kf.P, random_track_reconstruct.kf.P)
+    assert np.allclose(random_track.x, random_track_reconstruct.x)
+    assert np.allclose(random_track.P, random_track_reconstruct.P)
 
 
 def test_trackcontainer_as_string():
