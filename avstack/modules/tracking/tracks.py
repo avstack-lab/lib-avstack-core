@@ -136,8 +136,8 @@ class _TrackBase:
         self._update(z, R)
 
 
-class RadarCentroidTrack(_TrackBase):
-    """Radar centroid tracker
+class RazelRrtTrack(_TrackBase):
+    """Razel rrt track
     
     IMPORTANT: assumes we are in a sensor-relative coordinate frame.
     This assumption allows us to say that the sensor is always 
@@ -183,6 +183,14 @@ class RadarCentroidTrack(_TrackBase):
             P = np.diag([5, 5, 5, 2, 10, 10]) ** 2
         super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
 
+    @property
+    def position(self):
+        return self.x[:3]
+
+    @property
+    def velocity(self):
+        return self.x[3:6]
+    
     @staticmethod
     def H(x):
         """Partial derivative of the measurement function w.r.t x at x hat
@@ -207,7 +215,7 @@ class RadarCentroidTrack(_TrackBase):
         
         NOTE: assumes we are in a sensor-relative coordinate frame
         """
-        rng, az, el, rrt = cartesian_to_spherical(x[:3]), x[3]
+        (rng, az, el), rrt = cartesian_to_spherical(x[:3]), x[3]
         return np.array([rng, az, el, rrt])
     
     @staticmethod
@@ -229,7 +237,7 @@ class RadarCentroidTrack(_TrackBase):
                          x[3], x[4], x[5]])
     
     @staticmethod
-    def Q(x, dt):
+    def Q(dt):
         """This is most definitely not optimal and should be tuned in the future"""
         return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
     

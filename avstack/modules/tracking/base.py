@@ -15,7 +15,7 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
-from avstack.modules.perception.detections import BoxDetection
+from avstack.modules.perception.detections import BoxDetection, RazelRrtDetection
 
 from ..assignment import gnn_single_frame_assign
 
@@ -66,32 +66,51 @@ class _TrackingAlgorithm:
 
     def assign(self, dets, tracks):
         A = np.zeros((len(dets), len(tracks)))
-        for i, b1 in enumerate(dets):
-            boxa = b1.box if isinstance(b1, VehicleState) else b1
-            box1 = boxa.box if isinstance(b1, BoxDetection) else boxa
-            for j, b2 in enumerate(tracks):
-                try:
-                    box2 = b2.as_object().box
-                except AttributeError:
-                    box2 = b2.box2d
+        for i, det_ in enumerate(dets):
+            # -- pull off detection state
+            if isinstance(det_, (VehicleState, BoxDetection)):
+                det = det_.box
+            elif isinstance(det_, RazelRrtDetection):
+                det = det_.xyzrrt  # use the cartesian coordinates for gating
+            else:
+                raise NotImplementedError(type(det_))
+
+            for j, trk in enumerate(tracks):
+                # -- pull off track state
+                if isinstance(det_, (VehicleState, BoxDetection)):
+                    try:
+                        trk = trk.as_object().box
+                    except AttributeError:
+                        trk = trk.box2d
+                elif isinstance(det_, RazelRrtDetection):
+                    trk = trk.x[:4]  # NOTE: using rrt here assuming sensor-relative coords
+                else:
+                    raise NotImplementedError(type(det_))
 
                 # -- either way, change origin and use radius to filter coarsely
                 try:
-                    if box1.origin != box2.origin:
-                        box1.change_origin(box2.origin)
+                    if det.origin != trk.origin:
+                        det.change_origin(trk.origin)
                 except AttributeError as e:
                     pass
+
+                # -- gating
                 if self.assign_radius is not None:
-                    dist = box1.t.distance(box2.t)
+                    if isinstance(det_, (VehicleState, BoxDetection)):
+                        dist = det.t.distance(trk.t)
+                    else:
+                        dist = np.linalg.norm(trk - det)
                     if dist > self.assign_radius:
                         continue
+
                 # -- use the metric of choice
                 if self.assign_metric == "IoU":
-                    cost = -box1.IoU(box2)  # lower is better
+                    cost = -det.IoU(trk)  # lower is better
                 elif self.assign_metric == "center_dist":
                     cost = dist - self.assign_radius  # lower is better
                 else:
                     raise NotImplementedError(self.assign_metric)
+                
                 # -- store result
                 A[i, j] = cost
         return A
@@ -141,7 +160,7 @@ class _TrackingAlgorithm:
 
             # -- update tracks with associations
             for i_det, j_trk in assign_sol.assignment_tuples:
-                trks_active[j_trk].update(detections[i_det].box3d)
+                trks_active[j_trk].update(detections[i_det].z)
 
             # -- unassigned dets for new tracks
             for i_det in assign_sol.unassigned_rows:

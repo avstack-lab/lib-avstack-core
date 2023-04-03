@@ -52,6 +52,14 @@ def test_centroid_detection():
     assert np.all(d.centroid == centroid)
 
 
+def test_razelrrt_detection():
+    razelrrt = np.array([100, 1.0, -0.3, 1.23, 19.1])
+    d = detections.RazelRrtDetection(
+        source_identifier=alg_name, razelrrt=razelrrt, obj_type="Car"
+    )
+    assert np.all(d.razelrrt == razelrrt)
+
+
 def test_box_detection():
     h = 1
     w = 2
