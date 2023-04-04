@@ -13,3 +13,11 @@ from avstack.geometry import transformations as tforms
 def test_rotation_conversion():
     D = tforms.transform_orientation([0, 0, 0], "euler", "DCM")
     assert np.all(D == np.eye(3))
+
+
+def test_razelrrt_to_xyzvel():
+    raise NotImplementedError
+
+
+def test_xyzvel_to_razelrrt():
+    raise NotImplementedError

@@ -1,10 +1,9 @@
 import numpy as np
-from filterpy.kalman import KalmanFilter, ExtendedKalmanFilter
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
 from avstack.geometry.bbox import Box2D, Box3D, get_box_from_line
-from avstack.geometry.transformations import spherical_to_cartesian, cartesian_to_spherical
+from avstack.geometry.transformations import xyzvel_to_razelrrt, razelrrt_to_xyzvel
 
 
 def format_data_container_as_string(DC):
@@ -165,22 +164,13 @@ class RazelRrtTrack(_TrackBase):
         """
         # Position can be initialized fairly well
         # Velocity can only be initialized along the range rate 
-        # This means along the "-x axis" (see above for a note explaining this)
-        x, y, z = spherical_to_cartesian(razelrrt[:3])
-        vx, vy, vz = razelrrt[3], 0, 0
-        x = np.array(
-            [
-                x,
-                y,
-                z,
-                vx,
-                vy,
-                vz
-            ]
-        )
+        x = razelrrt_to_xyzvel(razelrrt)
         if P is None:
             # Note the uncertainty on transverse velocities is larger (see note above)
-            P = np.diag([5, 5, 5, 2, 10, 10]) ** 2
+            v_unit = x[:3] / razelrrt[0]
+            rrt_p_max = 10  # complete uncertainty gives 10, total certainty gives 2
+            rrt_p_min = 2
+            P = np.diag([5, 5, 5, *np.maximum(rrt_p_min, rrt_p_max * (1-v_unit))]) ** 2
         super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
 
     @property
@@ -206,7 +196,7 @@ class RazelRrtTrack(_TrackBase):
         H[2, 0] = -x[0]*x[2] / (r**2 * r2d)
         H[2, 1] = -x[1]*x[2] / (r**2 * r2d)
         H[2, 2] =  r2d / r**2
-        H[3, 3] = x[3]
+        H[3, :3] = x[:3] / r
         return H
 
     @staticmethod
@@ -215,8 +205,7 @@ class RazelRrtTrack(_TrackBase):
         
         NOTE: assumes we are in a sensor-relative coordinate frame
         """
-        (rng, az, el), rrt = cartesian_to_spherical(x[:3]), x[3]
-        return np.array([rng, az, el, rrt])
+        return xyzvel_to_razelrrt(x)
     
     @staticmethod
     def F(x, dt):

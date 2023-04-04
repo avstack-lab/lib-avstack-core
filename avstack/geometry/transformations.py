@@ -77,6 +77,19 @@ def cartesian_to_spherical(v, coordinates=StandardCoordinates):
     return np.array([rng, az, el])
 
 
+def xyzvel_to_razelrrt(xyzvel):
+    rng, az, el = cartesian_to_spherical(xyzvel[:3])
+    rrt = xyzvel[3:6] @ xyzvel[:3]/rng
+    return np.array([rng, az, el, rrt])
+    
+
+def razelrrt_to_xyzvel(razelrrt):
+    x, y, z = spherical_to_cartesian(razelrrt[:3])
+    v_unit = np.array([x, y, z]) / razelrrt[0] 
+    vx, vy, vz = v_unit * razelrrt[3]
+    return np.array([x, y, z, vx, vy, vz])
+
+
 # ===========================================
 # Global wrapper function
 # ===========================================

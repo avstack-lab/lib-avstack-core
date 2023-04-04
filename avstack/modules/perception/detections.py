@@ -21,7 +21,7 @@ from avstack.geometry import (
     Translation,
     bbox,
 )
-from avstack.geometry.transformations import spherical_to_cartesian
+from avstack.geometry.transformations import spherical_to_cartesian, cartesian_to_spherical
 
 
 # detection_map = {'vehicle':'car', 'car':'car', 'pedestrian':'pedestrian', 'cyclist':'cyclist',
@@ -55,8 +55,8 @@ def get_detection_from_line(line):
         centroid = np.array([float(d) for d in items[5 : 5 + n_dims]])
         det = CentroidDetection(sID, centroid, obj_type, score)
     elif det_type == "razelrrt-detection":
-        centroid = np.array([float(d) for d in items[4 : 8]])
-        det = RazelRrtDetection(sID, centroid, obj_type, score)
+        razelrrt = np.array([float(d) for d in items[4 : 8]])
+        det = RazelRrtDetection(sID, razelrrt, obj_type, score)
     else:
         raise NotImplementedError(det_type)
     return det

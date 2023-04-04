@@ -13,10 +13,20 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.modules.tracking import tracks
+from avstack.geometry.transformations import xyzvel_to_razelrrt
 
 
 sys.path.append("tests/")
 from utilities import camera_calib, get_object_global
+
+
+def test_razelrrt_track():
+    random_object = get_object_global(1)
+    t0 = 1.25
+    box3d = random_object.box
+    obj_type = random_object.obj_type
+    razelrrt = xyzvel_to_razelrrt(np.array([*box3d.t, *random_object.velocity.vector]))
+    random_track = tracks.RazelRrtTrack(t0, razelrrt, obj_type)
 
 
 def test_boxtrack3d_as_string():
