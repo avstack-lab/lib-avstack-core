@@ -54,6 +54,9 @@ def get_detection_from_line(line):
         n_dims = int(items[4])
         centroid = np.array([float(d) for d in items[5 : 5 + n_dims]])
         det = CentroidDetection(sID, centroid, obj_type, score)
+    elif det_type == "razel-detection":
+        razel = np.array([float(d) for d in items[4 : 7]])
+        det = RazelDetection(sID, razel, obj_type, score)
     elif det_type == "razelrrt-detection":
         razelrrt = np.array([float(d) for d in items[4 : 8]])
         det = RazelRrtDetection(sID, razelrrt, obj_type, score)
@@ -146,6 +149,44 @@ class CentroidDetection(Detection_):
     def format_as_string(self):
         """Format data elements"""
         return f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} {' '.join([str(d) for d in self.centroid])}"
+
+
+class RazelDetection(Detection_):
+    def __init__(
+        self, source_identifier, razel, obj_type=None, score=None, check_type=False
+    ):
+        super().__init__(source_identifier, obj_type, score, check_type)
+        self.razel = razel
+
+    @property
+    def data(self):
+        return self.razel
+
+    @property
+    def razel(self):
+        return self._razel
+    
+    @property
+    def z(self):
+        return self.razel
+
+    @razel.setter
+    def razel(self, razel):
+        if self.check_type:
+            if not isinstance(razel, np.ndarray):
+                raise TypeError(
+                    f"Input razel of type {type(razel)} is not of an acceptable type"
+                )
+        self._razel = razel
+    
+    @property
+    def xyz(self):
+        x, y, z = spherical_to_cartesian(self.razel)
+        return np.array([x, y, z])
+        
+    def format_as_string(self):
+        """Format data elements"""
+        return f"razel-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.razel])}"
 
 
 class RazelRrtDetection(Detection_):
