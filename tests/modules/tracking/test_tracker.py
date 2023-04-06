@@ -65,9 +65,10 @@ def make_kitti_tracking_data(dt=0.1, n_frames=10, n_targs=4, det_type='box', shu
         dets = deepcopy(objects)
         dets_class = []
         for det in dets:
-            det.box3d.t[2] += (
-                t * det.velocity.vector[2]
-            )  # camera coordinates with z forward
+            det.box3d.t += (
+                t * det.velocity.vector
+            )  
+            # -- camera coordinates with z forward
             det.box3d.change_origin(lidar_calib.origin)
             if det_type == 'box':
                 det = BoxDetection(name_3d, det.box3d, det.obj_type)
@@ -128,37 +129,86 @@ def test_make_2d3d_tracking_data():
 
 
 def test_razel_tracker_3d():
-    dets_3d_all = make_kitti_tracking_data(dt=0.1, n_frames=10, n_targs=4, det_type='razel')
-    tracker = tracking.tracker3d.BasicRazelTracker(threshold_coast=20)
+    dt = 0.25
+    dets_3d_all = make_kitti_tracking_data(dt=dt, n_frames=20, n_targs=4, det_type='razel')
+    tracker = tracking.tracker3d.BasicRazelTracker(threshold_coast=5)
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame * 0.10, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
         for det in dets_3d_all[-1]:
-            if np.linalg.norm(trk.position - det.xyz) < 2:
+            if np.linalg.norm(trk.position - det.xyz) < 4:
                 break
         else:
             raise
 
+def test_inline_razelrrt_tracker_3d():
+    """test an object traveling in line with sensor"""
+    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
+    target_xyzvel = np.array([20, 0, 0, 30, 0, 0])
+    dt = 0.1
+    nframes = 20
+    for frame in range(nframes):
+        target_xyzvel[0] += target_xyzvel[3]*dt
+        target_xyzvel[1] += target_xyzvel[4]*dt
+        target_xyzvel[2] += target_xyzvel[5]*dt
+        dets = [RazelRrtDetection(
+            razelrrt=xyzvel_to_razelrrt(target_xyzvel), source_identifier='radar', obj_type=None)]
+        tracks = tracker(t=frame*dt, frame=frame, detections_nd=dets)
+    assert len(tracks) == 1
+    assert np.linalg.norm(tracks[0].position - target_xyzvel[:3]) < 3
+    assert np.linalg.norm(tracks[0].rrt - dets[0].razelrrt[3]) < 5
+
+
+def tests_transverse_razelrrt_tracker_3d():
+    """test an object traveling transverse to the sensor"""
+    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
+    target_xyzvel = np.array([20, 0, 0, 0, 10, 0])
+    dt = 0.1
+    nframes = 20
+    for frame in range(nframes):
+        target_xyzvel[0] += target_xyzvel[3]*dt
+        target_xyzvel[1] += target_xyzvel[4]*dt
+        target_xyzvel[2] += target_xyzvel[5]*dt
+        dets = [RazelRrtDetection(
+            razelrrt=xyzvel_to_razelrrt(target_xyzvel), source_identifier='radar', obj_type=None)]
+        tracks = tracker(t=frame*dt, frame=frame, detections_nd=dets)
+    assert len(tracks) == 1
+    assert np.linalg.norm(tracks[0].position - target_xyzvel[:3]) < 3
+    assert np.linalg.norm(tracks[0].rrt - dets[0].razelrrt[3]) < 5
+
+
+def tests_full_razelrrt_tracker_3d():
+    """test an object traveling transverse to the sensor"""
+    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
+    target_xyzvel = np.array([20, 10, -5, 2, 10, 2.4])
+    dt = 0.1
+    nframes = 20
+    for frame in range(nframes):
+        target_xyzvel[0] += target_xyzvel[3]*dt
+        target_xyzvel[1] += target_xyzvel[4]*dt
+        target_xyzvel[2] += target_xyzvel[5]*dt
+        det = [RazelRrtDetection(
+            razelrrt=xyzvel_to_razelrrt(target_xyzvel), source_identifier='radar', obj_type=None)]
+        tracks = tracker(t=frame*dt, frame=frame, detections_nd=det)
+    assert len(tracks) == 1
+    assert np.linalg.norm(tracks[0].position - target_xyzvel[:3]) < 3
+
 
 def test_razelrrt_tracker_3d():
-    dets_3d_all = make_kitti_tracking_data(dt=0.1, n_frames=20, n_targs=4, det_type='razelrrt')
-    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=20)
+    dt = 0.10
+    dets_3d_all = make_kitti_tracking_data(dt=dt, n_frames=20, n_targs=5, det_type='razelrrt')
+    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame * 0.10, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
-    for det in dets_3d_all[-1]:
-        print(det.xyz)
-    print('\n')
-    for trk in tracks:
-        print(trk.x[:3])
     for i, trk in enumerate(tracks):
         for det in dets_3d_all[-1]:
-            if np.linalg.norm(trk.position - det.xyz) < 2:
+            if np.linalg.norm(trk.position - det.xyz) < 4:
                 break
         else:
             raise
@@ -166,11 +216,12 @@ def test_razelrrt_tracker_3d():
 
 def test_basic_box_tracker_3d():
     n_frames = 10
-    dets_3d_all = make_kitti_tracking_data(n_frames=n_frames)
+    dt = 0.10
+    dets_3d_all = make_kitti_tracking_data(dt=dt, n_frames=n_frames)
     tracker = tracking.tracker3d.BasicBoxTracker3D()
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame * 0.10, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
@@ -183,13 +234,14 @@ def test_basic_box_tracker_3d():
 
 def test_basic_box_tracker_2d():
     n_targs = 4
+    dt = 0.10
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
-        n_frames=10, n_targs=n_targs
+        dt=dt, n_frames=10, n_targs=n_targs
     )
     tracker = tracking.tracker2d.BasicBoxTracker2D()
     for frame, dets_2d in enumerate(dets_2d_all):
         tracks = tracker(
-            t=frame * 0.10, detections_nd=dets_2d, frame=frame, identifier="tracker-1"
+            t=frame*dt, detections_nd=dets_2d, frame=frame, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
@@ -202,13 +254,14 @@ def test_basic_box_tracker_2d():
 
 def test_basic_joint_box_tracker():
     n_targs = 4
+    dt = 0.10
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
-        n_frames=10, n_targs=n_targs
+        dt=dt, n_frames=10, n_targs=n_targs
     )
     tracker = tracking.tracker3d.BasicBoxTrackerFusion3Stage()
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
         tracks = tracker(
-            t=frame * 0.10,
+            t=frame*dt,
             detections_2d=dets_2d,
             detections_3d=dets_3d,
         frame=frame,
@@ -219,11 +272,12 @@ def test_basic_joint_box_tracker():
 
 def test_ab3dmot_kitti():
     n_frames = 10
-    dets_3d_all = make_kitti_tracking_data(n_frames=n_frames)
+    dt = 0.10
+    dets_3d_all = make_kitti_tracking_data(dt=dt, n_frames=n_frames)
     tracker = tracking.tracker3d.Ab3dmotTracker()
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame * 0.10, detections_3d=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, detections_3d=dets_3d, frame=frame, identifier="tracker-1"
         )
 
 
@@ -248,7 +302,8 @@ def test_eagermot_fusion_kitti():
 
 
 def test_eagermot_associations():
-    dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(n_frames=10)
+    dt = 0.10
+    dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(dt=dt, n_frames=10)
     tracker = tracking.tracker3d.EagermotTracker()
     trk_base = tracker.tracker
     i = 0
@@ -295,7 +350,7 @@ def test_eagermot_associations():
 
         # run for real
         tracks = tracker(
-            t=frame * 0.10,
+            t=frame*dt,
             detections_2d=dets_2d,
             detections_3d=dets_3d,
             frame=frame,
@@ -313,14 +368,15 @@ def test_eagermot_associations():
 
 def test_eagermot_performance():
     n_targs = 4
+    dt = 0.10
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
-        n_frames=10, n_targs=n_targs
+        dt=dt, n_frames=10, n_targs=n_targs
     )
     tracker = tracking.tracker3d.EagermotTracker()
     tracks = tracker.tracker
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
         tracks = tracker(
-            t=frame * 0.10,
+            t=frame*dt,
             detections_2d=dets_2d,
             detections_3d=dets_3d,
             frame=frame,

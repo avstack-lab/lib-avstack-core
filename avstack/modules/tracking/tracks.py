@@ -166,7 +166,9 @@ class XyzFromRazelTrack(_TrackBase):
         # Velocity can only be initialized along the range rate 
         x = np.array([*spherical_to_cartesian(razel), 0, 0, 0])
         if P is None:
-            P = np.diag([5, 5, 5, 10, 10, 10]) ** 2
+            r_sig = 5
+            v_sig = 30
+            P = np.diag([r_sig, r_sig, r_sig, v_sig, v_sig, v_sig]) ** 2
         super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
 
     @property
@@ -234,7 +236,12 @@ class XyzFromRazelRrtTrack(_TrackBase):
     
     NOTE: to reduce the nonlinearities of the range rate,
     we use the pseudo-measurement of range * rrt.
-    See https://arxiv.org/pdf/1412.5524.pdf for an explanation
+    See Farina and Studer, Radar Data Processing for an explanation
+
+    NOTE: Miller and Leskiw in Nonlinear Estimation with Radar Observations
+    showed it is better to process updates in the order of
+    azimuth, elevation, and range and range rate (simultaneously) and
+    NOT all at once...but we do not do this here...
 
     IMPORTANT: assumes we are in a sensor-relative coordinate frame.
     This assumption allows us to say that the sensor is always 
@@ -266,9 +273,11 @@ class XyzFromRazelRrtTrack(_TrackBase):
         if P is None:
             # Note the uncertainty on transverse velocities is larger (see note above)
             v_unit = x[:3] / razelrrt[0]
-            rrt_p_max = 10  # complete uncertainty gives 10, total certainty gives 2
-            rrt_p_min = 2
-            P = np.diag([5, 5, 5, *np.maximum(rrt_p_min, rrt_p_max * (1-v_unit))]) ** 2
+            r_sig = 5
+            v_sig = 30
+            rrt_p_max = v_sig  # complete uncertainty gives 10, total certainty gives 2
+            rrt_p_min = 10
+            P = np.diag([r_sig, r_sig, r_sig, *np.maximum(rrt_p_min, rrt_p_max * (1-v_unit))]) ** 2
         super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
 
     @property
@@ -341,6 +350,7 @@ class XyzFromRazelRrtTrack(_TrackBase):
     
     def update(self, z, R=np.diag([10, 1e-2, 5e-2, 2])**2):
         """Construct the pseudo measurement for range rate"""
+        z = z.copy()  # copy bc we are doing pseudo measurement manipulation
         z[3] = z[0]*z[3]
         self._update(z, R)
 

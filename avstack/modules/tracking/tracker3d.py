@@ -261,7 +261,7 @@ class BasicRazelTracker(_TrackingAlgorithm):
         threshold_coast=3,
         v_max=60,  # meters per second
         assign_metric="center_dist",
-        assign_radius=6,
+        assign_radius=8,
         **kwargs,
     ):
         super().__init__(
