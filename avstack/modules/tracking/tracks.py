@@ -3,7 +3,7 @@ import numpy as np
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
 from avstack.geometry.bbox import Box2D, Box3D, get_box_from_line
-from avstack.geometry.transformations import xyzvel_to_razelrrt, razelrrt_to_xyzvel
+from avstack.geometry.transformations import xyzvel_to_razelrrt, razelrrt_to_xyzvel, spherical_to_cartesian, cartesian_to_spherical
 
 
 def format_data_container_as_string(DC):
@@ -135,9 +135,107 @@ class _TrackBase:
         self._update(z, R)
 
 
-class RazelRrtTrack(_TrackBase):
-    """Razel rrt track
+class XyzFromRazelTrack(_TrackBase):
+    """Tracking on razel measurements
     
+    IMPORTANT: assumes we are in a sensor-relative coordinate frame.
+    This assumption allows us to say that the sensor is always 
+    facing 'forward' which simplifies the calculations. If we are
+    wanting to track in some other coordinate frame, we will need to
+    explicitly incorporate the sensor's pointing angle and position
+    offset in the calculations."""
+    def __init__(
+        self,
+        t0,
+        razel,
+        obj_type,
+        ID_force=None,
+        P=None,
+        t=None,
+        coast=0,
+        n_updates=1,
+        age=0,
+        *args,
+        **kwargs,
+    ):
+        """
+        Track state is: [x, y, z, vx, vy, vz]
+        Measurement is: [range, azimuth, elevation, range rate]
+        """
+        # Position can be initialized fairly well
+        # Velocity can only be initialized along the range rate 
+        x = np.array([*spherical_to_cartesian(razel), 0, 0, 0])
+        if P is None:
+            P = np.diag([5, 5, 5, 10, 10, 10]) ** 2
+        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
+
+    @property
+    def position(self):
+        return self.x[:3]
+
+    @property
+    def velocity(self):
+        return self.x[3:6]
+    
+    @staticmethod
+    def H(x):
+        """Partial derivative of the measurement function w.r.t x at x hat
+        
+        NOTE: assumes we are in a sensor-relative coordinate frame
+        """
+        H = np.zeros((3, 6))
+        r = np.linalg.norm(x[:3])
+        r2d = np.linalg.norm(x[:2])
+        H[0, :3] = x[:3] / r
+        H[1, 0] = -x[1] / r2d**2
+        H[1, 1] =  x[0] / r2d**2
+        H[2, 0] = -x[0]*x[2] / (r**2 * r2d)
+        H[2, 1] = -x[1]*x[2] / (r**2 * r2d)
+        H[2, 2] =  r2d / r**2
+        return H
+
+    @staticmethod
+    def h(x):
+        """Measurement function
+        
+        NOTE: assumes we are in a sensor-relative coordinate frame
+        """
+        return cartesian_to_spherical(x[:3])
+    
+    @staticmethod
+    def F(x, dt):
+        """Partial derivative of the propagation function w.r.t. x at x hat"""
+        return np.array([[1, 0, 0, dt,  0,  0],
+                         [0, 1, 0,  0, dt,  0],
+                         [0, 0, 1,  0,  0, dt],
+                         [0, 0, 0,  1,  0,  0],
+                         [0, 0, 0,  0,  1,  0],
+                         [0, 0, 0,  0,  0,  1]])
+
+    @staticmethod
+    def f(x, dt):
+        """State propagation function"""
+        return np.array([x[0] + x[3]*dt,
+                         x[1] + x[4]*dt,
+                         x[2] + x[5]*dt,
+                         x[3], x[4], x[5]])
+    
+    @staticmethod
+    def Q(dt):
+        """This is most definitely not optimal and should be tuned in the future"""
+        return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
+    
+    def update(self, z, R=np.diag([10, 1e-2, 5e-2])**2):
+        self._update(z, R)
+
+
+class XyzFromRazelRrtTrack(_TrackBase):
+    """Tracking on razel rrt measurements
+    
+    NOTE: to reduce the nonlinearities of the range rate,
+    we use the pseudo-measurement of range * rrt.
+    See https://arxiv.org/pdf/1412.5524.pdf for an explanation
+
     IMPORTANT: assumes we are in a sensor-relative coordinate frame.
     This assumption allows us to say that the sensor is always 
     facing 'forward' which simplifies the calculations. If we are
@@ -181,10 +279,15 @@ class RazelRrtTrack(_TrackBase):
     def velocity(self):
         return self.x[3:6]
     
+    @property
+    def rrt(self):
+        return self.velocity @ self.position / np.linalg.norm(self.position)
+    
     @staticmethod
     def H(x):
         """Partial derivative of the measurement function w.r.t x at x hat
         
+        NOTE: we are using the pseudo measurement for range rate 
         NOTE: assumes we are in a sensor-relative coordinate frame
         """
         H = np.zeros((4, 6))
@@ -196,16 +299,22 @@ class RazelRrtTrack(_TrackBase):
         H[2, 0] = -x[0]*x[2] / (r**2 * r2d)
         H[2, 1] = -x[1]*x[2] / (r**2 * r2d)
         H[2, 2] =  r2d / r**2
-        H[3, :3] = x[:3] / r
+        # range rate pseudo measurement
+        # range*rrt = vx*x + vy*y + vz*z
+        H[3, :3] = x[3:6]
+        H[3, 3:6] = x[:3]
         return H
 
     @staticmethod
     def h(x):
         """Measurement function
         
+        NOTE: we are using the pseudo measurement for range rate 
         NOTE: assumes we are in a sensor-relative coordinate frame
         """
-        return xyzvel_to_razelrrt(x)
+        zhat = xyzvel_to_razelrrt(x)
+        zhat[3] = zhat[0]*zhat[3]
+        return zhat
     
     @staticmethod
     def F(x, dt):
@@ -231,6 +340,8 @@ class RazelRrtTrack(_TrackBase):
         return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
     
     def update(self, z, R=np.diag([10, 1e-2, 5e-2, 2])**2):
+        """Construct the pseudo measurement for range rate"""
+        z[3] = z[0]*z[3]
         self._update(z, R)
 
 

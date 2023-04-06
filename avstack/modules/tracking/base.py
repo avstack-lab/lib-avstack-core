@@ -15,7 +15,7 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
-from avstack.modules.perception.detections import BoxDetection, RazelRrtDetection
+from avstack.modules.perception.detections import BoxDetection, RazelRrtDetection, RazelDetection
 
 from ..assignment import gnn_single_frame_assign
 
@@ -27,12 +27,16 @@ class _TrackingAlgorithm:
         assign_radius=4,
         threshold_confirmed=3,
         threshold_coast=3,
-        cost_threshold=0,
+        cost_threshold=-0.10,
         v_max=None,
         save_output=False,
         save_folder="",
         **kwargs,
     ):
+        """Base class for tracking algorithm
+        
+        Cost threshold means any cost higher than this value is rejected
+        """
         self.tracks = []
         self.iframe = -1
         self.frame = 0
@@ -64,7 +68,7 @@ class _TrackingAlgorithm:
     def confirmed_tracks(self):
         return self.tracks_confirmed
 
-    def assign(self, dets, tracks):
+    def get_assignment_matrix(self, dets, tracks):
         A = np.zeros((len(dets), len(tracks)))
         for i, det_ in enumerate(dets):
             # -- pull off detection state
@@ -72,6 +76,8 @@ class _TrackingAlgorithm:
                 det = det_.box
             elif isinstance(det_, RazelRrtDetection):
                 det = det_.xyzrrt  # use the cartesian coordinates for gating
+            elif isinstance(det_, RazelDetection):
+                det = det_.xyz  # use the cartesian coordinates for gating
             else:
                 raise NotImplementedError(type(det_))
 
@@ -83,7 +89,9 @@ class _TrackingAlgorithm:
                     except AttributeError:
                         trk = trk.box2d
                 elif isinstance(det_, RazelRrtDetection):
-                    trk = trk.x[:4]  # NOTE: using rrt here assuming sensor-relative coords
+                    trk = np.array([*trk.x[:3], trk.rrt])
+                elif isinstance(det_, RazelDetection):
+                    trk = trk.x[:3]
                 else:
                     raise NotImplementedError(type(det_))
 
@@ -100,8 +108,6 @@ class _TrackingAlgorithm:
                         dist = det.t.distance(trk.t)
                     else:
                         dist = np.linalg.norm(trk - det)
-                    if dist > self.assign_radius:
-                        continue
 
                 # -- use the metric of choice
                 if self.assign_metric == "IoU":
@@ -155,8 +161,10 @@ class _TrackingAlgorithm:
         for sensor, detections in detections_nd.items():
             # -- assignment with active tracks
             trks_active = self.tracks_active
-            A = self.assign(detections, trks_active)
+            A = self.get_assignment_matrix(detections, trks_active)
             assign_sol = gnn_single_frame_assign(A, cost_threshold=self.cost_threshold)
+            # print(assign_sol.assignment_tuples)
+            # print(A)
 
             # -- update tracks with associations
             for i_det, j_trk in assign_sol.assignment_tuples:

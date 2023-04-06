@@ -16,8 +16,8 @@ def test_rotation_conversion():
 
 
 def test_razelrrt_to_xyzvel():
-    raise NotImplementedError
-
-
-def test_xyzvel_to_razelrrt():
-    raise NotImplementedError
+    xyzvel = np.random.randn(6)
+    razelrrt = tforms.xyzvel_to_razelrrt(xyzvel)
+    xyzvel_recon = tforms.razelrrt_to_xyzvel(razelrrt)
+    assert np.allclose(xyzvel[:3], xyzvel_recon[:3])
+    assert np.isclose(abs(razelrrt[3]), np.linalg.norm(xyzvel_recon[3:6]))

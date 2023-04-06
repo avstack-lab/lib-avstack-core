@@ -17,9 +17,9 @@ import avstack
 from avstack import GroundTruthInformation
 from avstack.datastructs import DataContainer
 from avstack.geometry import bbox
-from avstack.geometry.transformations import xyzvel_to_razelrrt
+from avstack.geometry.transformations import xyzvel_to_razelrrt, cartesian_to_spherical
 from avstack.modules import tracking
-from avstack.modules.perception.detections import BoxDetection, CentroidDetection, RazelRrtDetection
+from avstack.modules.perception.detections import BoxDetection, CentroidDetection, RazelRrtDetection, RazelDetection
 
 
 sys.path.append("tests/")
@@ -56,7 +56,7 @@ def test_groundtruth_tracking():
     assert np.all(tracks[0].velocity == obj1.velocity)
 
 
-def make_kitti_tracking_data(dt=0.1, n_frames=10, n_targs=4, det_type='box'):
+def make_kitti_tracking_data(dt=0.1, n_frames=10, n_targs=4, det_type='box', shuffle=False):
     ego = get_ego(1)
     objects = [get_object_local(ego, i + 10) for i in range(n_targs)]
     t = 0
@@ -73,12 +73,18 @@ def make_kitti_tracking_data(dt=0.1, n_frames=10, n_targs=4, det_type='box'):
                 det = BoxDetection(name_3d, det.box3d, det.obj_type)
             elif det_type == 'centroid':
                 det = CentroidDetection(name_3d, det.box3d.t.vector, det.obj_type)
+            elif det_type == 'razel':
+                razel = cartesian_to_spherical(det.box3d.t)
+                det = RazelDetection(name_3d, razel, det.obj_type)
             elif det_type == 'razelrrt':
                 razelrrt = xyzvel_to_razelrrt(np.array([*det.box3d.t, *det.velocity.vector]))
                 det = RazelRrtDetection(name_3d, razelrrt, det.obj_type)
             else:
                 raise NotImplementedError
             dets_class.append(det)
+        # shuffle the detection order
+        if shuffle:
+            np.random.shuffle(dets_class)
         detections = DataContainer(i, t, dets_class, source_identifier=name_3d)
         dets_3d_all.append(detections)
         t += dt
@@ -121,16 +127,35 @@ def test_make_2d3d_tracking_data():
     assert len(dets_2d) == len(dets_3d)
 
 
+def test_razel_tracker_3d():
+    dets_3d_all = make_kitti_tracking_data(dt=0.1, n_frames=10, n_targs=4, det_type='razel')
+    tracker = tracking.tracker3d.BasicRazelTracker(threshold_coast=20)
+    for frame, dets_3d in enumerate(dets_3d_all):
+        tracks = tracker(
+            t=frame * 0.10, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+        )
+    assert len(tracks) == len(dets_3d_all[-1])
+    for i, trk in enumerate(tracks):
+        for det in dets_3d_all[-1]:
+            if np.linalg.norm(trk.position - det.xyz) < 2:
+                break
+        else:
+            raise
+
+
 def test_razelrrt_tracker_3d():
-    dets_3d_all = make_kitti_tracking_data(dt=0.1, n_frames=10, n_targs=4, det_type='razelrrt')
+    dets_3d_all = make_kitti_tracking_data(dt=0.1, n_frames=20, n_targs=4, det_type='razelrrt')
     tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=20)
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
             t=frame * 0.10, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
-    print([det.xyz for det in dets_3d_all[-1]])
-    print([trk.position for trk in tracks])
+    for det in dets_3d_all[-1]:
+        print(det.xyz)
+    print('\n')
+    for trk in tracks:
+        print(trk.x[:3])
     for i, trk in enumerate(tracks):
         for det in dets_3d_all[-1]:
             if np.linalg.norm(trk.position - det.xyz) < 2:
