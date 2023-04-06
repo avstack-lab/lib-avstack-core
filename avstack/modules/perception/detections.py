@@ -21,6 +21,7 @@ from avstack.geometry import (
     Translation,
     bbox,
 )
+from avstack.geometry.transformations import spherical_to_cartesian, cartesian_to_spherical
 
 
 # detection_map = {'vehicle':'car', 'car':'car', 'pedestrian':'pedestrian', 'cyclist':'cyclist',
@@ -41,20 +42,24 @@ def get_detections_from_file(det_file_path):
 def get_detection_from_line(line):
     items = line.split()
     det_type = items[0]
+    sID, obj_type, score = items[1:4]
     if det_type == "box-detection":
-        sID, obj_type, score = items[1:4]
         box = bbox.get_box_from_line(" ".join(items[4:]))
         det = BoxDetection(sID, box, obj_type, score)
     elif det_type == "mask-detection":
-        sID, obj_type, score = items[1:4]
         box = bbox.get_box_from_line(" ".join(items[4:34]))
         mask = bbox.get_segmask_from_line(" ".join(items[34:]))
         det = MaskDetection(sID, box, mask, obj_type, score)
     elif det_type == "centroid-detection":
-        sID, obj_type, score = items[1:4]
         n_dims = int(items[4])
         centroid = np.array([float(d) for d in items[5 : 5 + n_dims]])
         det = CentroidDetection(sID, centroid, obj_type, score)
+    elif det_type == "razel-detection":
+        razel = np.array([float(d) for d in items[4 : 7]])
+        det = RazelDetection(sID, razel, obj_type, score)
+    elif det_type == "razelrrt-detection":
+        razelrrt = np.array([float(d) for d in items[4 : 8]])
+        det = RazelRrtDetection(sID, razelrrt, obj_type, score)
     else:
         raise NotImplementedError(det_type)
     return det
@@ -127,6 +132,10 @@ class CentroidDetection(Detection_):
     @property
     def centroid(self):
         return self._centroid
+    
+    @property
+    def z(self):
+        return self.centroid
 
     @centroid.setter
     def centroid(self, centroid):
@@ -140,6 +149,87 @@ class CentroidDetection(Detection_):
     def format_as_string(self):
         """Format data elements"""
         return f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} {' '.join([str(d) for d in self.centroid])}"
+
+
+class RazelDetection(Detection_):
+    def __init__(
+        self, source_identifier, razel, obj_type=None, score=None, check_type=False
+    ):
+        super().__init__(source_identifier, obj_type, score, check_type)
+        self.razel = razel
+
+    @property
+    def data(self):
+        return self.razel
+
+    @property
+    def razel(self):
+        return self._razel
+    
+    @property
+    def z(self):
+        return self.razel
+
+    @razel.setter
+    def razel(self, razel):
+        if self.check_type:
+            if not isinstance(razel, np.ndarray):
+                raise TypeError(
+                    f"Input razel of type {type(razel)} is not of an acceptable type"
+                )
+        self._razel = razel
+    
+    @property
+    def xyz(self):
+        x, y, z = spherical_to_cartesian(self.razel)
+        return np.array([x, y, z])
+        
+    def format_as_string(self):
+        """Format data elements"""
+        return f"razel-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.razel])}"
+
+
+class RazelRrtDetection(Detection_):
+    def __init__(
+        self, source_identifier, razelrrt, obj_type=None, score=None, check_type=False
+    ):
+        super().__init__(source_identifier, obj_type, score, check_type)
+        self.razelrrt = razelrrt
+
+    @property
+    def data(self):
+        return self.razelrrt
+
+    @property
+    def razelrrt(self):
+        return self._razelrrt
+    
+    @property
+    def z(self):
+        return self.razelrrt
+
+    @razelrrt.setter
+    def razelrrt(self, razelrrt):
+        if self.check_type:
+            if not isinstance(razelrrt, np.ndarray):
+                raise TypeError(
+                    f"Input razelrrt of type {type(razelrrt)} is not of an acceptable type"
+                )
+        self._razelrrt = razelrrt
+
+    @property
+    def xyzrrt(self):
+        x, y, z = spherical_to_cartesian(self.razelrrt[:3])
+        return np.array([x, y, z, self.razelrrt[3]])
+    
+    @property
+    def xyz(self):
+        x, y, z = spherical_to_cartesian(self.razelrrt[:3])
+        return np.array([x, y, z])
+        
+    def format_as_string(self):
+        """Format data elements"""
+        return f"razelrrt-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.razelrrt])}"
 
 
 class JointBoxDetection(Detection_):
@@ -240,6 +330,10 @@ class BoxDetection(Detection_):
                 raise ValueError
         return self.box
 
+    @property
+    def z(self):
+        return self.box
+    
     def format_as_string(self):
         """Convert to vehicle state and format"""
         return f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"
