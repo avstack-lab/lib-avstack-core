@@ -35,6 +35,8 @@ WGS_ep_2 = WGS_ep**2
 @jit(nopython=True, fastmath=True)
 def matrix_cartesian_to_spherical(M):
     """
+    Matrix is of shape N x 3
+
     Outputs values in ranges:
     azimuth: [-pi, +pi]
     elevation: [-pi/2, +pi/2]
@@ -50,6 +52,8 @@ def matrix_cartesian_to_spherical(M):
 @jit(nopython=True, fastmath=True)
 def matrix_spherical_to_cartesian(M):
     """
+    Matrix is of shape N x 3
+    
     Assumes elevations are in ranges:
     azimuth:   [-pi, +pi]
     elevation: [-pi/2, +pi/2]
