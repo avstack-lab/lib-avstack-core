@@ -24,7 +24,7 @@ cython = "^0.29"
 numpy-quaternion = "^2022.4"
 numba = "~0.53.0"
 Pillow = "^9"
-opencv-python = "^4.5.5"
+opencv-python = ">=4.3, <4.7"
 tqdm = "^4"
 scikit-learn = "^1.1"
 torch = { url = "https://download.pytorch.org/whl/cu113/torch-1.10.0%2Bcu113-cp38-cp38-linux_x86_64.whl" }
