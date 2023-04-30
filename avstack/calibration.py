@@ -24,7 +24,8 @@ def read_calibration_from_line(line):
         P_cam = np.reshape(np.array([float(e) for e in elems[10:22]]), (3, 4))
         assert elems[22] == "img_shape"
         img_shape = tuple([int(e) for e in elems[23:25]])
-        return CameraCalibration(origin, P_cam, img_shape)
+        channel_order = elems[26]
+        return CameraCalibration(origin, P_cam, img_shape, channel_order)
     else:
         return Calibration(origin)
 
@@ -93,6 +94,7 @@ class CameraCalibration(Calibration):
         fov_horizontal=None,
         fov_vertical=None,
         square_pixels=False,
+        channel_order="bgr",
     ):
         """
         P - intrinsic matrix
@@ -137,6 +139,7 @@ class CameraCalibration(Calibration):
             else:
                 pix_size = fov_vertical / (2 * self.f_v)
             self.pixel_size_u = self.pixel_size_v = pix_size
+        self.channel_order = channel_order
         super().__init__(origin)
 
     def __str__(self):
@@ -150,6 +153,7 @@ class CameraCalibration(Calibration):
             + " intrinsics "
             + P_as_str
             + f" img_shape {self.img_shape[0]} {self.img_shape[1]}"
+            + f" channel_order {self.channel_order}"
         )
         return c_str
 
