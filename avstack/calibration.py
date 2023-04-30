@@ -25,7 +25,7 @@ def read_calibration_from_line(line):
         assert elems[22] == "img_shape"
         img_shape = tuple([int(e) for e in elems[23:25]])
         channel_order = elems[26]
-        return CameraCalibration(origin, P_cam, img_shape, channel_order)
+        return CameraCalibration(origin, P_cam, img_shape, channel_order=channel_order)
     else:
         return Calibration(origin)
 
