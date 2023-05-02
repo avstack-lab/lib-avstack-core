@@ -17,7 +17,7 @@ from avstack.geometry import (
     Rotation,
     Transform,
     Translation,
-    Vector,
+    VectorDirMag,
     bbox,
 )
 from avstack.geometry import transformations as tforms
@@ -61,8 +61,8 @@ def test_vehicle_pid_control():
     )
     v = 10
     vel = v * rot.forward_vector
-    acc = Vector(np.zeros(3), origin=NominalOriginStandard)
-    ang_vel = Vector(np.zeros(3), origin=NominalOriginStandard)
+    acc = VectorDirMag(np.zeros(3), origin=NominalOriginStandard)
+    ang_vel = VectorDirMag(np.zeros(3), origin=NominalOriginStandard)
 
     # Run looop
     pos_all = []

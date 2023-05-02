@@ -14,7 +14,7 @@ from scipy import sparse
 from scipy.spatial import ConvexHull
 from scipy.spatial.qhull import QhullError
 
-from avstack import calibration, exceptions
+from avstack import exceptions
 from avstack.geometry import transformations as tforms
 
 from ..calibration import read_calibration_from_line
@@ -25,7 +25,6 @@ from .primitives import (
     Rotation,
     Transform,
     Translation,
-    Vector,
     get_origin_from_line,
 )
 

@@ -17,13 +17,10 @@ import quaternion
 from avstack.geometry import (
     NominalOriginStandard,
     Rotation,
-    Transform,
     Translation,
-    Vector,
+    VectorDirMag,
     bbox,
-    get_coordinates_from_string,
     get_origin_from_line,
-    q_mult_vec,
 )
 from avstack.geometry import transformations as tforms
 from avstack.maskfilters import box_in_fov, filter_points_in_box
@@ -120,11 +117,11 @@ class ObjectState:
         self.box = box
         # -- velocity
         if isinstance(velocity, (list, np.ndarray)):
-            velocity = Vector(velocity, origin=origin)
+            velocity = VectorDirMag(velocity, origin=origin)
         self.velocity = velocity
         # -- accel
         if isinstance(acceleration, (list, np.ndarray)):
-            acceleration = Vector(acceleration, origin=origin)
+            acceleration = VectorDirMag(acceleration, origin=origin)
         self.acceleration = acceleration
         # -- attitude
         if isinstance(attitude, (quaternion.quaternion)):
@@ -137,7 +134,7 @@ class ObjectState:
         self.attitude = attitude  # world 2 body
         # -- angular vel
         if isinstance(angular_velocity, (list, np.ndarray)):
-            angular_velocity = Vector(angular_velocity, origin=origin)
+            angular_velocity = VectorDirMag(angular_velocity, origin=origin)
         self.angular_velocity = angular_velocity
 
     def predict(self, dt):

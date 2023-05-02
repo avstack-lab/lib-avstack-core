@@ -15,13 +15,10 @@ from avstack.geometry import (
     NominalTransform,
     Rotation,
     StandardCoordinates,
-    Transform,
     Translation,
-    Vector,
+    VectorDirMag,
     bbox,
 )
-from avstack.modules import control
-
 
 def get_object(seed):
     np.random.seed(seed)
@@ -29,10 +26,10 @@ def get_object(seed):
     box_obj = bbox.Box3D(
         [2, 2, 5, [0, 0, 0], 0], NominalTransform
     )  # box in local coordinates
-    vel_obj = Vector(StandardCoordinates, np.random.rand(3))
-    acc_obj = Vector(StandardCoordinates, np.random.rand(3))
+    vel_obj = VectorDirMag(StandardCoordinates, np.random.rand(3))
+    acc_obj = VectorDirMag(StandardCoordinates, np.random.rand(3))
     rot_obj = Rotation(StandardCoordinates, np.eye(3))
-    ang_obj = Vector(StandardCoordinates, np.random.rand(3))
+    ang_obj = VectorDirMag(StandardCoordinates, np.random.rand(3))
     obj = VehicleState("car")
     obj.set(
         0,

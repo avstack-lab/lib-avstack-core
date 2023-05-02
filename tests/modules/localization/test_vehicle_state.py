@@ -14,14 +14,6 @@ import numpy as np
 import quaternion
 
 from avstack.environment.objects import VehicleState
-from avstack.geometry import (
-    NominalOriginStandard,
-    NominalTransform,
-    Rotation,
-    Translation,
-    Vector,
-    bbox,
-)
 
 
 sys.path.append("tests/")
