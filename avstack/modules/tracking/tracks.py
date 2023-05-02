@@ -19,6 +19,7 @@ def get_track_from_line(line):
     trk_type = items[0]
     n_prelim = 9
     obj_type, t0, t, ID, coast, n_updates, age, n_dim = items[1:n_prelim]
+    n_dim = int(n_dim)
     if "box" in trk_type:
         if trk_type == "boxtrack3d":
             n_add = 3
@@ -49,7 +50,30 @@ def get_track_from_line(line):
             age=float(age),
         )
     else:
-        raise NotImplementedError(trk_type)
+        if trk_type == "raztrack":
+            factory = XyFromRazTrack
+        elif trk_type == "razeltrack":
+            factory = XyzFromRazelTrack
+        elif trk_type == "razelrrttrack":
+            factory = XyzFromRazelRrtTrack
+        else:
+            raise NotImplementedError(trk_type)
+        x = items[n_prelim : (n_prelim + n_dim)]
+        P = items[(n_prelim + n_dim) : (n_prelim + n_dim + n_dim **2)]
+        x = np.array([float(xi) for xi in x])
+        P = np.reshape(np.array([float(pi) for pi in P]), (int(n_dim), int(n_dim)))
+        trk = factory(
+            float(t0),
+            None,
+            obj_type,
+            ID_force=int(ID),
+            x=x,
+            P=P,
+            t=float(t),
+            coast=float(coast),
+            n_updates=int(n_updates),
+            age=float(age),
+        )
     return trk
 
 
@@ -134,6 +158,15 @@ class _TrackBase:
         """Can override this in subclass"""
         self._update(z, R)
 
+    def format_as_string(self):
+        x_str = " ".join(map(str, self.x))
+        P_str = " ".join(map(str, self.P.ravel()))
+        return (
+            f"{self.NAME} {self.obj_type} {self.t0} {self.t} {self.ID} "
+            f"{self.coast} {self.n_updates} {self.age} "
+            f"{len(self.x)} {x_str} {P_str}"
+        )
+
 
 class XyFromRazTrack(_TrackBase):
     """Tracking on raz measurements
@@ -144,12 +177,16 @@ class XyFromRazTrack(_TrackBase):
     wanting to track in some other coordinate frame, we will need to
     explicitly incorporate the sensor's pointing angle and position
     offset in the calculations."""
+
+    NAME = "raztrack"
+
     def __init__(
         self,
         t0,
         raz,
         obj_type,
         ID_force=None,
+        x=None,
         P=None,
         t=None,
         coast=0,
@@ -164,9 +201,10 @@ class XyFromRazTrack(_TrackBase):
         """
         # Position can be initialized fairly well
         # Velocity can only be initialized along the range rate 
-        x = np.array([raz[0] * np.cos(raz[1]),
-                      raz[0] * np.sin(raz[1]),
-                      0, 0])
+        if x is None:
+            x = np.array([raz[0] * np.cos(raz[1]),
+                        raz[0] * np.sin(raz[1]),
+                        0, 0])
         if P is None:
             r_sig = 5
             v_sig = 30
@@ -235,12 +273,16 @@ class XyzFromRazelTrack(_TrackBase):
     wanting to track in some other coordinate frame, we will need to
     explicitly incorporate the sensor's pointing angle and position
     offset in the calculations."""
+
+    NAME = "razeltrack"
+
     def __init__(
         self,
         t0,
         razel,
         obj_type,
         ID_force=None,
+        x=None,
         P=None,
         t=None,
         coast=0,
@@ -255,7 +297,8 @@ class XyzFromRazelTrack(_TrackBase):
         """
         # Position can be initialized fairly well
         # Velocity can only be initialized along the range rate 
-        x = np.array([*spherical_to_cartesian(razel), 0, 0, 0])
+        if x is None:
+            x = np.array([*spherical_to_cartesian(razel), 0, 0, 0])
         if P is None:
             r_sig = 5
             v_sig = 30
@@ -340,12 +383,16 @@ class XyzFromRazelRrtTrack(_TrackBase):
     wanting to track in some other coordinate frame, we will need to
     explicitly incorporate the sensor's pointing angle and position
     offset in the calculations."""
+
+    NAME = "razelrrttrack"
+
     def __init__(
         self,
         t0,
         razelrrt,
         obj_type,
         ID_force=None,
+        x=None,
         P=None,
         t=None,
         coast=0,
@@ -360,7 +407,8 @@ class XyzFromRazelRrtTrack(_TrackBase):
         """
         # Position can be initialized fairly well
         # Velocity can only be initialized along the range rate 
-        x = razelrrt_to_xyzvel(razelrrt)
+        if x is None:
+            x = razelrrt_to_xyzvel(razelrrt)
         if P is None:
             # Note the uncertainty on transverse velocities is larger (see note above)
             v_unit = x[:3] / razelrrt[0]

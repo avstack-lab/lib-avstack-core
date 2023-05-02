@@ -27,6 +27,10 @@ def test_raz_track():
     obj_type = random_object.obj_type
     razel = cartesian_to_spherical(box3d.t)
     random_track = tracks.XyFromRazTrack(t0, razel[:2], obj_type)
+    trk_string = random_track.format_as_string()
+    random_track_reconstruct = tracks.get_track_from_line(trk_string)
+    assert np.allclose(random_track.x, random_track_reconstruct.x)
+    assert np.allclose(random_track.P, random_track_reconstruct.P)
 
 
 def test_razel_track():
@@ -36,6 +40,10 @@ def test_razel_track():
     obj_type = random_object.obj_type
     razel = cartesian_to_spherical(box3d.t)
     random_track = tracks.XyzFromRazelTrack(t0, razel, obj_type)
+    trk_string = random_track.format_as_string()
+    random_track_reconstruct = tracks.get_track_from_line(trk_string)
+    assert np.allclose(random_track.x, random_track_reconstruct.x)
+    assert np.allclose(random_track.P, random_track_reconstruct.P)
 
 
 def test_razelrrt_track():
@@ -46,7 +54,11 @@ def test_razelrrt_track():
     razelrrt = xyzvel_to_razelrrt(np.array([*box3d.t, *random_object.velocity.vector]))
     random_track = tracks.XyzFromRazelRrtTrack(t0, razelrrt, obj_type)
     assert random_track.rrt == razelrrt[3]
-
+    trk_string = random_track.format_as_string()
+    random_track_reconstruct = tracks.get_track_from_line(trk_string)
+    assert np.allclose(random_track.x, random_track_reconstruct.x)
+    assert np.allclose(random_track.P, random_track_reconstruct.P)
+    
 
 def test_boxtrack3d_as_string():
     random_object = get_object_global(1)

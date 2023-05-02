@@ -159,6 +159,7 @@ class RazDetection(Detection_):
         self, source_identifier, raz, obj_type=None, score=None, check_type=False
     ):
         super().__init__(source_identifier, obj_type, score, check_type)
+        print(raz)
         self.raz = raz
 
     @property
