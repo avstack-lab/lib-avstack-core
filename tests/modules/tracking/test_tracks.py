@@ -20,6 +20,15 @@ sys.path.append("tests/")
 from utilities import camera_calib, get_object_global
 
 
+def test_raz_track():
+    random_object = get_object_global(1)
+    t0 = 1.25
+    box3d = random_object.box
+    obj_type = random_object.obj_type
+    razel = cartesian_to_spherical(box3d.t)
+    random_track = tracks.XyFromRazTrack(t0, razel[:2], obj_type)
+
+
 def test_razel_track():
     random_object = get_object_global(1)
     t0 = 1.25

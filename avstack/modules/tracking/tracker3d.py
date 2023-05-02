@@ -18,7 +18,7 @@ from avstack.modules.perception.detections import BoxDetection
 from ..assignment import build_A_from_iou, gnn_single_frame_assign, greedy_assignment
 from . import libraries
 from .base import _TrackingAlgorithm
-from .tracks import BasicBoxTrack3D, BasicJointBoxTrack, XyzFromRazelRrtTrack, XyzFromRazelTrack
+from .tracks import BasicBoxTrack3D, BasicJointBoxTrack, XyzFromRazelRrtTrack, XyzFromRazelTrack, XyFromRazTrack
 
 
 class GroundTruthTracker(_TrackingAlgorithm):
@@ -252,6 +252,34 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
         ]
 
         return self.tracks_confirmed
+
+
+class BasicRazTracker(_TrackingAlgorithm):
+    def __init__(
+        self,
+        threshold_confirmed=3,
+        threshold_coast=3,
+        v_max=60,  # meters per second
+        assign_metric="center_dist",
+        assign_radius=8,
+        **kwargs,
+    ):
+        super().__init__(
+            assign_metric=assign_metric,
+            assign_radius=assign_radius,
+            threshold_confirmed=threshold_confirmed,
+            threshold_coast=threshold_coast,
+            cost_threshold=0,  # bc we are subtracting off assign radius
+            v_max=v_max,
+            **kwargs,
+        )
+
+    def spawn_track_from_detection(self, detection):
+        return XyFromRazTrack(
+            self.t,
+            detection.raz,
+            detection.obj_type,
+        )
 
 
 class BasicRazelTracker(_TrackingAlgorithm):

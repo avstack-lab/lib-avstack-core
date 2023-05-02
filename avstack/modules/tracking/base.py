@@ -15,7 +15,7 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
-from avstack.modules.perception.detections import BoxDetection, RazelRrtDetection, RazelDetection
+from avstack.modules.perception.detections import BoxDetection, RazelRrtDetection, RazelDetection, RazDetection
 
 from ..assignment import gnn_single_frame_assign
 
@@ -78,6 +78,8 @@ class _TrackingAlgorithm:
                 det = det_.xyzrrt  # use the cartesian coordinates for gating
             elif isinstance(det_, RazelDetection):
                 det = det_.xyz  # use the cartesian coordinates for gating
+            elif isinstance(det_, RazDetection):
+                det = det_.xy  # use the cartesian coordinates for gating
             else:
                 raise NotImplementedError(type(det_))
 
@@ -92,6 +94,8 @@ class _TrackingAlgorithm:
                     trk = np.array([*trk.x[:3], trk.rrt])
                 elif isinstance(det_, RazelDetection):
                     trk = trk.x[:3]
+                elif isinstance(det_, RazDetection):
+                    trk = trk.x[:2]
                 else:
                     raise NotImplementedError(type(det_))
 

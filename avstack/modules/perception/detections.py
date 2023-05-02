@@ -54,6 +54,9 @@ def get_detection_from_line(line):
         n_dims = int(items[4])
         centroid = np.array([float(d) for d in items[5 : 5 + n_dims]])
         det = CentroidDetection(sID, centroid, obj_type, score)
+    elif det_type == "raz-detection":
+        raz = np.array([float(d) for d in items[4 : 6]])
+        det = RazDetection(sID, raz, obj_type, score)
     elif det_type == "razel-detection":
         razel = np.array([float(d) for d in items[4 : 7]])
         det = RazelDetection(sID, razel, obj_type, score)
@@ -150,6 +153,44 @@ class CentroidDetection(Detection_):
         """Format data elements"""
         return f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} {' '.join([str(d) for d in self.centroid])}"
 
+
+class RazDetection(Detection_):
+    def __init__(
+        self, source_identifier, raz, obj_type=None, score=None, check_type=False
+    ):
+        super().__init__(source_identifier, obj_type, score, check_type)
+        self.raz = raz
+
+    @property
+    def data(self):
+        return self.raz
+
+    @property
+    def raz(self):
+        return self._raz
+    
+    @property
+    def z(self):
+        return self.raz
+
+    @raz.setter
+    def raz(self, raz):
+        if self.check_type:
+            if not isinstance(raz, np.ndarray):
+                raise TypeError(
+                    f"Input raz of type {type(raz)} is not of an acceptable type"
+                )
+        self._raz = raz
+    
+    @property
+    def xy(self):
+        x, y = self.raz[0] * np.cos(self.raz[1]), self.raz[0] * np.sin(self.raz[1])
+        return np.array([x, y])
+        
+    def format_as_string(self):
+        """Format data elements"""
+        return f"raz-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.raz])}"
+    
 
 class RazelDetection(Detection_):
     def __init__(

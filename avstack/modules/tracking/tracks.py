@@ -135,6 +135,97 @@ class _TrackBase:
         self._update(z, R)
 
 
+class XyFromRazTrack(_TrackBase):
+    """Tracking on raz measurements
+    
+    IMPORTANT: assumes we are in a sensor-relative coordinate frame.
+    This assumption allows us to say that the sensor is always 
+    facing 'forward' which simplifies the calculations. If we are
+    wanting to track in some other coordinate frame, we will need to
+    explicitly incorporate the sensor's pointing angle and position
+    offset in the calculations."""
+    def __init__(
+        self,
+        t0,
+        raz,
+        obj_type,
+        ID_force=None,
+        P=None,
+        t=None,
+        coast=0,
+        n_updates=1,
+        age=0,
+        *args,
+        **kwargs,
+    ):
+        """
+        Track state is: [x, y, vx, vy]
+        Measurement is: [range, azimuth]
+        """
+        # Position can be initialized fairly well
+        # Velocity can only be initialized along the range rate 
+        x = np.array([raz[0] * np.cos(raz[1]),
+                      raz[0] * np.sin(raz[1]),
+                      0, 0])
+        if P is None:
+            r_sig = 5
+            v_sig = 30
+            P = np.diag([r_sig, r_sig, v_sig, v_sig]) ** 2
+        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
+
+    @property
+    def position(self):
+        return self.x[:2]
+
+    @property
+    def velocity(self):
+        return self.x[2:4]
+    
+    @staticmethod
+    def H(x):
+        """Partial derivative of the measurement function w.r.t x at x hat
+        
+        NOTE: assumes we are in a sensor-relative coordinate frame
+        """
+        H = np.zeros((2, 4))
+        r = np.linalg.norm(x[:2])
+        H[0, :2] = x[:2] / r
+        H[1, 0] = -x[1] / r**2
+        H[1, 1] =  x[0] / r**2
+        return H
+
+    @staticmethod
+    def h(x):
+        """Measurement function
+        
+        NOTE: assumes we are in a sensor-relative coordinate frame
+        """
+        return np.array([np.linalg.norm(x[:2]), np.arctan2(x[1], x[0])])
+        
+    @staticmethod
+    def F(x, dt):
+        """Partial derivative of the propagation function w.r.t. x at x hat"""
+        return np.array([[1, 0, dt,  0],
+                         [0, 1,  0, dt],
+                         [0, 0,  1,  0],
+                         [0, 0,  0,  1]])
+
+    @staticmethod
+    def f(x, dt):
+        """State propagation function"""
+        return np.array([x[0] + x[2]*dt,
+                         x[1] + x[3]*dt,
+                         x[2], x[3]])
+    
+    @staticmethod
+    def Q(dt):
+        """This is most definitely not optimal and should be tuned in the future"""
+        return (np.diag([2, 2, 2, 2]) * dt) ** 2
+    
+    def update(self, z, R=np.diag([10, 1e-2])**2):
+        self._update(z, R)
+
+
 class XyzFromRazelTrack(_TrackBase):
     """Tracking on razel measurements
     

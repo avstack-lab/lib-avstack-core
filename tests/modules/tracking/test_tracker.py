@@ -19,7 +19,7 @@ from avstack.datastructs import DataContainer
 from avstack.geometry import bbox
 from avstack.geometry.transformations import xyzvel_to_razelrrt, cartesian_to_spherical
 from avstack.modules import tracking
-from avstack.modules.perception.detections import BoxDetection, CentroidDetection, RazelRrtDetection, RazelDetection
+from avstack.modules.perception.detections import BoxDetection, CentroidDetection, RazelRrtDetection, RazelDetection, RazDetection
 
 
 sys.path.append("tests/")
@@ -74,6 +74,9 @@ def make_kitti_tracking_data(dt=0.1, n_frames=10, n_targs=4, det_type='box', shu
                 det = BoxDetection(name_3d, det.box3d, det.obj_type)
             elif det_type == 'centroid':
                 det = CentroidDetection(name_3d, det.box3d.t.vector, det.obj_type)
+            elif det_type == 'raz':
+                razel = cartesian_to_spherical(det.box3d.t)
+                det = RazDetection(name_3d, razel[:2], det.obj_type)
             elif det_type == 'razel':
                 razel = cartesian_to_spherical(det.box3d.t)
                 det = RazelDetection(name_3d, razel, det.obj_type)
@@ -140,6 +143,22 @@ def test_razel_tracker_3d():
     for i, trk in enumerate(tracks):
         for det in dets_3d_all[-1]:
             if np.linalg.norm(trk.position - det.xyz) < 4:
+                break
+        else:
+            raise
+
+def test_raz_tracker_3d():
+    dt = 0.25
+    dets_3d_all = make_kitti_tracking_data(dt=dt, n_frames=20, n_targs=4, det_type='raz')
+    tracker = tracking.tracker3d.BasicRazTracker(threshold_coast=5)
+    for frame, dets_3d in enumerate(dets_3d_all):
+        tracks = tracker(
+            t=frame*dt, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+        )
+    assert len(tracks) == len(dets_3d_all[-1])
+    for i, trk in enumerate(tracks):
+        for det in dets_3d_all[-1]:
+            if np.linalg.norm(trk.position - det.xy) < 4:
                 break
         else:
             raise

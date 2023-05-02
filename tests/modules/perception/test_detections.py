@@ -53,7 +53,15 @@ def test_centroid_detection():
 
 
 def test_razel_detection():
-    razel = np.array([100, 1.0, -0.3, 1.23])
+    raz = np.array([100, 1.0])
+    d = detections.RazDetection(
+        source_identifier=alg_name, raz=raz, obj_type="Car"
+    )
+    assert np.all(d.raz == raz)
+
+
+def test_razel_detection():
+    razel = np.array([100, 1.0, -0.3])
     d = detections.RazelDetection(
         source_identifier=alg_name, razel=razel, obj_type="Car"
     )
@@ -61,7 +69,7 @@ def test_razel_detection():
 
 
 def test_razelrrt_detection():
-    razelrrt = np.array([100, 1.0, -0.3, 1.23, 19.1])
+    razelrrt = np.array([100, 1.0, -0.3, 1.23])
     d = detections.RazelRrtDetection(
         source_identifier=alg_name, razelrrt=razelrrt, obj_type="Car"
     )
