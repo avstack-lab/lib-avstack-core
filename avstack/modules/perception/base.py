@@ -69,12 +69,13 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             self.input_data,
             label_dataset_override,
         ) = self.parse_mm_model(model, dataset, epoch)
-        self.class_names = self.parse_mm_object_classes(dataset)[0]
+        self.class_names = self.parse_mm_object_classes(label_dataset_override)[0]
 
         # Get label mapping
         all_objs, _ = self.parse_mm_object_classes(label_dataset_override)
         self.obj_map = {i: n for i, n in enumerate(all_objs)}
-        _, self.whitelist = self.parse_mm_object_classes(dataset)
+        _, self.whitelist = self.parse_mm_object_classes(label_dataset_override)
+        self.label_dataset_override = label_dataset_override
 
         if threshold is not None:
             print(f"Overriding default threshold of {self.threshold} with {threshold}")
@@ -86,10 +87,10 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             mod_path = os.path.join(mm3d_root, config_file)
             chk_path = os.path.join(mm3d_root, checkpoint_file)
             if not os.path.exists(mod_path):
-                raise FileNotFoundError(f'Cannot find {config_file}')
+                raise FileNotFoundError(f'Cannot find {config_file} config')
             if not os.path.exists(chk_path):
-                raise FileNotFoundError(f'Cannot find {checkpoint_file}')
+                raise FileNotFoundError(f'Cannot find {checkpoint_file} checkpoint')
         if not os.path.exists(chk_path):
-            raise FileNotFoundError(f'Cannot find {checkpoint_file}')
+            raise FileNotFoundError(f'Cannot find {checkpoint_file} checkpoint')
         
         self.model = init_model(mod_path, chk_path, device=f"cuda:{gpu}")

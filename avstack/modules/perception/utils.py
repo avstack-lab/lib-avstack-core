@@ -145,7 +145,7 @@ def convert_mm3d_to_avstack(
     dist_min=2.0,
     front_only=False,
     prune_low=False,
-    thresh_low=-1,
+    thresh_low=-3,
     prune_close=False,
     thresh_close=1.5,
     verbose=False,
@@ -154,26 +154,24 @@ def convert_mm3d_to_avstack(
     dets = []
     # -- parse object information
     if "lidar" in input_data.lower():
-        obj_base = result_[0]
-        if "pts_bbox" in obj_base:
-            obj_base = obj_base["pts_bbox"]
+        bboxes = result_.pred_instances_3d.bboxes_3d.tensor.cpu().numpy()
+        labels = result_.pred_instances_3d.labels_3d.cpu().numpy()
+        scores = result_.pred_instances_3d.scores_3d.cpu().numpy()
     elif ("cam" in input_data.lower()) or ("image" in input_data.lower()):
-        obj_base = result_[0]["img_bbox"]
+        bboxes = result_.pred_instances_3d.bboxes_3d.tensor.cpu().numpy()
+        labels = result_.pred_instances_3d.labels_3d.cpu().numpy()
+        scores = result_.pred_instances_3d.scores_3d.cpu().numpy()
     else:
         raise NotImplementedError(input_data)
-
+    
     # -- convert boxes
     prev_locs = []
-    for i_box in range(len(obj_base["boxes_3d"])):
-        # if obj_base['labels_3d'] not in obj_map:
-        #     continue
-        obj_type = class_maps[dataset][obj_map[obj_base["labels_3d"][i_box].item()]]
+    for box, label, score in zip(bboxes, labels, scores):
+        obj_type = class_maps[dataset][obj_map[label]]
         if obj_type in whitelist:
-            if obj_base["scores_3d"][i_box] > thresh:
+            if score > thresh:
                 # get info from detections
-                box = obj_base["boxes_3d"][i_box]
-                ten = box.tensor[0]
-                cent = np.array([c.item() for c in box.center[0]])
+                cent = box[:3]
                 if np.linalg.norm(cent) < dist_min:
                     continue
                 if (
@@ -181,9 +179,9 @@ def convert_mm3d_to_avstack(
                     or ("3dssd" in model_3d.cfg.filename)
                     or ("ssn" in model_3d.cfg.filename)
                 ):
-                    h, w, l = ten[5].item(), ten[4].item(), ten[3].item()
+                    h, w, l = box[5].item(), box[4].item(), box[3].item()
                     if dataset == "kitti":
-                        yaw = box.yaw.item()
+                        yaw = box[6]
                         q_S_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         q_O_2_obj = q_S_2_obj  # sensor is our origin
                         x_O_2_obj_in_O = cent
@@ -194,7 +192,7 @@ def convert_mm3d_to_avstack(
                             where_is_t = "bottom"
                         origin = calib.origin
                     elif dataset == "nuscenes":
-                        yaw = box.yaw.item()
+                        yaw = box[6]
                         if "pointpillars" in model_3d.cfg.filename:
                             q_O1_2_obj = transform_orientation(
                                 [0, 0, -yaw], "euler", "quat"
@@ -212,14 +210,14 @@ def convert_mm3d_to_avstack(
                         where_is_t = "bottom"
                         origin = calib.origin
                     elif dataset == "carla":
-                        yaw = box.yaw.item()
+                        yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += h  # whoops
                         where_is_t = "center"
                         origin = calib.origin
                     elif dataset == "carla-infrastructure":
-                        yaw = box.yaw.item()  # yaw is in O's frame here!!
+                        yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += 1.8
@@ -228,16 +226,16 @@ def convert_mm3d_to_avstack(
                     else:
                         raise NotImplementedError(dataset)
                 elif "pgd" in model_3d.cfg.filename:
-                    w, h, l = ten[5].item(), ten[4].item(), ten[3].item()
+                    w, h, l = box[5].item(), box[4].item(), box[3].item()
                     if dataset == "kitti":
-                        yaw = box.yaw.item() - np.pi / 2
+                        yaw = box[6] - np.pi / 2
                         q_L_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
                         where_is_t = "bottom"
                         origin = calib.origin  # camera origin
                     elif dataset == "nuscenes":
-                        yaw = box.yaw.item() - np.pi / 2
+                        yaw = box[6] - np.pi / 2
                         q_L_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
@@ -276,6 +274,6 @@ def convert_mm3d_to_avstack(
                         continue
                 # ---- we made it!
                 prev_locs.append(x_O_2_obj_in_O)
-                score = obj_base["scores_3d"][i_box].item()
                 dets.append(BoxDetection(source_identifier, box3d, obj_type, score))
+
     return dets

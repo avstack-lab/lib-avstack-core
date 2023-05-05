@@ -1,6 +1,6 @@
 # AVstack CORE
 
-This is the core library of `AVstack`. It is independent of any dataset or simulator. [This preprint][avstack-preprint] accompanies the repository.
+This is the core library of `AVstack`. It is independent of any dataset or simulator. `AVstack` was published and presented at ICCPS 2023 - [find the paper here][avstack-preprint] that accompanies the repository.
 
 ## Philosophy
 

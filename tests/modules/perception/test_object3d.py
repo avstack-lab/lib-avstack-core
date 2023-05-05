@@ -14,7 +14,6 @@ import sys
 import numpy as np
 
 from avstack import GroundTruthInformation
-from avstack.geometry import bbox
 from avstack.modules import perception
 
 
@@ -61,14 +60,17 @@ def test_mmdet_3d_perception_kitti():
     except ModuleNotFoundError as e:
         print("Cannot run mmdet test without the module")
     else:
-        detector = perception.object3d.MMDetObjectDetector3D()
-        detections = detector(pc, frame=frame, identifier="lidar_objects_3d")
-        for det in detections:
-            if det.box.t.distance(obj.box.t):
-                break
-        else:
-            raise
-        # assert len(detections) == len(labels)
+        modeldatasets = [('pgd', 'kitti', 'image')]
+        for (model, dataset, datatype) in modeldatasets:
+            if datatype == 'lidar':
+                data = pc
+            elif datatype == 'image':
+                data = img
+            else:
+                raise NotImplementedError(datatype)
+            detector = perception.object3d.MMDetObjectDetector3D(model=model, dataset=dataset)
+            detections = detector(data, frame=frame, identifier="lidar_objects_3d")
+            assert len(detections) > 2
 
 
 def test_mmdete_3d_perception_nuscenes():

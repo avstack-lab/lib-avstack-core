@@ -21,7 +21,6 @@ from utilities import get_image_data, get_lidar_data, get_object_global
 
 def run_analysis_vehicle_test(player, n_frames=3):
     data_manager = ds.DataManager()
-    iframe = 3
     for i in range(n_frames):
         t = i * 0.1
         pc = get_lidar_data(t=t, frame=1)

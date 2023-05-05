@@ -119,7 +119,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             data.calibration,
             self.model,
             identifier,
-            self.dataset,
+            self.label_dataset_override,
             self.threshold,
             self.whitelist,
             self.class_names,
@@ -241,6 +241,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 threshold = 0.5
                 config_file = "configs/cityscapes/faster-rcnn_r50_fpn_1x_cityscapes.py"
                 checkpoint_file = "checkpoints/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
+                label_dataset_override = "cityscapes"
             elif dataset == "nuscenes":
                 threshold = 0.7
                 config_file = "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.py"
@@ -288,6 +289,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                     "configs/nuimages/cascade-mask-rcnn_r50_fpn_coco-20e-1x_nuim.py"
                 )
                 checkpoint_file = "checkpoints/nuimages/cascade_mask_rcnn_r50_fpn_coco-20e_1x_nuim_20201009_124158-ad0540e3.pth"
+                label_dataset_override = "nuimages"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         else:
