@@ -645,7 +645,7 @@ class DataContainer:
         self.source_identifier = source_identifier
 
     def __str__(self):
-        return f"{len(self.data)} elements at frame {self.frame}, time {self.timestamp}\n{self.data}"
+        return f"{len(self.data)} elements at frame {self.frame}, time {self.timestamp}, ID: {self.source_identifier}\n{self.data}"
 
     def __repr__(self):
         return self.__str__()
@@ -746,8 +746,13 @@ class DelayManagedDataBuffer(DataManager):
         self.dt_delay = dt_delay
         self.t_real_for_first_data = None
         self.t_first_data = None
+        self.t_last_emit = -np.inf
         self.method = method
         assert method in ["event-driven", "real-time"]
+
+    def clean(self):
+        """Remove any elements that are too old"""
+        self.pop_all_below(self.t_last_emit)
 
     def emit_one(self):
         """Only emit a single element per queue that satisfies the delay timing"""
@@ -755,15 +760,16 @@ class DelayManagedDataBuffer(DataManager):
         elements = {}
         for key in self:
             if len(self[key]) > 0:
-                if self.top(key)[0] <= t_emit:
+                this_t = self.top(key)[0]
+                if this_t <= t_emit:
                     elements[key] = self.pop(key)
         return elements
 
     def emit_all(self):
         """Emit all element per queue that satisfy the delay timing"""
         t_emit = self._get_emit_timing()
-        print(t_emit)
         elements = self.pop_all_below(t_emit)
+        # TODO: add in the t_last_emit logic here
         return elements
 
     def _get_emit_timing(self):
@@ -795,6 +801,7 @@ class DelayManagedDataBuffer(DataManager):
             for index in range(len(priorities) - 1):
                 if (priorities[-1] - priorities[index]) >= self.dt_delay - 1e-6:
                     t_emit = max(t_emit, priorities[index])
+            self.t_last_emit = max(self.t_last_emit, t_emit)
             return t_emit
 
     def _emit_real_time(self):
@@ -804,7 +811,6 @@ class DelayManagedDataBuffer(DataManager):
 
         Monitors the delay in real-time to determine when to emit
         """
-        # import pdb; pdb.set_trace()
         t_now = time.time()
         t_emit = -np.inf
         if not self.empty():
@@ -820,4 +826,5 @@ class DelayManagedDataBuffer(DataManager):
                 dt_diff = dt_real_since_first - dt_data_since_first
                 if dt_diff >= self.dt_delay - 1e-6:
                     t_emit = max(t_emit, priority)
+            self.t_last_emit = max(self.t_last_emit, t_emit)
         return t_emit

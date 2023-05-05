@@ -24,7 +24,10 @@ def read_calibration_from_line(line):
         P_cam = np.reshape(np.array([float(e) for e in elems[10:22]]), (3, 4))
         assert elems[22] == "img_shape"
         img_shape = tuple([int(e) for e in elems[23:25]])
-        channel_order = elems[26]
+        try:
+            channel_order = elems[26]
+        except IndexError as e:
+            channel_order = 'bgr'
         return CameraCalibration(origin, P_cam, img_shape, channel_order=channel_order)
     else:
         return Calibration(origin)

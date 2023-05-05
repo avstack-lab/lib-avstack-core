@@ -69,6 +69,7 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             self.input_data,
             label_dataset_override,
         ) = self.parse_mm_model(model, dataset, epoch)
+        self.class_names = self.parse_mm_object_classes(dataset)[0]
 
         # Get label mapping
         all_objs, _ = self.parse_mm_object_classes(label_dataset_override)
@@ -84,4 +85,11 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         if not os.path.exists(mod_path):
             mod_path = os.path.join(mm3d_root, config_file)
             chk_path = os.path.join(mm3d_root, checkpoint_file)
+            if not os.path.exists(mod_path):
+                raise FileNotFoundError(f'Cannot find {config_file}')
+            if not os.path.exists(chk_path):
+                raise FileNotFoundError(f'Cannot find {checkpoint_file}')
+        if not os.path.exists(chk_path):
+            raise FileNotFoundError(f'Cannot find {checkpoint_file}')
+        
         self.model = init_model(mod_path, chk_path, device=f"cuda:{gpu}")

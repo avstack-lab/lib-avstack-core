@@ -257,8 +257,8 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
 class BasicRazTracker(_TrackingAlgorithm):
     def __init__(
         self,
-        threshold_confirmed=3,
-        threshold_coast=3,
+        threshold_confirmed=10,
+        threshold_coast=8,
         v_max=60,  # meters per second
         assign_metric="center_dist",
         assign_radius=8,

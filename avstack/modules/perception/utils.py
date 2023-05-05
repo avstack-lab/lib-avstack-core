@@ -15,7 +15,7 @@ from .detections import BoxDetection, MaskDetection
 
 
 car_classes = ["car", "Car", "vehicle"]
-ped_classes = ["pedestrian", "walker", "person", "Pedestrian"]
+ped_classes = ["pedestrian", "walker", "person", "Pedestrian", "rider"]
 bic_classes = ["bicycle", "cyclist", "Cyclist", "cycler"]
 ignore_classes = ["traffic_cone", "barrier", "trailer"]
 
@@ -38,6 +38,16 @@ nu_classes = [
     ("ignore", ignore_classes),
 ]
 
+ci_classes = [
+    ("person", ped_classes),
+    ("car", car_classes),
+    ("truck", ["truck"]),
+    ("bus", ["bus"]),
+    ("train", ["train"]),
+    ("motorcycle", ["motorcycle"]),
+    ("bicycle", ["bicycle"])
+]
+
 carla_clases = [
     ("car", car_classes),
     ("truck", ["truck", "van", "bus"]),
@@ -46,13 +56,16 @@ carla_clases = [
 ]
 
 coco_person_classes = [("person", ped_classes)]
+coco_classes = [("person", ped_classes), ("car", car_classes), ("bicycle", bic_classes)]
 
 class_maps = {
     "kitti": {k: ks[0] for ks in k_classes for k in ks[1]},
+    "cityscapes" : {k:ks[0] for ks in ci_classes for k in ks[1]},
     "nuscenes": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "nuimages": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "carla": {k: ks[0] for ks in carla_clases for k in ks[1]},
     "coco-person": {k: ks[0] for ks in coco_person_classes for k in ks[1]},
+    "coco":{k: ks[0] for ks in coco_classes for k in ks[1]},
 }
 
 
@@ -73,18 +86,16 @@ def convert_mm2d_to_avstack(
     else:
         bbox_result, segm_result = result_, None
         segms = None
-    bboxes = np.vstack(bbox_result)
-    labels = [
-        np.full(bbox.shape[0], i, dtype=np.int32) for i, bbox in enumerate(bbox_result)
-    ]
-    labels = np.concatenate(labels)
+    bboxes = bbox_result.pred_instances.bboxes.cpu().numpy()
+    labels = bbox_result.pred_instances.labels.cpu().numpy()
+    scores = bbox_result.pred_instances.scores.cpu().numpy()
+
     if score_thresh > 0:
-        assert bboxes is not None and bboxes.shape[1] == 5
-        scores = bboxes[:, -1]
+        assert bboxes is not None and bboxes.shape[1] == 4
         scores_pre = scores.copy()
         inds = scores > score_thresh
         scores = scores[inds]
-        bboxes = bboxes[inds, :-1]
+        bboxes = bboxes[inds, :]
         labels = labels[inds]
         if segms is not None:
             segms = [s for seg in segms for s in seg]

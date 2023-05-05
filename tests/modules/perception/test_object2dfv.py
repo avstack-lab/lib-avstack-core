@@ -37,5 +37,12 @@ def test_mmdet_2d_perception():
     except ModuleNotFoundError as e:
         print("Cannot run mmdet test without the module")
     else:
-        detector = perception.object2dfv.MMDetObjectDetector2D()
-        detections = detector(img, frame=frame, identifier="camera_objects_2d")
+
+        model_dataset_pairs = [('fasterrcnn', 'kitti'),
+                               ('fasterrcnn', 'cityscapes'),
+                               ('fasterrcnn', 'coco-person'),
+                               ('rtmdet', 'coco')]
+        
+        for model, dataset in model_dataset_pairs:
+            detector = perception.object2dfv.MMDetObjectDetector2D(model=model, dataset=dataset)
+            detections = detector(img, frame=frame, identifier="camera_objects_2d")

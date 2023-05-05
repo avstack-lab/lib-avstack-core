@@ -17,17 +17,18 @@ mkdir -p "$MMDET_CKPT"
 mkdir -p "$MMDET_WKDIR"
 
 download_models () {
-    MODEL_PATH="https://download.openmmlab.com/mmdetection/v2.0"
+    MODEL_PATH="https://download.openmmlab.com/mmdetection"
     SUBFOLDER=$1  # Input 1: subfolder
-    MODEL_TYPE=$2 # Input 2: model type
-    MODEL=$3     # Input 3: model name
+    VERSION=$2    # Input 2: mmdet version
+    MODEL_TYPE=$3 # Input 3: model type
+    MODEL=$4      # Input 4: model name
     OLDPATH=${4:-false}
     MNAME="${MODEL##*/}"
     if [ -f "${MMDET_CKPT}/${SUBFOLDER}/${MNAME}" ]; then
         echo -e "$MODEL exists.\n"
     else 
         echo "Downloading models"
-        wget -P "${MMDET_CKPT}/${SUBFOLDER}" "${MODEL_PATH}/${MODEL_TYPE}/$MODEL"
+        wget -P "${MMDET_CKPT}/${SUBFOLDER}" "${MODEL_PATH}/${VERSION}/${MODEL_TYPE}/${MODEL}"
 
     fi
 }
@@ -50,11 +51,14 @@ download_custom_models () {
 }
 
 COCOPERSON_FRCNN="faster_rcnn_r50_fpn_1x_coco-person/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
-download_models "coco-person" "faster_rcnn" "$COCOPERSON_FRCNN"
+download_models "coco-person" "v2.0" "faster_rcnn" "$COCOPERSON_FRCNN"
 CITYSCAPES_FRCNN="faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
-download_models "cityscapes" "cityscapes" "$CITYSCAPES_FRCNN"
+download_models "cityscapes" "v2.0" "cityscapes" "$CITYSCAPES_FRCNN"
 CITYSCAPES_MRCNN="mask_rcnn_r50_fpn_1x_cityscapes/mask_rcnn_r50_fpn_1x_cityscapes_20201211_133733-d2858245.pth"
-download_models "cityscapes" "cityscapes" "$CITYSCAPES_MRCNN"
+download_models "cityscapes" "v2.0" "cityscapes" "$CITYSCAPES_MRCNN"
+
+RTMDET_M="rtmdet_m_8xb32-300e_coco/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth"
+download_models "rtmdet" "v3.0" "rtmdet" "$RTMDET_M"
 
 CARLA_FRCNN="faster_rcnn_r50_fpn_1x_carla"
 download_custom_models "carla" "carla" "$CARLA_FRCNN"
