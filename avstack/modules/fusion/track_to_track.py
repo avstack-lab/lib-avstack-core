@@ -97,7 +97,6 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
                 obj_type = t2.obj_type
                 q = t2.q
                 origin = t2.origin
-                framerate = t2.framerate
                 box_f = bbox.Box3D(
                     [h, w, l, x, y, z, q], origin, where_is_t=t2.box3d.where_is_t
                 )
@@ -106,9 +105,7 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
                     ID = self.ID_registry[t1.ID].get(t2.ID, None)
                 else:
                     self.ID_registry[t1.ID] = {}
-                fused = BasicBoxTrack3D(
-                    t, box_f, obj_type, framerate, ID_force=ID, v=v_f, P=P_f
-                )
+                fused = BasicBoxTrack3D(t, box_f, obj_type, ID_force=ID, v=v_f, P=P_f)
                 self.ID_registry[t1.ID][t2.ID] = fused.ID
                 tracks3d_fused.append(fused)
         else:

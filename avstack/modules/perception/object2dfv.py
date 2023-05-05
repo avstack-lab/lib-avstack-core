@@ -95,8 +95,8 @@ class MMDetObjectDetector2D(_MMObjectDetector):
 
     def __init__(
         self,
-        model="cascade_mask_rcnn",
-        dataset="nuimages",
+        model="fasterrcnn",
+        dataset="kitti",
         threshold=None,
         gpu=0,
         epoch="latest",
@@ -106,7 +106,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         from mmdet.apis import inference_detector
 
         self.inference_detector = inference_detector
-
+        
     def _execute(self, data, identifier, is_rgb=True, eval_method="data", **kwargs):
         # -- inference
         result_ = self.run_mm_inference(
@@ -119,10 +119,10 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             data.calibration,
             self.model,
             identifier,
-            self.dataset,
+            self.label_dataset_override,
             self.threshold,
             self.whitelist,
-            class_names=self.model.CLASSES,
+            self.class_names,
         )
         return DataContainer(data.frame, data.timestamp, detections, identifier)
 
@@ -203,6 +203,22 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         elif dataset == "coco-person":
             all_objs = ["person"]
             whitelist = all_objs
+        elif dataset == "coco":
+            all_objs = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+               'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
+               'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
+               'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+               'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+               'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
+               'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+               'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+               'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
+               'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+               'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
+               'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
+               'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
+               'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+            whitelist = ["person", "bicycle", "car"]
         else:
             raise NotImplementedError(dataset)
         return all_objs, whitelist
@@ -213,11 +229,19 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         label_dataset_override = dataset
         if model == "yolov3":
             raise NotImplementedError("yolo not trained yet")
+        elif model == "rtmdet":
+            if dataset == "coco":
+                threshold = 0.5
+                config_file = "configs/rtmdet/rtmdet_m_8xb32-300e_coco.py"
+                checkpoint_file = "checkpoints/rtmdet/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth"
+            else:
+                raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         elif model == "fasterrcnn":
             if dataset == "kitti":
                 threshold = 0.5
-                config_file = "configs/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes.py"
+                config_file = "configs/cityscapes/faster-rcnn_r50_fpn_1x_cityscapes.py"
                 checkpoint_file = "checkpoints/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
+                label_dataset_override = "cityscapes"
             elif dataset == "nuscenes":
                 threshold = 0.7
                 config_file = "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.py"
@@ -238,11 +262,11 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 )
             elif dataset == "cityscapes":
                 threshold = 0.5
-                config_file = "configs/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes.py"
+                config_file = "configs/cityscapes/faster-rcnn_r50_fpn_1x_cityscapes.py"
                 checkpoint_file = "checkpoints/cityscapes/faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
             elif dataset == "coco-person":
-                threshold = 0.5
-                config_file = "configs/faster_rcnn/faster_rcnn_r50_caffe_fpn_mstrain_1x_coco-person.py"
+                threshold = 0.25
+                config_file = "configs/faster_rcnn/faster-rcnn_r50-caffe_fpn_ms-1x_coco-person.py"
                 checkpoint_file = "checkpoints/coco-person/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
@@ -253,7 +277,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/nuimages/htc_x101_64x4d_fpn_dconv_c3-c5_coco-20e_16x1_20e_nuim_20201008_211222-0b16ac4b.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
-        elif model == "cascade_mask_rcnn":
+        elif model == "cascade-mask-rcnn":
             if dataset in [
                 "nuimages",
                 "carla",
@@ -262,9 +286,10 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             ]:  # TODO eventually separate these
                 threshold = 0.7
                 config_file = (
-                    "configs/nuimages/cascade_mask_rcnn_r50_fpn_coco-20e_1x_nuim.py"
+                    "configs/nuimages/cascade-mask-rcnn_r50_fpn_coco-20e-1x_nuim.py"
                 )
                 checkpoint_file = "checkpoints/nuimages/cascade_mask_rcnn_r50_fpn_coco-20e_1x_nuim_20201009_124158-ad0540e3.pth"
+                label_dataset_override = "nuimages"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         else:

@@ -12,6 +12,7 @@ from typing import List
 import numpy as np
 from scipy.interpolate import interp1d
 
+from avstack.datastructs import DataContainer
 from avstack.geometry import (
     Box2D,
     Box3D,
@@ -20,6 +21,7 @@ from avstack.geometry import (
     Translation,
     bbox,
 )
+from avstack.geometry.transformations import spherical_to_cartesian, cartesian_to_spherical
 
 
 # detection_map = {'vehicle':'car', 'car':'car', 'pedestrian':'pedestrian', 'cyclist':'cyclist',
@@ -40,18 +42,48 @@ def get_detections_from_file(det_file_path):
 def get_detection_from_line(line):
     items = line.split()
     det_type = items[0]
+    sID, obj_type, score = items[1:4]
     if det_type == "box-detection":
-        sID, obj_type, score = items[1:4]
         box = bbox.get_box_from_line(" ".join(items[4:]))
         det = BoxDetection(sID, box, obj_type, score)
     elif det_type == "mask-detection":
-        sID, obj_type, score = items[1:4]
         box = bbox.get_box_from_line(" ".join(items[4:34]))
         mask = bbox.get_segmask_from_line(" ".join(items[34:]))
         det = MaskDetection(sID, box, mask, obj_type, score)
+    elif det_type == "centroid-detection":
+        n_dims = int(items[4])
+        centroid = np.array([float(d) for d in items[5 : 5 + n_dims]])
+        det = CentroidDetection(sID, centroid, obj_type, score)
+    elif det_type == "raz-detection":
+        raz = np.array([float(d) for d in items[4 : 6]])
+        det = RazDetection(sID, raz, obj_type, score)
+    elif det_type == "razel-detection":
+        razel = np.array([float(d) for d in items[4 : 7]])
+        det = RazelDetection(sID, razel, obj_type, score)
+    elif det_type == "razelrrt-detection":
+        razelrrt = np.array([float(d) for d in items[4 : 8]])
+        det = RazelRrtDetection(sID, razelrrt, obj_type, score)
     else:
         raise NotImplementedError(det_type)
     return det
+
+
+def format_data_container_as_string(DC):
+    dets_strings = " ".join(["DETECTION " + det.format_as_string() for det in DC.data])
+    return (
+        f"datacontainer {DC.frame} {DC.timestamp} {DC.source_identifier} "
+        f"{dets_strings}"
+    )
+
+
+def get_data_container_from_line(line):
+    items = line.split()
+    assert items[0] == "datacontainer"
+    frame = int(items[1])
+    timestamp = float(items[2])
+    source_identifier = items[3]
+    detections = [get_detection_from_line(det) for det in line.split("DETECTION")[1:]]
+    return DataContainer(frame, timestamp, detections, source_identifier)
 
 
 class Detection_:
@@ -103,6 +135,10 @@ class CentroidDetection(Detection_):
     @property
     def centroid(self):
         return self._centroid
+    
+    @property
+    def z(self):
+        return self.centroid
 
     @centroid.setter
     def centroid(self, centroid):
@@ -112,6 +148,129 @@ class CentroidDetection(Detection_):
                     f"Input centroid of type {type(centroid)} is not of an acceptable type"
                 )
         self._centroid = centroid
+
+    def format_as_string(self):
+        """Format data elements"""
+        return f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} {' '.join([str(d) for d in self.centroid])}"
+
+
+class RazDetection(Detection_):
+    def __init__(
+        self, source_identifier, raz, obj_type=None, score=None, check_type=False
+    ):
+        super().__init__(source_identifier, obj_type, score, check_type)
+        self.raz = raz
+
+    @property
+    def data(self):
+        return self.raz
+
+    @property
+    def raz(self):
+        return self._raz
+    
+    @property
+    def z(self):
+        return self.raz
+
+    @raz.setter
+    def raz(self, raz):
+        if self.check_type:
+            if not isinstance(raz, np.ndarray):
+                raise TypeError(
+                    f"Input raz of type {type(raz)} is not of an acceptable type"
+                )
+        self._raz = raz
+    
+    @property
+    def xy(self):
+        x, y = self.raz[0] * np.cos(self.raz[1]), self.raz[0] * np.sin(self.raz[1])
+        return np.array([x, y])
+        
+    def format_as_string(self):
+        """Format data elements"""
+        return f"raz-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.raz])}"
+    
+
+class RazelDetection(Detection_):
+    def __init__(
+        self, source_identifier, razel, obj_type=None, score=None, check_type=False
+    ):
+        super().__init__(source_identifier, obj_type, score, check_type)
+        self.razel = razel
+
+    @property
+    def data(self):
+        return self.razel
+
+    @property
+    def razel(self):
+        return self._razel
+    
+    @property
+    def z(self):
+        return self.razel
+
+    @razel.setter
+    def razel(self, razel):
+        if self.check_type:
+            if not isinstance(razel, np.ndarray):
+                raise TypeError(
+                    f"Input razel of type {type(razel)} is not of an acceptable type"
+                )
+        self._razel = razel
+    
+    @property
+    def xyz(self):
+        x, y, z = spherical_to_cartesian(self.razel)
+        return np.array([x, y, z])
+        
+    def format_as_string(self):
+        """Format data elements"""
+        return f"razel-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.razel])}"
+
+
+class RazelRrtDetection(Detection_):
+    def __init__(
+        self, source_identifier, razelrrt, obj_type=None, score=None, check_type=False
+    ):
+        super().__init__(source_identifier, obj_type, score, check_type)
+        self.razelrrt = razelrrt
+
+    @property
+    def data(self):
+        return self.razelrrt
+
+    @property
+    def razelrrt(self):
+        return self._razelrrt
+    
+    @property
+    def z(self):
+        return self.razelrrt
+
+    @razelrrt.setter
+    def razelrrt(self, razelrrt):
+        if self.check_type:
+            if not isinstance(razelrrt, np.ndarray):
+                raise TypeError(
+                    f"Input razelrrt of type {type(razelrrt)} is not of an acceptable type"
+                )
+        self._razelrrt = razelrrt
+
+    @property
+    def xyzrrt(self):
+        x, y, z = spherical_to_cartesian(self.razelrrt[:3])
+        return np.array([x, y, z, self.razelrrt[3]])
+    
+    @property
+    def xyz(self):
+        x, y, z = spherical_to_cartesian(self.razelrrt[:3])
+        return np.array([x, y, z])
+        
+    def format_as_string(self):
+        """Format data elements"""
+        return f"razelrrt-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.razelrrt])}"
 
 
 class JointBoxDetection(Detection_):
@@ -212,6 +371,10 @@ class BoxDetection(Detection_):
                 raise ValueError
         return self.box
 
+    @property
+    def z(self):
+        return self.box
+    
     def format_as_string(self):
         """Convert to vehicle state and format"""
         return f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"

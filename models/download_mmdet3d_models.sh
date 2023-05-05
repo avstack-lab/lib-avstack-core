@@ -53,6 +53,7 @@ download_custom_models () {
     fi
 }
 
+
 KITTI_PILLARS="hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class_20220301_150306-37dc2420.pth"
 download_models "kitti" "pointpillars" "$KITTI_PILLARS"
 KITTI_PGD="pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d/pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d_20211022_102608-8a97533b.pth"

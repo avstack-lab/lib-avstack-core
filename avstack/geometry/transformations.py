@@ -35,6 +35,8 @@ WGS_ep_2 = WGS_ep**2
 @jit(nopython=True, fastmath=True)
 def matrix_cartesian_to_spherical(M):
     """
+    Matrix is of shape N x 3
+
     Outputs values in ranges:
     azimuth: [-pi, +pi]
     elevation: [-pi/2, +pi/2]
@@ -50,6 +52,8 @@ def matrix_cartesian_to_spherical(M):
 @jit(nopython=True, fastmath=True)
 def matrix_spherical_to_cartesian(M):
     """
+    Matrix is of shape N x 3
+    
     Assumes elevations are in ranges:
     azimuth:   [-pi, +pi]
     elevation: [-pi/2, +pi/2]
@@ -75,6 +79,19 @@ def cartesian_to_spherical(v, coordinates=StandardCoordinates):
     az = np.arctan2(v2[1], v2[0])
     el = np.arcsin(v2[2] / rng)
     return np.array([rng, az, el])
+
+
+def xyzvel_to_razelrrt(xyzvel):
+    rng, az, el = cartesian_to_spherical(xyzvel[:3])
+    rrt = xyzvel[3:6] @ xyzvel[:3]/rng
+    return np.array([rng, az, el, rrt])
+    
+
+def razelrrt_to_xyzvel(razelrrt):
+    x, y, z = spherical_to_cartesian(razelrrt[:3])
+    v_unit = np.array([x, y, z]) / razelrrt[0] 
+    vx, vy, vz = v_unit * razelrrt[3]
+    return np.array([x, y, z, vx, vy, vz])
 
 
 # ===========================================

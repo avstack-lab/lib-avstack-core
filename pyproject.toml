@@ -24,13 +24,14 @@ cython = "^0.29"
 numpy-quaternion = "^2022.4"
 numba = "~0.53.0"
 Pillow = "^9"
-opencv-python = "^4.5.5"
+opencv-python = ">=4.3, <4.7"
 tqdm = "^4"
 scikit-learn = "^1.1"
 torch = { url = "https://download.pytorch.org/whl/cu113/torch-1.10.0%2Bcu113-cp38-cp38-linux_x86_64.whl" }
 torchvision = { url = "https://download.pytorch.org/whl/cu113/torchvision-0.11.0%2Bcu113-cp38-cp38-linux_x86_64.whl" }
 mmsegmentation = "~0.29.1"
-mmcv-full = { url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/mmcv_full-1.7.0-cp38-cp38-manylinux1_x86_64.whl" }
+mmcv = { url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/mmcv-2.0.0-cp38-cp38-manylinux1_x86_64.whl" }
+mmengine = "^0.7.3"
 mmdet = { path = "./third_party/mmdetection/", develop = true }
 mmdet3d = { path = "./third_party/mmdetection3d/", develop = true }
 # lanenet = { path = "./third_party/lanenet/", develop = true }

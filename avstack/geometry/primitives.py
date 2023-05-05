@@ -715,8 +715,8 @@ class Translation:
         return f"translation {self.vector[0]} {self.vector[1]} {self.vector[2]} {self.origin.format_as_string()}"
 
 
-class Vector(Translation):
-    TYPE = "Vector"
+class VectorDirMag(Translation):
+    TYPE = "VectorDirMag"
     """
     Unlike translation, a vector is NOT related to the origin's translation
     so only the rotation aspect is applied
@@ -744,7 +744,32 @@ class Vector(Translation):
             self.__init__(v_new, origin=origin_new)
 
     def format_as_string(self):
-        return f"vector {self.vector[0]} {self.vector[1]} {self.vector[2]} {self.origin.format_as_string()}"
+        return f"vectordirmag{self.vector[0]} {self.vector[1]} {self.vector[2]} {self.origin.format_as_string()}"
+
+
+class VectorHeadTail:
+    TYPE = "Vector"
+
+    def __init__(self, head, tail, origin=NominalOriginStandard, n_prec=8):
+        if isinstance(head, np.ndarray):
+            self.head = Translation(head, origin=origin, n_prec=n_prec)
+        else:
+            assert isinstance(head, Translation)
+            self.head = head
+        if isinstance(tail, np.ndarray):
+            self.tail = Translation(tail, origin=origin, n_prec=n_prec)
+        else:
+            assert isinstance(tail, Translation)
+            self.tail = tail
+        self.origin = origin
+
+    @property
+    def magnitude(self):
+        return self.tail.distance(self.head)
+
+    def change_origin(self, origin_new):
+        self.head.change_origin(origin_new)
+        self.tail.change_origin(origin_new)
 
 
 class Transform:

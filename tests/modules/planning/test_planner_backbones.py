@@ -11,18 +11,11 @@ import sys
 
 import numpy as np
 
-import avstack
 from avstack.environment import EnvironmentState
-from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     NominalOriginStandard,
-    Rotation,
-    Transform,
     Translation,
-    Vector,
-    bbox,
 )
-from avstack.geometry import transformations as tforms
 from avstack.modules import planning
 from avstack.modules.perception.detections import LaneLineInSpace
 from avstack.modules.planning.vehicle import components
@@ -41,7 +34,6 @@ def get_lanes():
 
 
 def get_tracks(ego, seed):
-    timestamp = frame = 0
     trk_0 = get_object_global(seed)
     trk_1 = get_object_global(seed + 1)
     return [ego.global_to_local(trk_0), ego.global_to_local(trk_1)]

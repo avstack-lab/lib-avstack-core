@@ -15,7 +15,7 @@ from .detections import BoxDetection, MaskDetection
 
 
 car_classes = ["car", "Car", "vehicle"]
-ped_classes = ["pedestrian", "walker", "person", "Pedestrian"]
+ped_classes = ["pedestrian", "walker", "person", "Pedestrian", "rider"]
 bic_classes = ["bicycle", "cyclist", "Cyclist", "cycler"]
 ignore_classes = ["traffic_cone", "barrier", "trailer"]
 
@@ -38,6 +38,16 @@ nu_classes = [
     ("ignore", ignore_classes),
 ]
 
+ci_classes = [
+    ("person", ped_classes),
+    ("car", car_classes),
+    ("truck", ["truck"]),
+    ("bus", ["bus"]),
+    ("train", ["train"]),
+    ("motorcycle", ["motorcycle"]),
+    ("bicycle", ["bicycle"])
+]
+
 carla_clases = [
     ("car", car_classes),
     ("truck", ["truck", "van", "bus"]),
@@ -45,11 +55,17 @@ carla_clases = [
     ("motorcycle", ["motorcycle"], ("ignore", ignore_classes)),
 ]
 
+coco_person_classes = [("person", ped_classes)]
+coco_classes = [("person", ped_classes), ("car", car_classes), ("bicycle", bic_classes)]
+
 class_maps = {
     "kitti": {k: ks[0] for ks in k_classes for k in ks[1]},
+    "cityscapes" : {k:ks[0] for ks in ci_classes for k in ks[1]},
     "nuscenes": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "nuimages": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "carla": {k: ks[0] for ks in carla_clases for k in ks[1]},
+    "coco-person": {k: ks[0] for ks in coco_person_classes for k in ks[1]},
+    "coco":{k: ks[0] for ks in coco_classes for k in ks[1]},
 }
 
 
@@ -70,18 +86,16 @@ def convert_mm2d_to_avstack(
     else:
         bbox_result, segm_result = result_, None
         segms = None
-    bboxes = np.vstack(bbox_result)
-    labels = [
-        np.full(bbox.shape[0], i, dtype=np.int32) for i, bbox in enumerate(bbox_result)
-    ]
-    labels = np.concatenate(labels)
+    bboxes = bbox_result.pred_instances.bboxes.cpu().numpy()
+    labels = bbox_result.pred_instances.labels.cpu().numpy()
+    scores = bbox_result.pred_instances.scores.cpu().numpy()
+
     if score_thresh > 0:
-        assert bboxes is not None and bboxes.shape[1] == 5
-        scores = bboxes[:, -1]
+        assert bboxes is not None and bboxes.shape[1] == 4
         scores_pre = scores.copy()
         inds = scores > score_thresh
         scores = scores[inds]
-        bboxes = bboxes[inds, :-1]
+        bboxes = bboxes[inds, :]
         labels = labels[inds]
         if segms is not None:
             segms = [s for seg in segms for s in seg]
@@ -131,7 +145,7 @@ def convert_mm3d_to_avstack(
     dist_min=2.0,
     front_only=False,
     prune_low=False,
-    thresh_low=-1,
+    thresh_low=-3,
     prune_close=False,
     thresh_close=1.5,
     verbose=False,
@@ -140,26 +154,24 @@ def convert_mm3d_to_avstack(
     dets = []
     # -- parse object information
     if "lidar" in input_data.lower():
-        obj_base = result_[0]
-        if "pts_bbox" in obj_base:
-            obj_base = obj_base["pts_bbox"]
+        bboxes = result_.pred_instances_3d.bboxes_3d.tensor.cpu().numpy()
+        labels = result_.pred_instances_3d.labels_3d.cpu().numpy()
+        scores = result_.pred_instances_3d.scores_3d.cpu().numpy()
     elif ("cam" in input_data.lower()) or ("image" in input_data.lower()):
-        obj_base = result_[0]["img_bbox"]
+        bboxes = result_.pred_instances_3d.bboxes_3d.tensor.cpu().numpy()
+        labels = result_.pred_instances_3d.labels_3d.cpu().numpy()
+        scores = result_.pred_instances_3d.scores_3d.cpu().numpy()
     else:
         raise NotImplementedError(input_data)
-
+    
     # -- convert boxes
     prev_locs = []
-    for i_box in range(len(obj_base["boxes_3d"])):
-        # if obj_base['labels_3d'] not in obj_map:
-        #     continue
-        obj_type = class_maps[dataset][obj_map[obj_base["labels_3d"][i_box].item()]]
+    for box, label, score in zip(bboxes, labels, scores):
+        obj_type = class_maps[dataset][obj_map[label]]
         if obj_type in whitelist:
-            if obj_base["scores_3d"][i_box] > thresh:
+            if score > thresh:
                 # get info from detections
-                box = obj_base["boxes_3d"][i_box]
-                ten = box.tensor[0]
-                cent = np.array([c.item() for c in box.center[0]])
+                cent = box[:3]
                 if np.linalg.norm(cent) < dist_min:
                     continue
                 if (
@@ -167,9 +179,9 @@ def convert_mm3d_to_avstack(
                     or ("3dssd" in model_3d.cfg.filename)
                     or ("ssn" in model_3d.cfg.filename)
                 ):
-                    h, w, l = ten[5].item(), ten[4].item(), ten[3].item()
+                    h, w, l = box[5].item(), box[4].item(), box[3].item()
                     if dataset == "kitti":
-                        yaw = box.yaw.item()
+                        yaw = box[6]
                         q_S_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         q_O_2_obj = q_S_2_obj  # sensor is our origin
                         x_O_2_obj_in_O = cent
@@ -180,7 +192,7 @@ def convert_mm3d_to_avstack(
                             where_is_t = "bottom"
                         origin = calib.origin
                     elif dataset == "nuscenes":
-                        yaw = box.yaw.item()
+                        yaw = box[6]
                         if "pointpillars" in model_3d.cfg.filename:
                             q_O1_2_obj = transform_orientation(
                                 [0, 0, -yaw], "euler", "quat"
@@ -198,14 +210,14 @@ def convert_mm3d_to_avstack(
                         where_is_t = "bottom"
                         origin = calib.origin
                     elif dataset == "carla":
-                        yaw = box.yaw.item()
+                        yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += h  # whoops
                         where_is_t = "center"
                         origin = calib.origin
                     elif dataset == "carla-infrastructure":
-                        yaw = box.yaw.item()  # yaw is in O's frame here!!
+                        yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += 1.8
@@ -214,16 +226,16 @@ def convert_mm3d_to_avstack(
                     else:
                         raise NotImplementedError(dataset)
                 elif "pgd" in model_3d.cfg.filename:
-                    w, h, l = ten[5].item(), ten[4].item(), ten[3].item()
+                    w, h, l = box[5].item(), box[4].item(), box[3].item()
                     if dataset == "kitti":
-                        yaw = box.yaw.item() - np.pi / 2
+                        yaw = box[6] - np.pi / 2
                         q_L_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
                         where_is_t = "bottom"
                         origin = calib.origin  # camera origin
                     elif dataset == "nuscenes":
-                        yaw = box.yaw.item() - np.pi / 2
+                        yaw = box[6] - np.pi / 2
                         q_L_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
@@ -262,6 +274,6 @@ def convert_mm3d_to_avstack(
                         continue
                 # ---- we made it!
                 prev_locs.append(x_O_2_obj_in_O)
-                score = obj_base["scores_3d"][i_box].item()
                 dets.append(BoxDetection(source_identifier, box3d, obj_type, score))
+
     return dets

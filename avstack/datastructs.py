@@ -10,6 +10,7 @@ Custom data structures. Some based on the heapq library.
 from __future__ import annotations
 
 import heapq
+import time
 from copy import deepcopy
 from functools import total_ordering
 from typing import Any, Dict, List
@@ -40,13 +41,19 @@ def custom_chain(*it):
 
 
 class _Priority:
-    """Base class for priority queue-type objects"""
+    """Base class for priority queue-type objects
 
-    def __init__(self, max_size: int, max_heap: bool):
+    max_heap (bool):
+        If True, is a max-heap where the "top" item has the "highest" priority,
+        if False, is a min-heap where the "top" item has the "lowest" priority.
+    """
+
+    def __init__(self, max_size: int, max_heap: bool = False):
         self.max_size = max_size
         self.heap = []
         self.is_max = max_heap
         self.mult = -1 if max_heap else 1
+        self.max_priority = -np.inf
 
     def __repr__(self):
         return self.__str__()
@@ -97,7 +104,7 @@ class _Priority:
         else:
             return sorted(self.heap)[:n]
 
-    def pop_all_below(self, priority_max):
+    def pop_all_below(self, priority_max, with_priority=False):
         """
         NOTE: THIS IS SLOW FOR MAX HEAP
         """
@@ -107,7 +114,7 @@ class _Priority:
         ) or (
             (not self.is_max) and (not self.empty()) and (self.top()[0] <= priority_max)
         ):
-            all_things.append(self.pop())
+            all_things.append(self.pop(with_priority=with_priority))
         return all_things
 
     def pop_all_above(self, priority_min):
@@ -162,14 +169,21 @@ class PriorityQueue(_Priority):
                 pass
         else:
             self.pushpop(priority, item)
+        self.max_priority = max(self.max_priority, self.mult * priority)
 
-    def pop(self):
+    def pop(self, with_priority=True):
         """Pop top-priority item (smallest in min-heap)"""
         if self.empty() and self.empty_returns_none:
-            return None, None
+            if with_priority:
+                return None, None
+            else:
+                return None
         else:
             priority, item = heapq.heappop(self.heap)
-            return self.mult * priority, item
+            if with_priority:
+                return self.mult * priority, item
+            else:
+                return item
 
     def pushpop(self, priority, item):
         """Push item then return item"""
@@ -483,6 +497,12 @@ class DataManager:
     def __len__(self):
         return len(self.data)
 
+    def __iter__(self):
+        return iter(self.data)
+
+    def __getitem__(self, index):
+        return self.data[index]
+
     def empty(self):
         return all([d.empty() for d in self.data.values()])
 
@@ -517,6 +537,40 @@ class DataManager:
         except KeyError as e:
             raise KeyError(f"{self} does not have key {s_ID}, has {self.keys}")
 
+    def top(self, s_ID=None):
+        try:
+            if s_ID is None:
+                return {ID: self.data[ID].top() for ID in self.data}
+            else:
+                return self.data[s_ID].top()
+        except KeyError as e:
+            raise KeyError(f"{self} does not have key {s_ID}, has {self.keys}")
+
+    def pop_all_below(self, priority, s_ID=None):
+        try:
+            if s_ID is None:
+                return {ID: self.data[ID].pop_all_below(priority) for ID in self.data}
+            else:
+                return self.data[s_ID].pop_all_below(priority)
+        except KeyError as e:
+            raise KeyError(f"{self} does not have key {s_ID}, has {self.keys}")
+
+    def get_highest_earliest_priority(self):
+        """Get the highest earliest priority (max of mins) from all the buckets
+
+        Buckets are min-heaps, so the "top" returns the lowest priority. This is fast.
+        """
+        t_earliest = [bucket.top()[0] for bucket in self.data.values()]
+        return max(t_earliest) if len(t_earliest) > 0 else None
+
+    def get_lowest_latest_priority(self):
+        """Get the lowest latest priority (min of maxes) from all the buckets
+
+        Buckets are max-heaps, so the "bottom" returns the highest priority. This is slow.
+        """
+        t_latest = [bucket.bottom()[0] for bucket in self.data.values()]
+        return min(t_latest) if len(t_latest) > 0 else None
+
 
 class DataBucket(PriorityQueue):
     """Manages data elements over time
@@ -531,7 +585,9 @@ class DataBucket(PriorityQueue):
         empty_returns_none (bool):
             If True, popping when empty returns "None",
             if False, popping when empty causes an error.
-
+        max_heap (bool):
+            If True, is a max-heap where the "top" item has the "highest" priority,
+            if False, is a min-heap where the "top" item has the "lowest" priority.
     """
 
     TYPE = "DataBucket"
@@ -541,8 +597,11 @@ class DataBucket(PriorityQueue):
         source_identifier: str,
         max_size: int = 10,
         empty_returns_none: bool = True,
+        max_heap: bool = False,
     ):
-        super().__init__(max_size, empty_returns_none=empty_returns_none)
+        super().__init__(
+            max_size, empty_returns_none=empty_returns_none, max_heap=max_heap
+        )
         self.source_identifier = source_identifier
 
     def push(self, data):
@@ -551,11 +610,11 @@ class DataBucket(PriorityQueue):
         ), f"{data.source_identifier} needs to match {self.source_identifier}"
         super(DataBucket, self).push(data.timestamp, data)
 
-    def pop(self):
-        return super(DataBucket, self).pop()[1]
-
-    # def pushpop(self, priority, item):
-    #     return super(DataBucket, self).pushpop(data.timestamp, data)[1]
+    def pop(self, with_priority=False):
+        if with_priority:
+            return super(DataBucket, self).pop()
+        else:
+            return super(DataBucket, self).pop()[1]
 
 
 class DataContainer:
@@ -586,7 +645,7 @@ class DataContainer:
         self.source_identifier = source_identifier
 
     def __str__(self):
-        return f"{len(self.data)} elements at frame {self.frame}, time {self.timestamp}\n{self.data}"
+        return f"{len(self.data)} elements at frame {self.frame}, time {self.timestamp}, ID: {self.source_identifier}\n{self.data}"
 
     def __repr__(self):
         return self.__str__()
@@ -667,7 +726,105 @@ class DataContainer:
         else:
             raise NotImplementedError
 
-    def to_file(self, file, form="kitti"):
-        det_str = "\n".join([det.format_as(form) for det in self.data])
-        with open(file, "w") as f:
-            f.write(det_str)
+
+# -------------------------------
+# Data Buffers
+# -------------------------------
+
+
+class BasicDataBuffer(DataManager):
+    pass
+
+
+class DelayManagedDataBuffer(DataManager):
+    """Data buffer managing emits by a delay factor"""
+
+    def __init__(
+        self, dt_delay: float, max_size: int = 10, method: str = "event-driven"
+    ) -> None:
+        super().__init__(max_size=max_size)
+        self.dt_delay = dt_delay
+        self.t_real_for_first_data = None
+        self.t_first_data = None
+        self.t_last_emit = -np.inf
+        self.method = method
+        assert method in ["event-driven", "real-time"]
+
+    def clean(self):
+        """Remove any elements that are too old"""
+        self.pop_all_below(self.t_last_emit)
+
+    def emit_one(self):
+        """Only emit a single element per queue that satisfies the delay timing"""
+        t_emit = self._get_emit_timing()
+        elements = {}
+        for key in self:
+            if len(self[key]) > 0:
+                this_t = self.top(key)[0]
+                if this_t <= t_emit:
+                    elements[key] = self.pop(key)
+        return elements
+
+    def emit_all(self):
+        """Emit all element per queue that satisfy the delay timing"""
+        t_emit = self._get_emit_timing()
+        elements = self.pop_all_below(t_emit)
+        # TODO: add in the t_last_emit logic here
+        return elements
+
+    def _get_emit_timing(self):
+        """Get the timing of the data for emitting
+
+        NOTE: current implementation assumes sensors are time synchronized
+        i.e., no relative timing differences between sensor global clocks
+        Could change this by returning a dictionary for each key in buffer
+        """
+        if self.method == "event-driven":
+            return self._emit_event_driven()
+        elif self.method == "real-time":
+            return self._emit_real_time()
+        else:
+            raise NotImplementedError(self.method)
+
+    def _emit_event_driven(self):
+        """Emits based on events - more coarsely, but logic is simpler
+
+        Can run above-real-time (simulation rate)
+
+        Waits until there is a new data element some delay amount of time
+        """
+        priorities = sorted([item[0] for key in self for item in self[key]])
+        if len(priorities) < 2:
+            return -np.inf
+        else:
+            t_emit = -np.inf
+            for index in range(len(priorities) - 1):
+                if (priorities[-1] - priorities[index]) >= self.dt_delay - 1e-6:
+                    t_emit = max(t_emit, priorities[index])
+            self.t_last_emit = max(self.t_last_emit, t_emit)
+            return t_emit
+
+    def _emit_real_time(self):
+        """Emits based on real-time delay - more fine-grained emit, but more complicated
+
+        Constrained to run in a real-time system delay
+
+        Monitors the delay in real-time to determine when to emit
+        """
+        t_now = time.time()
+        t_emit = -np.inf
+        if not self.empty():
+            # -- initialize time offset and last emit time
+            if self.t_real_for_first_data is None:
+                self.t_real_for_first_data = t_now
+                self.t_first_data = self.top(self.keys[0])[0] - 1e-6
+
+            # -- get emit timing
+            dt_real_since_first = t_now - self.t_real_for_first_data
+            for priority in sorted([item[0] for key in self for item in self[key]]):
+                dt_data_since_first = priority - self.t_first_data
+                dt_diff = dt_real_since_first - dt_data_since_first
+                if dt_diff >= self.dt_delay - 1e-6:
+                    t_emit = max(t_emit, priority)
+            self.t_last_emit = max(self.t_last_emit, t_emit)
+        return t_emit

@@ -131,7 +131,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                     }
                     with open(json_file, "w") as f:
                         json.dump(json_data, f)
-                    result_, _ = inference_detector(model, data_file, json_file)
+                    result_ = inference_detector(model, data_file, json_file)
                 else:
                     raise NotImplementedError(input_data)
         elif eval_method == "data":
@@ -254,7 +254,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             if dataset == "kitti":
                 threshold = 5
                 config_file = (
-                    "configs/pgd/pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d.py"
+                    "configs/pgd/pgd_r101-caffe_fpn_head-gn_4xb3-4x_kitti-mono3d.py"
                 )
                 checkpoint_file = "checkpoints/kitti/pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d_20211022_102608-8a97533b.pth"
             elif dataset == "nuscenes":

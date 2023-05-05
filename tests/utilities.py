@@ -115,13 +115,12 @@ def get_image_data(t, frame, camera_ID=0):
     return img
 
 
-def get_test_sensor_data():
+def get_test_sensor_data(frame=1000):
     sys.path.append(KITTI_data_dir)
     obj = VehicleState("car", ID=1)
 
     # -- vehicle data
     t = 0
-    frame = 1000
     p = [6.27, -1.45, 14.55]
     position = Translation(p, origin=CameraOrigin)
     yaw = 3.09

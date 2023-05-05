@@ -290,7 +290,9 @@ class LidarPerceptionAndTrackingVehicle(VehicleEgoStack):
         dets_3d = self.perception["object_3d"](
             data_manager.pop("lidar-0"), frame=frame, identifier="lidar_objects_3d"
         )
-        tracks_3d = self.tracking(dets_3d, frame=frame, identifier="tracker-0")
+        tracks_3d = self.tracking(
+            t=timestamp, detections_nd=dets_3d, frame=frame, identifier="tracker-0"
+        )
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
 
@@ -339,7 +341,9 @@ class LidarCollabPerceptionAndTrackingVehicle(VehicleEgoStack):
                         dets_3d[name] = dets_collab_keep
         if self.verbose:
             print("Added {} collab detections".format(n_collab))
-        tracks_3d = self.tracking(dets_3d, frame=frame, identifier="tracker-0")
+        tracks_3d = self.tracking(
+            t=timestamp, detections_3d=dets_3d, frame=frame, identifier="tracker-0"
+        )
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
 
@@ -380,7 +384,13 @@ class LidarCameraPerceptionAndTrackingVehicle(VehicleEgoStack):
         dets_3d = self.perception["object_3d"](
             data_manager.pop("lidar-0"), frame=frame, identifier="lidar_objects_3d"
         )
-        tracks_3d = self.tracking(dets_2d, dets_3d, frame=frame, identifier="tracker-0")
+        tracks_3d = self.tracking(
+            t=timestamp,
+            detections_2d=dets_2d,
+            detections_3d=dets_3d,
+            frame=frame,
+            identifier="tracker-0",
+        )
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {
             "object_3d": dets_3d,
@@ -479,7 +489,7 @@ def init_tracking(algorithm, framerate, **kwargs):
     if algorithm.lower() == "ab3dmot":
         T = modules.tracking.tracker3d.Ab3dmotTracker(framerate=framerate, **kwargs)
     elif algorithm.lower() == "basic-box-tracker":
-        T = modules.tracking.tracker3d.BasicBoxTracker(framerate=framerate, **kwargs)
+        T = modules.tracking.tracker3d.BasicBoxTracker3D(framerate=framerate, **kwargs)
     elif algorithm.lower() == "basic-box-tracker-fusion-3stage":
         T = modules.tracking.tracker3d.BasicBoxTrackerFusion3Stage(
             framerate=framerate, **kwargs

@@ -54,6 +54,9 @@ class SensorData:
     def _default_subfolder(self):
         return self.source_identifier
 
+    def __iter__(self):
+        return iter(self.data)
+
     def __getitem__(self, index):
         """Indexes into sensor data list/array"""
         s = deepcopy(self)
@@ -514,6 +517,25 @@ class RadarDataRazelRRT(SensorData):
     def __init__(self, *args, source_name="radar", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
+    def filter_by_range(self, min_range: float, max_range: float, inplace=True):
+        if (min_range is not None) or (max_range is not None):
+            min_range = 0 if min_range is None else min_range
+            max_range = np.inf if max_range is None else max_range
+            mask = (self.data > min_range) & (self.data < max_range)
+            return self.filter(mask, inplace=inplace)
+        else:
+            if not inplace:
+                return deepcopy(self)
+
+    def filter(self, mask, inplace: bool = True):
+        if inplace:
+            self.data = self.data[mask, :]
+        else:
+            data = self.data[mask, :]
+            return RadarDataRazelRRT(
+                self.timestamp, self.frame, data, self.calibration, self.source_ID
+            )
+
 
 def save_image_file(
     data: np.ndarray, filepath: str, is_depth: bool = False, ext: str = ".png"
@@ -583,7 +605,7 @@ class ImuBuffer(datastructs.PriorityQueue):
         source_ID = None
         imu_calib = None
         R = np.zeros((6, 6))
-        for timestamp, imu_data in imu_elements:
+        for imu_data in imu_elements:
             dt_total += imu_data.data["dt"]
             dv_total += imu_data.data["dv"]
             dth_total += imu_data.data["dth"]
