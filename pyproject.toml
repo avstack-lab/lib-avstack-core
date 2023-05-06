@@ -29,22 +29,23 @@ Pillow = "^9"
 opencv-python = ">=4.3, <4.7"
 tqdm = "^4"
 scikit-learn = "^1.1"
-
 torch = [
-    { url = "https://download.pytorch.org/whl/cu113/torch-1.13.0-cu113-cp38-cp38-linux_x86_64.whl", markers = "platform_machine == 'x86_64'"},
-    { url = "https://download.pytorch.org/whl/torch-1.13.0-cp38-cp38-manylinux2014_aarch64.whl", markers = "platform_machine == 'aarch64'"}
+    { url = "https://download.pytorch.org/whl/cu113/torch-1.12.0%2Bcu113-cp38-cp38-linux_x86_64.whl", markers = "platform_machine == 'x86_64'"},
+    { url = "https://download.pytorch.org/whl/torch-1.12.0-cp38-cp38-manylinux2014_aarch64.whl", markers = "platform_machine == 'aarch64'"}
 ]
 torchvision = [
-    {url = "https://download.pytorch.org/whl/cu113/torchvision-0.14.0-cu113-cp38-cp38-linux_x86_64.whl", markers = "platform_machine == 'x86_64'" },
-    { url = "https://download.pytorch.org/whl/torchvision-0.14.0-cp38-cp38-manylinux2014_aarch64.whl", markers = "platform_machine == 'aarch64'" }
+    { url = "https://download.pytorch.org/whl/cu113/torchvision-0.13.0%2Bcu113-cp38-cp38-linux_x86_64.whl", markers = "platform_machine == 'x86_64'" },
+    { url = "https://download.pytorch.org/whl/torchvision-0.13.0-cp38-cp38-manylinux2014_aarch64.whl", markers = "platform_machine == 'aarch64'" }
 ]
 
-# mmcv = { url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/mmcv-2.0.0-cp38-cp38-manylinux1_x86_64.whl" }
 # check https://download.openmmlab.com/mmcv/dist/cu113/torch1.12/index.html
 
 mmsegmentation = "~0.29.1"
 mmengine = "^0.7.3"
-mmcv = { git = "https://github.com/open-mmlab/mmcv.git", tag = "v2.0.0" }
+mmcv = [
+    { url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.12.0/mmcv-2.0.0-cp38-cp38-manylinux1_x86_64.whl" , markers = "platform_machine == 'x86_64'" },
+    { url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.12.0/mmcv-2.0.0-cp38-cp38-manylinux1_x86_64.whl", markers = "platform_machine == 'aarch64'" }
+]
 mmdet = { path = "./third_party/mmdetection/", develop = true }
 mmdet3d = { path = "./third_party/mmdetection3d/", develop = true }
 
