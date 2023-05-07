@@ -93,4 +93,8 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         if not os.path.exists(chk_path):
             raise FileNotFoundError(f'Cannot find {checkpoint_file} checkpoint')
         
-        self.model = init_model(mod_path, chk_path, device=f"cuda:{gpu}")
+        try:
+            self.model = init_model(mod_path, chk_path, device=f"cuda:{gpu}")
+        except AttributeError:
+            self.model = init_model(mod_path, chk_path, device='cpu')
+

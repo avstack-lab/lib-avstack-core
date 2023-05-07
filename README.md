@@ -17,6 +17,11 @@ git clone --recurse-submodules https://github.com/avstack-lab/lib-avstack-core.g
 ```
 Dependencies are managed with [`poetry`][poetry]. This uses the `pyproject.toml` file to create a `poetry.lock` file. It includes an optional `perception` group so that you can install `avstack` without all the large packages necessary for perception. To install poetry, see [this page](https://python-poetry.org/docs/#installation). 
 
+NOTE: if the installation is giving you troubles (e.g., in my experience, with `pycocotools` in `aarch64`-based chips), try the following:
+```
+poetry config experimental.new-installer false
+```
+to get through the problem packages, then reactivation with `true`.
 
 ### Without Perception
 

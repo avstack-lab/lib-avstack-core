@@ -53,7 +53,7 @@ def test_razelrrt_track():
     obj_type = random_object.obj_type
     razelrrt = xyzvel_to_razelrrt(np.array([*box3d.t, *random_object.velocity.vector]))
     random_track = tracks.XyzFromRazelRrtTrack(t0, razelrrt, obj_type)
-    assert random_track.rrt == razelrrt[3]
+    assert np.isclose(random_track.rrt, razelrrt[3])
     trk_string = random_track.format_as_string()
     random_track_reconstruct = tracks.get_track_from_line(trk_string)
     assert np.allclose(random_track.x, random_track_reconstruct.x)
