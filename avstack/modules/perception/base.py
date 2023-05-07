@@ -61,7 +61,7 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         self.dataset = dataset.lower()
         self.algorithm = model
 
-        # Initialize model
+        # Initialize object classes
         (
             self.threshold,
             config_file,
@@ -69,17 +69,17 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             self.input_data,
             label_dataset_override,
         ) = self.parse_mm_model(model, dataset, epoch)
-        self.class_names = self.parse_mm_object_classes(label_dataset_override)[0]
 
         # Get label mapping
-        all_objs, _ = self.parse_mm_object_classes(label_dataset_override)
-        self.obj_map = {i: n for i, n in enumerate(all_objs)}
-        _, self.whitelist = self.parse_mm_object_classes(label_dataset_override)
+        self.class_names, self.whitelist  = self.parse_mm_object_classes(label_dataset_override)
+        self.obj_map = {i: n for i, n in enumerate(self.class_names)}
         self.label_dataset_override = label_dataset_override
 
         if threshold is not None:
             print(f"Overriding default threshold of {self.threshold} with {threshold}")
             self.threshold = threshold
+
+        # Initialize model
         self.model_name = model
         mod_path = os.path.join(mm2d_root, config_file)
         chk_path = os.path.join(mm2d_root, checkpoint_file)
@@ -97,4 +97,3 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             self.model = init_model(mod_path, chk_path, device=f"cuda:{gpu}")
         except AttributeError:
             self.model = init_model(mod_path, chk_path, device='cpu')
-

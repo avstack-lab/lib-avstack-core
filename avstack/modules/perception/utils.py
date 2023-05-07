@@ -7,6 +7,7 @@
 
 import numpy as np
 
+from avstack.exceptions import BoundingBoxError
 from avstack.geometry import q_cam_to_stan
 from avstack.geometry.bbox import Box2D, Box3D, SegMask2D
 from avstack.geometry.transformations import transform_orientation
@@ -276,4 +277,25 @@ def convert_mm3d_to_avstack(
                 prev_locs.append(x_O_2_obj_in_O)
                 dets.append(BoxDetection(source_identifier, box3d, obj_type, score))
 
+    return dets
+
+
+def convert_jetson2d_to_avstack(
+    result_,
+    calib,
+    source_identifier,
+    score_thresh,
+    whitelist,
+    class_names
+):
+    dets = []
+    for obj in result_:
+        obj_type = class_names[obj.ClassID]
+        score = obj.Confidence
+        if (obj_type in whitelist) and (score >= score_thresh):
+            try:
+                bbox = Box2D([obj.Left, obj.Top, obj.Right, obj.Bottom], calibration=calib)
+            except BoundingBoxError:
+                continue
+            dets.append(BoxDetection(source_identifier=source_identifier, box=bbox, obj_type=obj_type, score=score))
     return dets

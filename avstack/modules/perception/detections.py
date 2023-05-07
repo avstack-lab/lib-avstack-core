@@ -377,7 +377,8 @@ class BoxDetection(Detection_):
     
     def format_as_string(self):
         """Convert to vehicle state and format"""
-        return f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"
+        fstr = f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"
+        return fstr
 
 
 class MaskDetection(Detection_):

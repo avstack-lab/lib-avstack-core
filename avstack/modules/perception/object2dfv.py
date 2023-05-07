@@ -22,6 +22,25 @@ from avstack.modules.perception import detections, utils
 from avstack.modules.perception.base import _MMObjectDetector, _PerceptionAlgorithm
 
 
+coco_objs_90 = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+    'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
+    'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
+    'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+    'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+    'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
+    'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+    'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+    'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
+    'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+    'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
+    'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
+    'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
+    'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+for obj in coco_objs_90:
+    obj.replace(' ', '_')
+coco_objs_91 = coco_objs_90.copy()
+coco_objs_91.insert(0, 'unlabeled')
+
 # ===========================================================================
 # TRUTH OPERATIONS
 # ===========================================================================
@@ -204,20 +223,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             all_objs = ["person"]
             whitelist = all_objs
         elif dataset == "coco":
-            all_objs = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
-               'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
-               'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
-               'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
-               'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
-               'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
-               'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
-               'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
-               'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
-               'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
-               'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
-               'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
-               'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
-               'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+            all_objs = coco_objs_90
             whitelist = ["person", "bicycle", "car"]
         else:
             raise NotImplementedError(dataset)
@@ -301,3 +307,53 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             input_data,
             label_dataset_override,
         )
+        
+
+class JetsonInference2D(_PerceptionAlgorithm):
+    MODE = "object_2d"
+
+    def __init__(self, model="dashcamnet", dataset="dashcamnet", threshold=0.1, **kwargs):
+        super().__init__(**kwargs)
+        import jetson_inference
+
+        # Initialize model
+        self.model = jetson_inference.detectNet(model=model, output_bbox="boxes", threshold=threshold)
+        self.threshold = threshold
+        self.class_names, self.whitelist  = self.parse_jetson_object_classes(model, dataset)
+        self.obj_map = {i: n for i, n in enumerate(self.class_names)}
+
+    def _execute(self, data, identifier, is_rgb=True, **kwargs):
+        import jetson_utils
+
+        # -- inference
+        cu_img = jetson_utils.cudaFromNumpy(data.data)
+        result_ = self.model.Detect(cu_img)
+
+        # -- post processing
+        detections = utils.convert_jetson2d_to_avstack(
+            result_,
+            data.calibration,
+            identifier,
+            self.threshold,
+            self.whitelist,
+            self.class_names,
+        )
+        return DataContainer(data.frame, data.timestamp, detections, identifier)
+
+    @staticmethod
+    def parse_jetson_object_classes(model, dataset):
+        if model == 'dashcamnet':
+            if dataset == 'dashcamnet':
+                all_objs = ["car", "bicycle", "person", "sign"]
+                whitelist = all_objs
+            else:
+                raise NotImplementedError(f"{model}, {dataset} not compatible")
+        elif model == 'ssd-mobilenet-v2':
+            if dataset == 'ssd-mobilenet-v2':
+                all_objs = coco_objs_91
+                whitelist = coco_objs_91
+            else:
+                raise NotImplementedError(f"{model}, {dataset} not compatible")
+        else:
+            raise NotImplementedError(model)
+        return all_objs, whitelist

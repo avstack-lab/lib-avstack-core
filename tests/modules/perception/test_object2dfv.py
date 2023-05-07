@@ -31,13 +31,12 @@ from utilities import get_test_sensor_data
 
 
 def test_mmdet_2d_perception():
-    frame = 0
     try:
         import mmdet
     except ModuleNotFoundError as e:
         print("Cannot run mmdet test without the module")
     else:
-
+        frame = 0
         model_dataset_pairs = [('fasterrcnn', 'kitti'),
                                ('fasterrcnn', 'cityscapes'),
                                ('fasterrcnn', 'coco-person')]
@@ -45,4 +44,18 @@ def test_mmdet_2d_perception():
         
         for model, dataset in model_dataset_pairs:
             detector = perception.object2dfv.MMDetObjectDetector2D(model=model, dataset=dataset)
+            detections = detector(img, frame=frame, identifier="camera_objects_2d")
+
+
+def test_jetson_2d_perception():
+    try:
+        import jetson_inference
+    except ModuleNotFoundError as e:
+        print("Cannot run jetson test without the jetson module")
+    else:
+        frame = 0
+        models = ["dashcamnet"]
+        for model in models:
+            detector = perception.object2dfv.JetsonInference2D(model=model)
+            import pdb; pdb.set_trace()
             detections = detector(img, frame=frame, identifier="camera_objects_2d")
