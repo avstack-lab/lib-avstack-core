@@ -10,3 +10,6 @@
 [submodule "third_party/ad-rss-lib"]
 	path = third_party/ad-rss-lib
 	url = https://github.com/avstack-lab/ad-rss-lib.git
+[submodule "third_party/mmcv"]
+	path = third_party/mmcv
+	url = https://github.com/avstack-lab/mmcv
