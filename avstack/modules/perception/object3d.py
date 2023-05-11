@@ -192,7 +192,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/kitti/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class_20220301_150306-37dc2420.pth"
             elif dataset == "nuscenes":
                 threshold = 0.4
-                config_file = "configs/pointpillars/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_nus-3d.py"
+                config_file = "configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
                 checkpoint_file = "checkpoints/nuscenes/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_nus-3d_20201021_120719-269f9dd6.pth"
             elif dataset == "carla":
                 threshold = 0.5
