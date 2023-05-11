@@ -70,7 +70,7 @@ def get_box_from_line(line):
             origin = get_origin_from_line(" ".join(items[11:]))
             box = Box3D([h, w, l, [x, y, z], q], origin)
         else:
-            raise NotImplementedError(box_type)
+            raise NotImplementedError(f"{box_type} ---- {line}")
     except Exception as e:
         print(items)
         raise e

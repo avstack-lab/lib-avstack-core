@@ -103,11 +103,16 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         **kwargs,
     ):
         super().__init__(model, dataset, gpu, epoch, threshold, **kwargs)
-        from mmdet.apis import inference_detector
-
+        from mmdet.apis import inference_detector, init_detector
+        from mmdet.utils import register_all_modules
+        register_all_modules(init_default_scope=True)
         self.inference_detector = inference_detector
-        
+        self.model = init_detector(self.mod_path, self.chk_path, device=f"cuda:{gpu}")
+
     def _execute(self, data, identifier, is_rgb=True, eval_method="data", **kwargs):
+        from mmdet.utils import register_all_modules
+        register_all_modules(init_default_scope=True)
+
         # -- inference
         result_ = self.run_mm_inference(
             self.inference_detector, self.model, data, is_rgb, eval_method

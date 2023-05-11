@@ -53,11 +53,6 @@ mm3d_root = os.path.join(
 class _MMObjectDetector(_PerceptionAlgorithm):
     def __init__(self, model, dataset, gpu=0, epoch="latest", threshold=None, **kwargs):
         super().__init__(**kwargs)
-        # Import module here -- NOTE several mmdet and mmdet3d functions are cross-compatible
-        try:
-            from mmdet3d.apis import init_model
-        except ModuleNotFoundError as e:
-            from mmdet.apis import init_detector as init_model
         self.dataset = dataset.lower()
         self.algorithm = model
 
@@ -92,5 +87,5 @@ class _MMObjectDetector(_PerceptionAlgorithm):
                 raise FileNotFoundError(f'Cannot find {checkpoint_file} checkpoint')
         if not os.path.exists(chk_path):
             raise FileNotFoundError(f'Cannot find {checkpoint_file} checkpoint')
-        
-        self.model = init_model(mod_path, chk_path, device=f"cuda:{gpu}")
+        self.mod_path = mod_path
+        self.chk_path = chk_path

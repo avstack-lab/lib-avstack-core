@@ -28,7 +28,9 @@ def get_track_from_line(line):
             n_add = 2
             factory = BasicBoxTrack2D
         elif trk_type == "boxtrack2d3d":
-            raise NotImplementedError
+            # HACK: only doing the 3d track here
+            n_add = 3
+            factory = BasicBoxTrack3D
         else:
             raise NotImplementedError(trk_type)
         v = items[n_prelim : (n_prelim + n_add)]
@@ -495,6 +497,9 @@ class XyzFromRazelRrtTrack(_TrackBase):
 
 
 class BasicBoxTrack3D(_TrackBase):
+
+    NAME = "boxtrack3d"
+
     def __init__(
         self,
         t0,
@@ -620,6 +625,7 @@ class BasicBoxTrack3D(_TrackBase):
 
 
 class BasicBoxTrack2D(_TrackBase):
+    NAME = "boxtrack2d"
 
     def __init__(
         self,
@@ -737,6 +743,8 @@ class BasicBoxTrack2D(_TrackBase):
 
 
 class BasicJointBoxTrack(_TrackBase):
+    NAME = "boxtrack2d3d"
+
     def __init__(self, t0, box2d, box3d, obj_type):
         self.track_2d = (
             BasicBoxTrack2D(t0, box2d, obj_type) if box2d is not None else None
@@ -752,6 +760,41 @@ class BasicJointBoxTrack(_TrackBase):
     @property
     def box(self):
         return self.box3d
+
+    @property
+    def x(self):
+        return self.track_3d.x
+
+    @property
+    def P(self):
+        return self.track_3d.P
+
+    @property
+    def obj_type(self):
+        return self.track_3d.obj_type
+
+    @property
+    def t0(self):
+        return self.track_3d.t0
+
+    @property
+    def t(self):
+        return self.track_3d.t
+
+    @property
+    def coast(self):
+        return self.track_3d.coast
+    
+    @property
+    def n_updates(self):
+        return self.track_3d.n_updates
+
+    @property
+    def age(self):
+        try:
+            return max(self.track_2d.age, self.track_3d.age)
+        except Exception:
+            return self.track_3d.age
 
     @property
     def box2d(self):
@@ -824,5 +867,11 @@ class BasicJointBoxTrack(_TrackBase):
         else:
             raise RuntimeError("No 3d track to convert to object")
 
-    def format_as(self, format_):
-        return self.as_object().format_as(format_)
+    def format_as_string(self):
+        v_str = " ".join(map(str, self.x[6:9]))
+        P_str = " ".join(map(str, self.P.ravel()))
+        return (
+            f"boxtrack2d3d {self.obj_type} {self.t0} {self.t} {self.ID} "
+            f"{self.coast} {self.n_updates} {self.age} "
+            f"{len(self.x)} {v_str} {P_str} {self.box3d.format_as_string()}"
+        )
