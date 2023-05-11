@@ -278,7 +278,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         elif model == "htc":
             if dataset == "nuimages":
                 threshold = 0.7
-                config_file = "configs/nuimages/htc_x101_64x4d_fpn_dconv_c3-c5_coco-20e_16x1_20e_nuim.py"
+                config_file = "configs/nuimages/htc_x101_64x4d_fpn_dconv_c3-c5_coco-20e-1xb16_nuim.py"
                 checkpoint_file = "checkpoints/nuimages/htc_x101_64x4d_fpn_dconv_c3-c5_coco-20e_16x1_20e_nuim_20201008_211222-0b16ac4b.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")

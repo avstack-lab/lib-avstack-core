@@ -166,7 +166,8 @@ class ImageData(SensorData):
         save_image_file(self.data, filepath, self.source_name)
 
     def view(self, axis=False, extent=None):
-        pil_im = Image.fromarray(self.data)
+        img_data = self.data if self.calibration.channel_order=='rgb' else self.data[:,:,::-1]
+        pil_im = Image.fromarray(img_data)
         plt.figure(figsize=[2 * x for x in plt.rcParams["figure.figsize"]])
         plt.imshow(pil_im, extent=extent)
         if not axis:

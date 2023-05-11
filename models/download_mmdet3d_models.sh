@@ -59,6 +59,8 @@ download_models "kitti" "pointpillars" "$KITTI_PILLARS"
 KITTI_PGD="pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d/pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d_20211022_102608-8a97533b.pth"
 download_models "kitti" "pgd" "$KITTI_PGD"
 
+NUIM_HTC="htc_x101_64x4d_fpn_dconv_c3-c5_coco-20e_16x1_20e_nuim/htc_x101_64x4d_fpn_dconv_c3-c5_coco-20e_16x1_20e_nuim_20201008_211222-0b16ac4b.pth"
+download_models "nuimages" "nuimages_semseg" "$NUIM_HTC" true
 NUIM_CMRCNN="cascade_mask_rcnn_r50_fpn_coco-20e_1x_nuim/cascade_mask_rcnn_r50_fpn_coco-20e_1x_nuim_20201009_124158-ad0540e3.pth"
 download_models "nuimages" "nuimages_semseg" "$NUIM_CMRCNN" true
 
