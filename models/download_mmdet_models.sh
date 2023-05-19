@@ -70,5 +70,5 @@ download_custom_models "nuscenes" "nuscenes" "$NUSC_FRCNN"
 
 
 echo "Adding symbolic link to mmdet directory"
-ln -sf $(realpath "$MMDET_CKPT") "$THISDIR/../third_party/mmdetection/checkpoints"
-ln -sf $(realpath "$MMDET_WKDIR") "$THISDIR/../third_party/mmdetection/work_dirs"
+ln -sfnT $(realpath "$MMDET_CKPT") "$THISDIR/../third_party/mmdetection/checkpoints"
+ln -sfnT $(realpath "$MMDET_WKDIR") "$THISDIR/../third_party/mmdetection/work_dirs"

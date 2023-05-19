@@ -17,7 +17,7 @@ from avstack.geometry import transformations as tforms
 try:
     import ad_rss as ad
 except ModuleNotFoundError as e:
-    print("Cannot import rss library")
+    print("Cannot import rss library -- don't worry about this unless you need 'safety' evals")
     use_rss = False
 else:
     use_rss = True
