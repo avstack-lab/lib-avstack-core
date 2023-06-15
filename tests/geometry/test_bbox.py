@@ -4,15 +4,31 @@
 # @Last modified by:   spencer
 # @Last modified time: 2021-08-10
 
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import numpy as np
 import quaternion
 
 import avstack.geometry.bbox as bbox
 from avstack import calibration, exceptions
-from avstack.geometry import NominalOriginStandard, Origin, q_mult_vec
+from avstack.geometry import NominalOriginStandard, Origin
 from avstack.geometry import transformations as tforms
+
+import sys
+sys.path.append("tests/")
+from utilities import get_test_sensor_data
+
+
+(
+    obj,
+    box_calib,
+    lidar_calib,
+    pc,
+    camera_calib,
+    img,
+    box_2d,
+    box_3d,
+) = get_test_sensor_data()
 
 
 def test_2d_intersection_union():
@@ -56,26 +72,26 @@ def test_2d_box_valid():
     cam_calib = None
 
     box = bbox.Box2D([10, 20, 50, 60], cam_calib)
-    assert box.squeeze(im_h, im_w) == box
+    assert box.squeeze(im_h, im_w, inplace=False) == box
     assert box._x_valid(im_w) and box._y_valid(im_h) and box.check_valid(im_h, im_w)
 
     box = bbox.Box2D([-10, 20, 50, 60], cam_calib)
-    assert box.squeeze(im_h, im_w) != box
+    assert box.squeeze(im_h, im_w, inplace=False) != box
     assert (
         not box._x_valid(im_w)
         and box._y_valid(im_h)
         and not box.check_valid(im_h, im_w)
     )
-    assert box.squeeze(im_h, im_w).check_valid(im_h, im_w)
+    assert box.squeeze(im_h, im_w, inplace=False).check_valid(im_h, im_w)
 
     box = bbox.Box2D([10, 20, 5000, 60], cam_calib)
-    assert box.squeeze(im_h, im_w) != box
+    assert box.squeeze(im_h, im_w, inplace=False) != box
     assert (
         not box._x_valid(im_w)
         and box._y_valid(im_h)
         and not box.check_valid(im_h, im_w)
     )
-    assert box.squeeze(im_h, im_w).check_valid(im_h, im_w)
+    assert box.squeeze(im_h, im_w, inplace=False).check_valid(im_h, im_w)
 
     try:
         box = bbox.Box2D([10, 20, 50, 10], cam_calib)
@@ -102,6 +118,13 @@ def test_box_IoU():
     q_2 = tforms.transform_orientation([0, 0, 1.4], "euler", "quat")
     box_2 = bbox.Box3D([3, 4, 5, [5, 5, -10.4], q_2], origin=NominalOriginStandard)
     assert box_1.IoU(box_2) > 0
+
+
+def test_2d_3d_iou():
+    box_1_3d = box_3d
+    box_1_2d = box_3d.project_to_2d_bbox(camera_calib)
+    assert np.isclose(box_1_2d.IoU(box_1_3d), 1.0)
+    assert np.isclose(box_1_3d.IoU(box_1_2d), 1.0)
 
 
 # ===========================================================

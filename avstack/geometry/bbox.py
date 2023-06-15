@@ -143,18 +143,6 @@ class Box2D:
         self.ymin = box2d[1]
         self.xmax = box2d[2]
         self.ymax = box2d[3]
-        self.box2d = np.asarray(box2d)
-        self.center = np.asarray(
-            [(self.xmin + self.xmax) / 2, (self.ymin + self.ymax) / 2]
-        )
-        self.corners = np.array(
-            [
-                [self.xmin, self.ymin],
-                [self.xmin, self.ymax],
-                [self.xmax, self.ymax],
-                [self.xmax, self.ymin],
-            ]
-        )
 
     def __repr__(self):
         return self.__str__()
@@ -169,6 +157,27 @@ class Box2D:
 
     def __eq__(self, other):
         return np.allclose(self.box2d, other.box2d)
+    
+    @property
+    def box2d(self):
+        return np.array([self.xmin, self.ymin, self.xmax, self.ymax])
+
+    @property
+    def center(self):
+        return np.asarray(
+            [(self.xmin + self.xmax) / 2, (self.ymin + self.ymax) / 2]
+        )
+
+    @property
+    def corners(self):
+        return np.array(
+            [
+                [self.xmin, self.ymin],
+                [self.xmin, self.ymax],
+                [self.xmax, self.ymax],
+                [self.xmax, self.ymin],
+            ]
+        )
 
     def deepcopy(self):
         return deepcopy(self)
@@ -214,16 +223,46 @@ class Box2D:
         return [self.xmin, self.ymin, self.w, self.h]
 
     def IoU(self, other):
-        inter = box_intersection(self.box2d, other.box2d)
-        union = box_union(self.box2d, other.box2d)
-        return inter / union
+        if isinstance(other, Box2D):
+            inter = box_intersection(self.box2d, other.box2d)
+            union = box_union(self.box2d, other.box2d)
+            iou = inter / union
+        elif isinstance(other, Box3D):
+            iou = other.IoU(self)
+        else:
+            raise NotImplementedError(type(other))
+        return iou
 
-    def squeeze(self, im_h, im_w):
+    def squeeze(self, im_h, im_w, inplace=True):
         x_min_s = int(max(0, min(self.xmin, im_w - 1)))
         y_min_s = int(max(0, min(self.ymin, im_h - 1)))
         x_max_s = int(max(0, min(self.xmax, im_w - 1)))
         y_max_s = int(max(0, min(self.ymax, im_h - 1)))
-        return Box2D([x_min_s, y_min_s, x_max_s, y_max_s], self.calibration)
+        if inplace:
+            self.xmin = x_min_s
+            self.ymin = y_min_s
+            self.xmax = x_max_s
+            self.ymax = y_max_s
+        else:
+            return Box2D([x_min_s, y_min_s, x_max_s, y_max_s], self.calibration)
+
+    def add_noise(self, noise_variance):
+        """Add noise to each component
+
+        NOTE: also assumes no cross correlations for now
+
+        noise must be Gaussian of the form: [xmin, xmax, ymin, ymax]
+        """
+        if noise_variance is None:
+            return
+        assert len(noise_variance) == 4
+        noise_samples = np.random.randn(len(noise_variance))
+        noisy_vals = [np.sqrt(nv) * ns for nv, ns in zip(noise_variance, noise_samples)]
+        self.xmin += noisy_vals[0]
+        self.ymin += noisy_vals[1]
+        self.xmax += noisy_vals[2]
+        self.ymax += noisy_vals[3]
+        self.squeeze(self.calibration.img_shape[0], self.calibration.img_shape[1], inplace=True)
 
     def format_as_string(self):
         return f"box2d {self.xmin} {self.ymin} {self.xmax} {self.ymax} {self.calibration.format_as_string()}"
@@ -421,46 +460,53 @@ class Box3D:
         q_OG_2_V = self.q * self.origin.q
 
         """
-        if self.center_global.distance(other.center_global) > (
-            max(self.size) / 2 + max(other.size) / 2
-        ):
-            return 0.0
+        if isinstance(other, Box3D):
+            if self.center_global.distance(other.center_global) > (
+                max(self.size) / 2 + max(other.size) / 2
+            ):
+                return 0.0
 
-        if run_angle_check:
-            eps = 0.05
-            q_stand_to_box = self.q * self.origin.q
-            if (abs(q_stand_to_box.x) > eps) or (abs(q_stand_to_box.y) > eps):
-                msg = (
-                    f"Not a good idea to run this IoU equation"
-                    f" when there are more than just yaw angles in the"
-                    f" global frame...{q_stand_to_box}"
-                )
-                if error_on_angle_check:
-                    raise ValueError(msg)
-                else:
-                    logging.warning(msg)
+            if run_angle_check:
+                eps = 0.05
+                q_stand_to_box = self.q * self.origin.q
+                if (abs(q_stand_to_box.x) > eps) or (abs(q_stand_to_box.y) > eps):
+                    msg = (
+                        f"Not a good idea to run this IoU equation"
+                        f" when there are more than just yaw angles in the"
+                        f" global frame...{q_stand_to_box}"
+                    )
+                    if error_on_angle_check:
+                        raise ValueError(msg)
+                    else:
+                        logging.warning(msg)
 
-        if metric == "3D":
-            # c1 = self.corners_global_without_pitch_roll
-            # c2 = other.corners_global_without_pitch_roll
-            c1 = self.corners_global
-            c2 = other.corners_global
-            inter = box_intersection(c1, c2, up="+z")
-            union = box_union(c1, c2, up="+z")
-            iou = inter / union
-            if (iou < 0) or (iou > 1.5):
-                iou = max(
-                    1.0, iou
-                )  # BUG: IoU can be >1.0 if roll and pitch angles are non-zero since the formula used approximates intersection equation as only yaw angle
-                import ipdb
-
-                ipdb.set_trace()
+            if metric == "3D":
+                # c1 = self.corners_gloabal_without_pitch_roll
+                # c2 = other.corners_global_without_pitch_roll
+                c1 = self.corners_global
+                c2 = other.corners_global
                 inter = box_intersection(c1, c2, up="+z")
                 union = box_union(c1, c2, up="+z")
-                raise RuntimeError("Invalid iou output")
+                iou = inter / union
+                if (iou < 0) or (iou > 2.0):
+                    iou = max(
+                        1.0, iou
+                    )  # BUG: IoU can be >1.0 if roll and pitch angles are non-zero since the formula used approximates intersection equation as only yaw angle
+                    import pdb
+
+                    pdb.set_trace()
+                    inter = box_intersection(c1, c2, up="+z")
+                    union = box_union(c1, c2, up="+z")
+                    raise RuntimeError("Invalid iou output")
+            else:
+                raise NotImplementedError(metric)
+            iou = max(0.0, min(1.0, iou))
+        elif isinstance(other, Box2D):
+            box2d_self = self.project_to_2d_bbox(other.calibration)
+            iou = other.IoU(box2d_self)
         else:
-            raise NotImplementedError(metric)
-        return max(0.0, min(1.0, iou))
+            raise NotImplementedError(type(other))
+        return iou
 
     def rotate(self, q):
         """Rotates the attitude AND the translation of the box"""
@@ -490,7 +536,7 @@ class Box3D:
     def project_to_2d_bbox(self, calib, squeeze=True, check_origin=True):
         """Project 3D bounding box into a 2D bounding box"""
         return proj_3d_bbox_to_2d_bbox(self, calib, check_origin).squeeze(
-            calib.height, calib.width
+            calib.height, calib.width, inplace=False
         )
 
     def project_corners_to_2d_image_plane(self, calib, squeeze=True):
