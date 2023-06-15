@@ -7,18 +7,14 @@
 """
 
 """
-import hashlib
 import os
 import tempfile
-import time
 
 import numpy as np
 from cv2 import imwrite
 
-import avstack
 from avstack.datastructs import DataContainer
-from avstack.geometry import StandardCoordinates, bbox
-from avstack.modules.perception import detections, utils
+from avstack.modules.perception import utils
 from avstack.modules.perception.base import _MMObjectDetector, _PerceptionAlgorithm
 
 
@@ -249,7 +245,8 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 label_dataset_override = "cityscapes"
             elif dataset == "nuscenes":
                 threshold = 0.7
-                config_file = "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.py"
+                config_file = "configs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.py"
+                # config_file = "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.py"
                 checkpoint_file = (
                     "work_dirs/nuscenes/faster_rcnn_r50_fpn_1x_nuscenes.pth"
                 )
