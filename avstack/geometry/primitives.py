@@ -908,6 +908,18 @@ class Transform:
         return f"transform {self.rotation.format_as_string()} {self.translation.format_as_string()}"
 
 
+class Pose:
+    def __init__(self, position, rotation) -> None:
+        self.position = position
+        self.rotation = rotation
+
+
+class Twist:
+    def __init__(self, linear, angular) -> None:
+        self.angular = angular
+        self.linear = linear
+
+
 class PointCloud:
     def __init__(self, points, origin):
         self.points = points
