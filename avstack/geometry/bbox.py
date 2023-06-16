@@ -7,6 +7,7 @@
 
 import logging
 from copy import copy, deepcopy
+from numba import jit
 
 import numpy as np
 import quaternion
@@ -18,7 +19,7 @@ from avstack import exceptions
 from avstack.geometry import transformations as tforms
 
 from ..calibration import read_calibration_from_line
-from .base import q_mult_vec
+from .base import q_mult_vec, _q_mult_vec
 from .coordinates import CameraCoordinates, LidarCoordinates, StandardCoordinates
 from .primitives import (
     Origin,
@@ -222,13 +223,13 @@ class Box2D:
     def box2d_xywh(self):
         return [self.xmin, self.ymin, self.w, self.h]
 
-    def IoU(self, other):
+    def IoU(self, other, check_origin=True):
         if isinstance(other, Box2D):
             inter = box_intersection(self.box2d, other.box2d)
             union = box_union(self.box2d, other.box2d)
             iou = inter / union
         elif isinstance(other, Box3D):
-            iou = other.IoU(self)
+            iou = other.IoU(self, check_origin=check_origin)
         else:
             raise NotImplementedError(type(other))
         return iou
@@ -439,12 +440,20 @@ class Box3D:
             self.t.change_origin(O1)
             self.where_is_t = "center"
 
-    def change_origin(self, origin_new):
-        self.t.change_origin(origin_new)
-        self.rot.change_origin(origin_new)
-        self.origin = origin_new
+    def change_origin(self, origin_new, inplace=True):
+        if inplace:
+            self.t.change_origin(origin_new)
+            self.rot.change_origin(origin_new)
+            self.origin = origin_new
+        else:
+            newt = self.t.change_origin(origin_new, inplace=inplace)
+            newr = self.rot.change_origin(origin_new, inplace=inplace)
+            box3d = [self.h, self.w, self.l, newt, newr.q]
+            newself = Box3D(box3d=box3d, origin=origin_new, where_is_t=self.where_is_t)
+            return newself
 
-    def IoU(self, other, metric="3D", run_angle_check=True, error_on_angle_check=False):
+    def IoU(self, other, metric="3D", run_angle_check=True, error_on_angle_check=False,
+            check_origin=True):
         """
         IMPORTANT NOTE: THIS METRIC ONLY WORKS WITH A YAW ANGLE
         (YAW AS DEFINED IN THE STANDARD FRAME) IT DOES NOT WORK
@@ -502,7 +511,7 @@ class Box3D:
                 raise NotImplementedError(metric)
             iou = max(0.0, min(1.0, iou))
         elif isinstance(other, Box2D):
-            box2d_self = self.project_to_2d_bbox(other.calibration)
+            box2d_self = self.project_to_2d_bbox(other.calibration, check_origin=check_origin)
             iou = other.IoU(box2d_self)
         else:
             raise NotImplementedError(type(other))
@@ -539,9 +548,9 @@ class Box3D:
             calib.height, calib.width, inplace=False
         )
 
-    def project_corners_to_2d_image_plane(self, calib, squeeze=True):
+    def project_corners_to_2d_image_plane(self, calib, squeeze=True, check_origin=True):
         """Project 3D bounding box corners only image plane"""
-        return proj_3d_bbox_to_image_plane(self, calib, squeeze=squeeze)
+        return proj_3d_bbox_to_image_plane(self, calib, squeeze=squeeze, check_origin=check_origin)
 
     def format_as_string(self):
         return (
@@ -809,7 +818,19 @@ def compute_box_size(corners_3d, heading_angle):
     return (l, w, h)
 
 
-def compute_box_3d_corners(box3d, yaw=None):
+def compute_box_3d_corners(box3d):
+    """A wrapper around the jit compiled method"""
+    qcon = box3d.q.conjugate()
+    qcs = qcon.w
+    qcr = qcon.vec
+    qcm = qcon.w**2 + qcon.x**2 + qcon.y**2 + qcon.z**2
+    return _compute_box_3d_corners(box3d.t.vector, box3d.h, box3d.w,
+        box3d.l, qcs, qcr, qcm, box3d.where_is_t)
+
+
+@jit(nopython=True, parallel=True)
+def _compute_box_3d_corners(t: np.ndarray, h: float, w: float, l: float,
+                            qcs: float, qcr: float, qcm: float, where_is_t: str):
     """Computes the 3D bounding box in the box's coordinate frame
 
     X - forward, Y - left, Z - up
@@ -847,10 +868,6 @@ def compute_box_3d_corners(box3d, yaw=None):
     corners_out =  box3d.q.conjugate() * corners_3d_base + box3d.t
 
     """
-    # -- get 3d coordinates of a nominal box in standard coordinates
-    l = box3d.l
-    w = box3d.w
-    h = box3d.h
     x_corners = np.array(
         [l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2], dtype=np.float64
     )
@@ -858,25 +875,20 @@ def compute_box_3d_corners(box3d, yaw=None):
         [w / 2, w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2], dtype=np.float64
     )
     z_corners = np.array([h, h, h, h, 0, 0, 0, 0], dtype=np.float64)
-    if box3d.where_is_t == "bottom":
+    if where_is_t == "bottom":
         pass
-    elif box3d.where_is_t == "center":
+    elif where_is_t == "center":
         z_corners -= h / 2
     else:
-        raise NotImplementedError(box3d.where_is_t)
+        raise NotImplementedError("Cannot handle this t position")
 
     # -- convert to the desired coordinates in the box's frame
-    corners_3d_base = np.concatenate(
-        (x_corners[:, None], y_corners[:, None], z_corners[:, None]), axis=1
-    )
+    corners_3d_base = np.column_stack((x_corners, y_corners, z_corners))
     # NOTE: no need to do anything with the new origin here...corners will assume
     # the origin of the vehicle
 
     # -- apply box rotation quaternion, then translation
-    corners_3d = (
-        q_mult_vec(box3d.q.conjugate(), corners_3d_base)
-        + np.asarray(box3d.t)[:, None].T
-    )
+    corners_3d = _q_mult_vec(qcs, qcr, qcm, corners_3d_base) + t
 
     return corners_3d
 
@@ -919,9 +931,7 @@ def in_hull(p, hull):
     return hull.find_simplex(p) >= 0
 
 
-def proj_3d_bbox_to_image_plane(
-    box3d, calib_img, check_origin=True, squeeze=False, squeeze_method="lines"
-):
+def proj_3d_bbox_to_image_plane(box3d, calib_img, check_origin=True):
     """
     Squeeze:
     Using the squeeze via-line method, the following combinations of points
@@ -957,90 +967,11 @@ def proj_3d_bbox_to_image_plane(
     """
     # Get 3D box points
     if check_origin:
-        box3d = deepcopy(box3d)
-        box3d.change_origin(calib_img.origin)
+        box3d = box3d.change_origin(calib_img.origin, inplace=False)
     box3d_pts_3d = box3d.corners
 
     # Project into image plane
     corners_3d_in_image = tforms.project_to_image(box3d_pts_3d, calib_img.P)
-    if False:
-        cix = corners_3d_in_image[:, 0].copy()
-        ciy = corners_3d_in_image[:, 1].copy()
-        if squeeze_method == "lines":
-            # Squeeze assuming lines between points
-            pt_is_off = ((cix < 0) | (cix >= calib_img.width)) | (
-                (ciy < 0) | (ciy >= calib_img.height)
-            )
-            pt_pairs = [
-                (0, 1),
-                (0, 3),
-                (0, 4),
-                (1, 2),
-                (1, 5),
-                (2, 3),
-                (2, 6),
-                (3, 7),
-                (4, 5),
-                (4, 7),
-                (5, 6),
-                (6, 7),
-            ]
-            for p1, p2 in pt_pairs:
-                if pt_is_off[p1] and pt_is_off[p2]:
-                    continue  # don't update both -- only 1 at a time
-                elif pt_is_off[p1]:
-                    poff = p1
-                    pon = p2
-                elif pt_is_off[p2]:
-                    poff = p2
-                    pon = p1
-                else:
-                    continue
-                # The off point must move along the line to the on point
-                dx_off_to_on = cix[pon] - cix[poff]
-                dy_off_to_on = ciy[pon] - ciy[poff]
-                m_y_x = dy_off_to_on / dx_off_to_on  # m is (delta y) / (delta x)
-                m_x_y = dx_off_to_on / dy_off_to_on  # m is (delta x) / (delta y)
-                # Find the point on this line where all conditions satisfied using iterative update (slow)
-                ds_total = 0
-                ds_max = 1000
-                ds = 0.01
-                cix_new = cix[poff].copy()
-                ciy_new = ciy[poff].copy()
-                while ds_total < ds_max:
-                    # update point moving along line
-                    if cix_new < 0:  # x needs to get more positive
-                        cix_new += ds
-                        ciy_new += ds * m_y_x
-                    elif cix_new >= calib_img.width:  # x needs to get more negative
-                        cix_new -= ds
-                        ciy_new -= ds * m_y_x
-                    elif ciy_new < 0:  # y needs to get more positive
-                        cix_new += ds * m_x_y
-                        ciy_new += ds
-                    elif ciy_new >= calib_img.height:  # y needs to get more negative
-                        cix_new -= ds * m_x_y
-                        ciy_new -= ds
-                    else:
-                        break  # were done!
-                    ds_total += ds
-                else:
-                    import ipdb
-
-                    ipdb.set_trace()
-                    raise RuntimeError("Could not find suitable point")
-                corners_3d_in_image[poff, 0] = cix_new
-                corners_3d_in_image[poff, 1] = ciy_new
-        elif squeeze_method == "points":
-            # Squeeze by just pushing points to edge
-            corners_3d_in_image[:, 0] = np.maximum(
-                0, np.minimum(cix, calib_img.width - 1)
-            )
-            corners_3d_in_image[:, 1] = np.maximum(
-                0, np.minimum(ciy, calib_img.height - 1)
-            )
-        else:
-            raise NotImplementedError(squeeze_method)
     return corners_3d_in_image
 
 

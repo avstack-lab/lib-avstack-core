@@ -28,11 +28,11 @@ assignments ahead of calling linear sum algorithm
 """
 
 
-def build_A_from_iou(boxes1, boxes2):
+def build_A_from_iou(boxes1, boxes2, **kwargs):
     A = np.zeros((len(boxes1), len(boxes2)))
     for i, b1 in enumerate(boxes1):
         for j, b2 in enumerate(boxes2):
-            iou = b1.IoU(b2)
+            iou = b1.IoU(b2, **kwargs)
             A[i, j] = -iou
     return A
 

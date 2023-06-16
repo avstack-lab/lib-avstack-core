@@ -155,7 +155,6 @@ def filter_points_in_image_frustum(point_cloud, box2d, camera_calib):
     lidar_mask3 = lidar_image.data[:, 0] < box2d.box2d[2]
     lidar_mask4 = lidar_image.data[:, 1] < box2d.box2d[3]
     frustum_filter = lidar_mask0 & lidar_mask1 & lidar_mask2 & lidar_mask3 & lidar_mask4
-
     return frustum_filter
 
 

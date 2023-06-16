@@ -437,7 +437,7 @@ class Rotation:
     def copy(self):
         return Rotation(self.q.copy(), self.origin)
 
-    def change_origin(self, origin_new):
+    def change_origin(self, origin_new, inplace=True):
         """
         self.q        := q_O_2_S
         self.origin.q := q_OR1_2_O
@@ -470,9 +470,17 @@ class Rotation:
         Thus in regular notation, this becomes:
         self.q = self.q * self.origin.q * origin_new.q.conjugate()
         """
-        if origin_new != self.origin:
-            q = self.q * self.origin.q * origin_new.q.conjugate()
-            self.__init__(q, origin=origin_new)
+        if inplace:
+                q = self.q * self.origin.q * origin_new.q.conjugate()
+                self.__init__(q, origin=origin_new)
+        else:
+            if origin_new != self.origin:
+                q = self.q * self.origin.q * origin_new.q.conjugate()
+                newself = Rotation(q, origin_new)
+            else:
+                newself = Rotation(self.q, origin_new)
+            return newself
+
 
     def format_as_string(self):
         return f"rotation {self.q.w} {self.q.x} {self.q.y} {self.q.z} {self.origin.format_as_string()}"
@@ -643,7 +651,7 @@ class Translation:
             raise NotImplementedError(type(other))
         return Translation(x, origin=self.origin)
 
-    def change_origin(self, origin_new):
+    def change_origin(self, origin_new, inplace=True):
         """Change origin of the translation
 
         Need to perform the following operations:
@@ -681,15 +689,21 @@ class Translation:
         x_out = (self.origin.q.conjugate() * self.x) + self.origin.x - origin_new.x
         """
         if origin_new != self.origin:
-            # x_global = self.origin.R.T @ self.vector + self.origin.x
-            # x_new = origin_new.R @ (x_global - origin_new.x)
             x_out = q_mult_vec(
                 origin_new.q,
                 q_mult_vec(self.origin.q.conjugate(), self.vector)
                 + self.origin.x
                 - origin_new.x,
             )
-            self.__init__(x_out, origin=origin_new)
+        if inplace:
+            if origin_new != self.origin:
+                self.__init__(x_out, origin=origin_new)
+        else:
+            if origin_new != self.origin:
+                newself = Translation(x_out, origin=origin_new)
+            else:
+                newself = Translation(self.vector, origin=origin_new)
+            return newself
 
     def sqrt(self):
         return np.sqrt(self.vector)
@@ -738,10 +752,18 @@ class VectorDirMag(Translation):
     def vector_global(self):
         return self.origin.R.T @ self.vector
 
-    def change_origin(self, origin_new):
+    def change_origin(self, origin_new, inplace=True):
         if origin_new != self.origin:
             v_new = origin_new.R @ (self.origin.R.T @ self.vector)
-            self.__init__(v_new, origin=origin_new)
+
+        if inplace:
+            if origin_new != self.origin:
+                self.__init__(v_new, origin=origin_new)
+        else:
+            if origin_new != self.origin:
+                newself = VectorDirMag(v_new, origin=origin_new)
+            else:
+                newself = VectorDirMag(self.vector, origin=origin_new)
 
     def format_as_string(self):
         return f"vectordirmag{self.vector[0]} {self.vector[1]} {self.vector[2]} {self.origin.format_as_string()}"
@@ -767,9 +789,14 @@ class VectorHeadTail:
     def magnitude(self):
         return self.tail.distance(self.head)
 
-    def change_origin(self, origin_new):
-        self.head.change_origin(origin_new)
-        self.tail.change_origin(origin_new)
+    def change_origin(self, origin_new, inplace=True):
+        if inplace:
+            self.head.change_origin(origin_new)
+            self.tail.change_origin(origin_new)
+        else:
+            head = self.head.change_origin(origin_new, inplace=inplace)
+            tail = self.tail.change_origin(origin_new, inplace=inplace)
+            return VectorHeadTail(head, tail, origin=origin_new)
 
 
 class Transform:
@@ -868,9 +895,14 @@ class Transform:
     def as_origin(self):
         return Origin(self.translation.vector, self.rotation.q)
 
-    def change_origin(self, origin_new):
-        self.rotation.change_origin(origin_new)
-        self.translation.change_origin(origin_new)
+    def change_origin(self, origin_new, inplace=True):
+        if inplace:
+            self.rotation.change_origin(origin_new)
+            self.translation.change_origin(origin_new)
+        else:
+            rot = self.rotation.change_origin(origin_new, inplace=inplace)
+            tra = self.translation.change_origin(origin_new, inplace=inplace)
+            return Transform(rot, tra)
 
     def format_as_string(self):
         return f"transform {self.rotation.format_as_string()} {self.translation.format_as_string()}"
