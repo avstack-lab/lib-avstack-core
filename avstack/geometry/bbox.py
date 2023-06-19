@@ -12,8 +12,7 @@ from numba import jit
 import numpy as np
 import quaternion
 from scipy import sparse
-from scipy.spatial import ConvexHull
-from scipy.spatial.qhull import QhullError
+from scipy.spatial import ConvexHull, QhullError
 
 from avstack import exceptions
 from avstack.geometry import transformations as tforms
