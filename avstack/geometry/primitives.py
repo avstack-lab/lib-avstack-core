@@ -10,13 +10,11 @@
 
 import numpy as np
 import quaternion
-from numba import jit
-from numba.types import float64, int64
 
 from avstack.geometry import CameraCoordinates, StandardCoordinates
 from avstack.geometry import transformations as tforms
 
-from .base import q_mult_vec
+from .base import q_mult_vec, fastround
 
 
 def get_origin_from_line(line):
@@ -50,14 +48,6 @@ def get_translation_from_line(line):
     v = [float(x) for x in items[1:4]]
     origin = get_origin_from_line(" ".join(items[4:]))
     return Translation(v, origin=origin)
-
-
-@jit(float64[:](float64[:], int64, float64[:]), nopython=True)
-def fastround(arr, ndec, out):
-    for i in range(len(arr)):
-        if np.abs(arr[i]) < 1e-12:
-            arr[i] = 0.0
-    return np.round_(arr, ndec, out)
 
 
 class Origin:

@@ -1,5 +1,6 @@
 import numpy as np
 from numba import jit
+from numba.types import float64, int64
 
 
 def q_mult_vec(q, v):
@@ -18,3 +19,11 @@ def q_mult_vec(q, v):
 @jit(nopython=True, fastmath=False)
 def _q_mult_vec(s, r, m, v):
     return v + 2 * np.cross(r, (s * v + np.cross(r, v))) / m
+
+
+@jit(float64[:](float64[:], int64, float64[:]), nopython=True)
+def fastround(arr, ndec, out):
+    for i in range(len(arr)):
+        if np.abs(arr[i]) < 1e-12:
+            arr[i] = 0.0
+    return np.round_(arr, ndec, out)
