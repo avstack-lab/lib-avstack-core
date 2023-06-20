@@ -28,9 +28,10 @@ def get_object_to_follow(ego_state, objects_3d, lane_lines):
     d_min = np.inf
     obj_follow = None
     for obj in objects_3d:
-        rel_pos = (
-            obj.position
-        )  # ego_state.attitude @ (obj.position - ego_state.position)
+        try:
+            rel_pos = obj.position
+        except AttributeError:
+            rel_pos = obj.box.position
         d_next = rel_pos.norm()
         if lane_lines[0].object_between_lanes_projected(lane_lines[1], rel_pos) and (
             rel_pos.x - ego_state.box3d.l / 2 - obj.box3d.l / 2 > 0
