@@ -51,7 +51,7 @@ def test_groundtruth_tracking():
         frame, timestamp, ego_state=ego, objects=[obj1]
     )
     tracker = tracking.tracker3d.GroundTruthTracker()
-    tracks = tracker(ground_truth, frame=frame, identifier="tracker-1")
+    tracks = tracker(t=timestamp, frame=frame, detections=None, ground_truth=ground_truth, identifier="tracker-1")
     assert np.all(tracks[0].position == obj1.position)
     assert np.all(tracks[0].velocity == obj1.velocity)
 
@@ -137,7 +137,7 @@ def test_razel_tracker_3d():
     tracker = tracking.tracker3d.BasicRazelTracker(threshold_coast=5)
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame*dt, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, frame=frame, detections=dets_3d, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
@@ -153,7 +153,7 @@ def test_raz_tracker_3d():
     tracker = tracking.tracker3d.BasicRazTracker(threshold_coast=5)
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame*dt, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, frame=frame, detections=dets_3d, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
@@ -175,7 +175,7 @@ def test_inline_razelrrt_tracker_3d():
         target_xyzvel[2] += target_xyzvel[5]*dt
         dets = [RazelRrtDetection(
             razelrrt=xyzvel_to_razelrrt(target_xyzvel), source_identifier='radar', obj_type=None)]
-        tracks = tracker(t=frame*dt, frame=frame, detections_nd=dets)
+        tracks = tracker(t=frame*dt, frame=frame, detections=dets)
     assert len(tracks) == 1
     assert np.linalg.norm(tracks[0].position - target_xyzvel[:3]) < 3
     assert np.linalg.norm(tracks[0].rrt - dets[0].razelrrt[3]) < 5
@@ -193,7 +193,7 @@ def tests_transverse_razelrrt_tracker_3d():
         target_xyzvel[2] += target_xyzvel[5]*dt
         dets = [RazelRrtDetection(
             razelrrt=xyzvel_to_razelrrt(target_xyzvel), source_identifier='radar', obj_type=None)]
-        tracks = tracker(t=frame*dt, frame=frame, detections_nd=dets)
+        tracks = tracker(t=frame*dt, frame=frame, detections=dets)
     assert len(tracks) == 1
     assert np.linalg.norm(tracks[0].position - target_xyzvel[:3]) < 3
     assert np.linalg.norm(tracks[0].rrt - dets[0].razelrrt[3]) < 5
@@ -211,7 +211,7 @@ def tests_full_razelrrt_tracker_3d():
         target_xyzvel[2] += target_xyzvel[5]*dt
         det = [RazelRrtDetection(
             razelrrt=xyzvel_to_razelrrt(target_xyzvel), source_identifier='radar', obj_type=None)]
-        tracks = tracker(t=frame*dt, frame=frame, detections_nd=det)
+        tracks = tracker(t=frame*dt, frame=frame, detections=det)
     assert len(tracks) == 1
     assert np.linalg.norm(tracks[0].position - target_xyzvel[:3]) < 3
 
@@ -222,7 +222,7 @@ def test_razelrrt_tracker_3d():
     tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame*dt, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, frame=frame, detections=dets_3d, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
@@ -240,7 +240,7 @@ def test_basic_box_tracker_3d():
     tracker = tracking.tracker3d.BasicBoxTracker3D()
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame*dt, detections_nd=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, frame=frame, detections=dets_3d, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
@@ -260,7 +260,7 @@ def test_basic_box_tracker_2d():
     tracker = tracking.tracker2d.BasicBoxTracker2D()
     for frame, dets_2d in enumerate(dets_2d_all):
         tracks = tracker(
-            t=frame*dt, detections_nd=dets_2d, frame=frame, identifier="tracker-1"
+            t=frame*dt, frame=frame, detections=dets_2d, identifier="tracker-1"
         )
     assert len(tracks) == len(dets_3d_all[-1])
     for i, trk in enumerate(tracks):
@@ -281,9 +281,8 @@ def test_basic_joint_box_tracker():
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
         tracks = tracker(
             t=frame*dt,
-            detections_2d=dets_2d,
-            detections_3d=dets_3d,
-        frame=frame,
+            frame=frame,
+            detections={'2d':dets_2d, '3d':dets_3d},
             identifier="tracker-1",
         )
     assert len(tracks) == n_targs
@@ -296,7 +295,7 @@ def test_ab3dmot_kitti():
     tracker = tracking.tracker3d.Ab3dmotTracker()
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
-            t=frame*dt, detections_3d=dets_3d, frame=frame, identifier="tracker-1"
+            t=frame*dt, frame=frame, detections=dets_3d, identifier="tracker-1"
         )
 
 
@@ -370,9 +369,8 @@ def test_eagermot_associations():
         # run for real
         tracks = tracker(
             t=frame*dt,
-            detections_2d=dets_2d,
-            detections_3d=dets_3d,
             frame=frame,
+            detections={'2d':dets_2d, '3d':dets_3d},
             identifier="tracker-1",
         )
         if i == 1:
@@ -396,9 +394,8 @@ def test_eagermot_performance():
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
         tracks = tracker(
             t=frame*dt,
-            detections_2d=dets_2d,
-            detections_3d=dets_3d,
             frame=frame,
+            detections={'2d':dets_2d, '3d':dets_3d},
             tracker="tracker-1",
         )
     assert len(tracks) == n_targs

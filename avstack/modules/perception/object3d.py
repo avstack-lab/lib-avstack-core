@@ -122,7 +122,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                 fd_data, data_file = tempfile.mkstemp(suffix=suffix, dir=temp_dir)
                 os.close(fd_data)  # need to start with the file closed...
                 if input_data == "lidar":
-                    data.data.tofile(data_file)
+                    data.save_to_file(data_file)
                     result_, _ = inference_detector(model, data_file)
                 elif input_data == "camera":
                     imwrite(data_file, data.data)

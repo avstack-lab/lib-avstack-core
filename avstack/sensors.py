@@ -335,22 +335,28 @@ class LidarData(SensorData):
         else:
             try:
                 if isinstance(self.data.raw_data, memoryview):
-                    if not filepath.endswith(".ply"):
-                        filepath = filepath + ".ply"
+                    if as_ply:
+                        raise NotImplementedError
+                    #     if filepath.endswith(".bin"):
+                    #         filepath = filepath.replace(".bin", ".ply")
+                    #     elif not filepath.endswith(".ply"):
+                    #         filepath = filepath + ".ply"
+                    # filepath = filepath.replace(".ply", ".bin")
+                    if not filepath.endswith(".bin"):
+                        filepath += ".bin"
+                    data = np.frombuffer(
+                        self.data.raw_data, dtype=np.float32
+                    ).reshape([-1, self.n_features])
                     if flipy:
-                        data = np.frombuffer(
-                            self.data.raw_data, dtype=np.float32
-                        ).reshape([-1, self.n_features])
                         try:
                             data[:, 1] *= -1
                         except ValueError as e:
                             data = np.copy(data)
                             data[:, 1] *= -1
-                        filepath = filepath.replace(".ply", ".bin")
-                        with open(filepath, "wb") as f:
-                            data.tofile(filepath)
-                    else:
-                        self.data.save_to_disk(filepath)
+                    with open(filepath, "wb") as f:
+                        data.tofile(filepath)
+                    # else:
+                        # self.data.save_to_disk(filepath) # later we'll figure out this way
                     return
             except AttributeError as e:
                 pass

@@ -125,13 +125,11 @@ class _TrackingAlgorithm:
                 A[i, j] = cost
         return A
 
-    def __call__(self, *args, **kwargs):
-        self.t = kwargs.get("t")
-        if self.t is None:
-            raise RuntimeError("t must be passed in for this to work")
-        self.frame = kwargs.get("frame")
+    def __call__(self, t, frame, detections, **kwargs):
+        self.t = t
+        self.frame = frame
         self.iframe += 1
-        tracks = self.track(*args, **kwargs)
+        tracks = self.track(t, frame, detections, **kwargs)
         if self.save:
             trk_str = "\n".join([trk.format_as_string() for trk in tracks])
             fname = os.path.join(self.save_folder, "%06d.txt" % self.frame)
@@ -151,7 +149,11 @@ class _TrackingAlgorithm:
     def spawn_track_from_detection(self, detection):
         raise NotImplementedError
     
-    def track(self, t, detections_nd, *args, **kwargs):
+    def track(self, t, frame, detections, *args, **kwargs):
+        """"Basic tracking implementation
+        
+        Note: detections being None means only do a prediction but don't penalize misses
+        """
         # -- propagation
         for trk in self.tracks:
             trk.predict(t)
@@ -160,29 +162,30 @@ class _TrackingAlgorithm:
                     trk.active = False
         
         # -- loop over each sensor providing detections
-        if not isinstance(detections_nd, dict):
-            detections_nd = {"sensor_1": detections_nd}
-        for sensor, detections in detections_nd.items():
-            # -- assignment with active tracks
-            trks_active = self.tracks_active
-            A = self.get_assignment_matrix(detections, trks_active)
-            assign_sol = gnn_single_frame_assign(A, cost_threshold=self.cost_threshold)
-            # print(assign_sol.assignment_tuples)
-            # print(A)
+        if detections is not None:
+            if not isinstance(detections, dict):
+                detections = {"sensor_1": detections}
+            for sensor, dets in detections.items():
+                # -- assignment with active tracks
+                trks_active = self.tracks_active
+                A = self.get_assignment_matrix(dets, trks_active)
+                assign_sol = gnn_single_frame_assign(A, cost_threshold=self.cost_threshold)
+                # print(assign_sol.assignment_tuples)
+                # print(A)
 
-            # -- update tracks with associations
-            for i_det, j_trk in assign_sol.assignment_tuples:
-                trks_active[j_trk].update(detections[i_det].z)
+                # -- update tracks with associations
+                for i_det, j_trk in assign_sol.assignment_tuples:
+                    trks_active[j_trk].update(dets[i_det].z)
 
-            # -- unassigned dets for new tracks
-            for i_det in assign_sol.unassigned_rows:
-                self.tracks.append(self.spawn_track_from_detection(detections[i_det]))
+                # -- unassigned dets for new tracks
+                for i_det in assign_sol.unassigned_rows:
+                    self.tracks.append(self.spawn_track_from_detection(dets[i_det]))
 
-        # -- prune dead tracks
-        self.tracks = [
-            trk
-            for trk in self.tracks
-            if (trk.coast < self.threshold_coast) and trk.active
-        ]
+            # -- prune dead tracks -- only in a non-predict_only state
+            self.tracks = [
+                trk
+                for trk in self.tracks
+                if (trk.coast < self.threshold_coast) and trk.active
+            ]
 
         return self.tracks_confirmed

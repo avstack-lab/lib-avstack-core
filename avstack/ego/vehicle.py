@@ -178,9 +178,9 @@ class Level2GtPerceptionGtLocalization(VehicleEgoStack):
         objects_2d = []
         # filter to objects within 30 m
         objects_3d = [obj for obj in objects_3d if ego_state.position.distance(obj.box.t) < 30]
-        objects_3d = self.tracking(t=timestamp, detections_3d=objects_3d, frame=frame, identifier='tracker-0')
+        objects_3d = self.tracking(t=timestamp, frame=frame, detections=objects_3d, identifier='tracker-0')
         lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier="lane_lines")
-        preds_3d = self.prediction(objects_3d, frame=frame)
+        # preds_3d = self.prediction(objects_3d, frame=frame)
         self.plan = self.planning(
             self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
         )
@@ -191,76 +191,46 @@ class Level2GtPerceptionGtLocalization(VehicleEgoStack):
         print("Ignoring destination...this type of vehicle does not take a destination")
 
 
+class Level2LidarBasedVehicle(VehicleEgoStack):
+    def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
+        integrity = modules.localization.integrity.Chi2Integrity(p_thresh=0.95)
+        self.localization = modules.localization.BasicGpsKinematicKalmanLocalizer(
+            t_init, ego_init, rate=10, integrity=integrity
+        )
+        self.perception = {
+            "object_3d": modules.perception.object3d.MMDetObjectDetector3D(model="pointpillars", dataset="nuscenes"),
+            "lane_lines": modules.perception.lanelines.GroundTruthLaneLineDetector(),
+        }
+        self.tracking = modules.tracking.tracker3d.Ab3dmotTracker(framerate=10)
+        self.prediction = modules.prediction.KinematicPrediction(
+            dt_pred=0.1, t_pred_forward=3
+        )
+        self.plan = modules.planning.WaypointPlan()
+        self.planning = modules.planning.vehicle.AdaptiveCruiseControl()
+        ctrl_lat = {"K_P": 1.2, "K_D": 0.2, "K_I": 0.05}
+        ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
+        self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
 
-# class Level2LidarBasedVehicle(VehicleEgoStack):
-#     def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
-#         integrity = modules.localization.integrity.Chi2Integrity(p_thresh=0.95)
-#         self.localization = modules.localization.BasicGpsKinematicKalmanLocalizer(
-#             t_init, ego_init, rate=10, integrity=integrity
-#         )
-#         self.perception = {
-#             "object_3d": modules.perception.object3d.MMDet3D(algorithm="second"),
-#             "lane_lines": modules.perception.lanelines.LaneNet(),
-#         }
-#         self.tracking = modules.tracking.AB3DMOT()
-#         self.prediction = modules.prediction.KinematicPrediction()
-#         self.planning = modules.planning.AdaptiveCruiseControl()
-#         ctrl_lat = {"K_P": 1.2, "K_D": 0.1, "K_I": 0.02}
-#         ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
-#         self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
+    def _tick_modules(self, frame, timestamp, data_manager, ground_truth, *args, **kwargs):
+        ego_state = self.localization(timestamp, data_manager.pop("gnss-0"))
+        # TODO: handle the case when there isn't data yet -- should NOT be a "missed detection"
+        objects_3d = self.perception["object_3d"](
+            data_manager.pop("lidar-0"), frame=frame, identifier="objects_3d"
+        )
+        objects_2d = []
+        objects_3d = self.tracking(t=timestamp, frame=frame, detections=objects_3d, identifier='tracker-0')
+        lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier="lane_lines")
+        # preds_3d = self.prediction(objects_3d, frame=frame)
+        self.plan = self.planning(
+            self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
+        )
+        ctrl = self.control(ego_state, self.plan)
+        return ctrl
 
-#     def _tick_modules(self, frame, timestamp, data_manager, *args, **kwargs):
-#         ego_state = self.localization(timestamp, data_manager.pop("gps-0"))
-#         objects_3d = self.perception["object_3d"](
-#             data_manager.pop("lidar-0"), frame=frame, identifier="objects_3d"
-#         )
-#         objects_3d = self.tracking(objects_3d, frame=frame, identifier='tracker-0')
-#         lanes = self.perception["lane_lines"](
-#             frame, data_manager.pop("camera-0"), "lane_lines"
-#         )
-#         preds_3d = self.prediction(objects_3d, frame=frame)
-#         plan = self.planning(ego_state, objects_3d, lanes)
-#         ctrl = self.control(ego_state, plan)
-#         return ctrl
+    def set_destination(self, *args, **kwargs):
+        print("Ignoring destination...this type of vehicle does not take a destination")
 
-
-# class Level2GroundTruthPerception(VehicleEgoStack):
-#     def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
-#         integrity = modules.localization.integrity.Chi2Integrity(p_thresh=0.95)
-#         self.localization = modules.localization.BasicGpsKinematicKalmanLocalizer(
-#             t_init=t_init, ego_init=ego_init, rate=10, integrity=integrity
-#         )
-#         self.perception = {
-#             "object_3d": modules.perception.object3d.GroundTruth3DObjectDetector(),
-#             "lane_lines": modules.perception.lanelines.GroundTruthLaneLineDetector(),
-#         }
-#         self.tracking = modules.tracking.tracker3d.Ab3dmotTracker(framerate=10)
-#         self.prediction = modules.prediction.KinematicPrediction(
-#             dt_pred=0.1, t_pred_forward=3
-#         )
-#         self.plan = modules.planning.WaypointPlan()
-#         self.planning = modules.planning.vehicle.AdaptiveCruiseControl()
-#         ctrl_lat = {"K_P": 1.2, "K_D": 0.2, "K_I": 0.05}
-#         ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
-#         self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
-
-#     def _tick_modules(
-#         self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
-#     ):
-#         ego_state = self.localization(timestamp, data_manager.pop("gps-0"))
-#         objects_3d = self.perception["object_3d"](ground_truth, frame=frame, identifier="objects_3d")
-#         objects_2d = []
-#         objects_3d = self.tracking(objects_3d, frame=frame, identifier='tracker-0')
-#         lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier= "lane_lines")
-#         preds_3d = self.prediction(objects_3d, frame=frame)
-#         self.plan = self.planning(
-#             self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
-#         )
-#         ctrl = self.control(ego_state, self.plan)
-#         return ctrl
-
-
-
+        
 # ==========================================================
 # ANALYSIS AV'S --> perception, tracking, prediction
 # ==========================================================
@@ -292,7 +262,7 @@ class LidarPerceptionAndTrackingVehicle(VehicleEgoStack):
             data_manager.pop("lidar-0"), frame=frame, identifier="lidar_objects_3d"
         )
         tracks_3d = self.tracking(
-            t=timestamp, detections_nd=dets_3d, frame=frame, identifier="tracker-0"
+            t=timestamp, frame=frame, detections=dets_3d, identifier="tracker-0"
         )
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
@@ -343,7 +313,7 @@ class LidarCollabPerceptionAndTrackingVehicle(VehicleEgoStack):
         if self.verbose:
             print("Added {} collab detections".format(n_collab))
         tracks_3d = self.tracking(
-            t=timestamp, detections_3d=dets_3d, frame=frame, identifier="tracker-0"
+            t=timestamp, frame=frame, detections=dets_3d, identifier="tracker-0"
         )
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
@@ -387,9 +357,8 @@ class LidarCameraPerceptionAndTrackingVehicle(VehicleEgoStack):
         )
         tracks_3d = self.tracking(
             t=timestamp,
-            detections_2d=dets_2d,
-            detections_3d=dets_3d,
             frame=frame,
+            detections={'2d':dets_2d, '3d':dets_3d},
             identifier="tracker-0",
         )
         predictions = self.prediction(tracks_3d, frame=frame)

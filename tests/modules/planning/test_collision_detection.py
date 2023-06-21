@@ -118,7 +118,7 @@ def test_collision_detection():
         frame, timestamp, ego_state=ego, objects=[obj0, obj1, obj2]
     )
     tracker = tracking.tracker3d.GroundTruthTracker()
-    tracks = tracker(ground_truth, frame=frame)
+    tracks = tracker(t=timestamp, frame=frame, detections=None, ground_truth=ground_truth)
     pred_ego = predictor(tracks, frame=frame)
     pred_ego = pred_ego[list(pred_ego.keys())[0]]
     preds_3d = predictor(tracks, frame=frame)

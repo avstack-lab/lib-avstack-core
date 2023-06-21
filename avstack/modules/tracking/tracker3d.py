@@ -26,7 +26,7 @@ class GroundTruthTracker(_TrackingAlgorithm):
         self.is_ground_truth = True
         super().__init__(**kwargs)
 
-    def __call__(self, ground_truth, *args, **kwargs):
+    def __call__(self, t, frame, detections, ground_truth, **kwargs):
         return ground_truth.objects
 
 
@@ -94,7 +94,7 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
             and (trk.n_updates_2d >= self.threshold_confirmed_2d)
         ]
 
-    def track(self, t, detections_2d, detections_3d, *args, **kwargs):
+    def track(self, t, frame, detections, **kwargs):
         """
         :detections_2d
         :detections_3d
@@ -106,150 +106,154 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
         for trk in self.tracks:
             trk.predict(t)
 
-        # -- STAGE 1: assignment between detections
-        boxes_2d = [det.box2d for det in detections_2d]
-        obj_types_2d = [det.obj_type for det in detections_2d]
-        boxes_3d = [det.box3d for det in detections_3d]
-        obj_types_3d = [det.obj_type for det in detections_3d]
+        if detections is not None:
+            detections_2d = detections['2d']
+            detections_3d = detections['3d']
 
-        if len(detections_2d) > 0:
-            if self.calib_cam is None:
-                self.calib_cam = detections_2d[0].box.calibration
-            boxes_3d_in_2d = [
-                box.project_to_2d_bbox(calib=self.calib_cam) for box in boxes_3d
-            ]
-            A = build_A_from_iou(boxes_2d, boxes_3d_in_2d)
-            assign_sol_1 = gnn_single_frame_assign(A, cost_threshold=-0.10)
-            lone_2d = [boxes_2d[i_2d] for i_2d in assign_sol_1.unassigned_rows]
-            lone_2d_to_det_map = {
-                i: k for i, k in enumerate(assign_sol_1.unassigned_rows)
-            }
-            lone_3d = [boxes_3d[i_3d] for i_3d in assign_sol_1.unassigned_cols]
-            lone_3d_to_det_map = {
-                i: k for i, k in enumerate(assign_sol_1.unassigned_cols)
-            }
-            fused_detections = [
-                (boxes_2d[i], boxes_3d[j]) for i, j in assign_sol_1.assignment_tuples
-            ]
-            fused_to_det_map = {
-                i: (k1, k2) for i, (k1, k2) in enumerate(assign_sol_1.assignment_tuples)
-            }
-        else:
-            lone_2d = []
-            lone_3d = boxes_3d
-            lone_2d_to_det_map = {}
-            lone_3d_to_det_map = {i: i for i in range(len(boxes_3d))}
-            fused_detections = []
-            fused_to_det_map = {}
+            # -- STAGE 1: assignment between detections
+            boxes_2d = [det.box2d for det in detections_2d]
+            obj_types_2d = [det.obj_type for det in detections_2d]
+            boxes_3d = [det.box3d for det in detections_3d]
+            obj_types_3d = [det.obj_type for det in detections_3d]
 
-        # -- STAGE 2: assignment between fused and lone 3d to tracks
-        i = 0
-        A = np.inf * np.ones((len(fused_detections) + len(lone_3d), len(self.tracks)))
-        for ds in (fused_detections, lone_3d):
-            for d_ in ds:
-                if i < len(fused_detections):
-                    d_ = d_[1]  # index into tuple for 3D box
-                for j, t in enumerate(self.tracks):
-                    if t.box3d is None:
-                        continue
-                    Bi = np.array(
-                        [
-                            t.box3d.t[0],
-                            t.box3d.t[1],
-                            t.box3d.t[2],
-                            t.box3d.h,
-                            t.box3d.w,
-                            t.box3d.l,
-                        ]
+            if len(detections_2d) > 0:
+                if self.calib_cam is None:
+                    self.calib_cam = detections_2d[0].box.calibration
+                boxes_3d_in_2d = [
+                    box.project_to_2d_bbox(calib=self.calib_cam) for box in boxes_3d
+                ]
+                A = build_A_from_iou(boxes_2d, boxes_3d_in_2d)
+                assign_sol_1 = gnn_single_frame_assign(A, cost_threshold=-0.10)
+                lone_2d = [boxes_2d[i_2d] for i_2d in assign_sol_1.unassigned_rows]
+                lone_2d_to_det_map = {
+                    i: k for i, k in enumerate(assign_sol_1.unassigned_rows)
+                }
+                lone_3d = [boxes_3d[i_3d] for i_3d in assign_sol_1.unassigned_cols]
+                lone_3d_to_det_map = {
+                    i: k for i, k in enumerate(assign_sol_1.unassigned_cols)
+                }
+                fused_detections = [
+                    (boxes_2d[i], boxes_3d[j]) for i, j in assign_sol_1.assignment_tuples
+                ]
+                fused_to_det_map = {
+                    i: (k1, k2) for i, (k1, k2) in enumerate(assign_sol_1.assignment_tuples)
+                }
+            else:
+                lone_2d = []
+                lone_3d = boxes_3d
+                lone_2d_to_det_map = {}
+                lone_3d_to_det_map = {i: i for i in range(len(boxes_3d))}
+                fused_detections = []
+                fused_to_det_map = {}
+
+            # -- STAGE 2: assignment between fused and lone 3d to tracks
+            i = 0
+            A = np.inf * np.ones((len(fused_detections) + len(lone_3d), len(self.tracks)))
+            for ds in (fused_detections, lone_3d):
+                for d_ in ds:
+                    if i < len(fused_detections):
+                        d_ = d_[1]  # index into tuple for 3D box
+                    for j, t in enumerate(self.tracks):
+                        if t.box3d is None:
+                            continue
+                        Bi = np.array(
+                            [
+                                t.box3d.t[0],
+                                t.box3d.t[1],
+                                t.box3d.t[2],
+                                t.box3d.h,
+                                t.box3d.w,
+                                t.box3d.l,
+                            ]
+                        )
+                        Bj = np.array([d_.t[0], d_.t[1], d_.t[2], d_.h, d_.w, d_.l])
+                        alpha = 2 - np.cos((t.yaw - d_.yaw) % (np.pi / 2))
+                        A[i, j] = np.linalg.norm(Bi - Bj) * alpha
+                    i += 1
+            assign_sol_2 = greedy_assignment(A, threshold=self.threshold_assoc_2)
+            lone_fused = [
+                fused_detections[j]
+                for j in assign_sol_2.unassigned_rows
+                if j < len(fused_detections)
+            ]
+            lone_fused_to_det_map = {
+                i: fused_to_det_map[k]
+                for i, k in enumerate(assign_sol_2.unassigned_rows)
+                if k < len(fused_detections)
+            }
+            lone_tracks = [self.tracks[k] for k in assign_sol_2.unassigned_cols]
+            lone_track_to_track_map = {
+                i: k for i, k in enumerate(assign_sol_2.unassigned_cols)
+            }
+
+            # -- STAGE 3: assignment between lone fused and lone 2d to tracks via 2D
+            i = 0
+            A = np.zeros((len(lone_fused) + len(lone_2d), len(lone_tracks)))
+            for ds in (lone_fused, lone_2d):
+                for d_ in ds:
+                    if i < len(lone_fused):
+                        d_ = d_[0]  # index into tuple for 2D box
+                    for j, t in enumerate(lone_tracks):
+                        if t.box2d is None:
+                            t_box = t.box3d.project_to_2d_bbox(self.calib_cam)
+                        else:
+                            t_box = t.box2d
+                        A[i, j] = -d_.IoU(t_box)
+                    i += 1
+            assign_sol_3 = greedy_assignment(A, threshold=self.threshold_assoc_3)
+
+            # -- update tracks
+            # ----- from assignment 2
+            for i_det, j_trk in assign_sol_2.assignment_tuples:
+                if i_det < len(fused_detections):
+                    d_2 = fused_detections[i_det]
+                    o2d = obj_types_2d[fused_to_det_map[i_det][0]]
+                    o3d = obj_types_3d[fused_to_det_map[i_det][1]]
+                else:
+                    d_2 = lone_3d[i_det - len(fused_detections)]
+                    o3d = obj_types_3d[lone_3d_to_det_map[i_det - len(fused_detections)]]
+                self.tracks[j_trk].update(d_2, o3d)
+            # ----- from assignment 3
+            for i_det, j_trk in assign_sol_3.assignment_tuples:
+                if i_det < len(lone_fused):
+                    d_3 = lone_fused[i_det]
+                    o2d = obj_types_2d[lone_fused_to_det_map[i_det][0]]
+                    o3d = obj_types_3d[lone_fused_to_det_map[i_det][1]]
+                else:
+                    d_3 = lone_2d[i_det - len(lone_fused)]
+                    o2d = obj_types_2d[lone_2d_to_det_map[i_det - len(lone_fused)]]
+                self.tracks[lone_track_to_track_map[j_trk]].update(d_3, o2d)
+
+            # -- unassigned dets for new tracks
+            # ----- unassigned from the 3D to 3D step
+            for i_det in assign_sol_2.unassigned_rows:
+                if i_det < len(fused_detections):
+                    continue
+                else:
+                    d3d = lone_3d[i_det - len(fused_detections)]
+                    o3d = obj_types_3d[lone_3d_to_det_map[i_det - len(fused_detections)]]
+                    self.tracks.append(BasicJointBoxTrack(self.t, None, d3d, o3d))
+            # ----- unassigned from the 2D to 2D step
+            for i_det in assign_sol_3.unassigned_rows:
+                if i_det < len(lone_fused):
+                    d2d, d3d = lone_fused[i_det]
+                    o2d, o3d = (
+                        obj_types_2d[lone_fused_to_det_map[i_det][0]],
+                        obj_types_3d[lone_fused_to_det_map[i_det][1]],
                     )
-                    Bj = np.array([d_.t[0], d_.t[1], d_.t[2], d_.h, d_.w, d_.l])
-                    alpha = 2 - np.cos((t.yaw - d_.yaw) % (np.pi / 2))
-                    A[i, j] = np.linalg.norm(Bi - Bj) * alpha
-                i += 1
-        assign_sol_2 = greedy_assignment(A, threshold=self.threshold_assoc_2)
-        lone_fused = [
-            fused_detections[j]
-            for j in assign_sol_2.unassigned_rows
-            if j < len(fused_detections)
-        ]
-        lone_fused_to_det_map = {
-            i: fused_to_det_map[k]
-            for i, k in enumerate(assign_sol_2.unassigned_rows)
-            if k < len(fused_detections)
-        }
-        lone_tracks = [self.tracks[k] for k in assign_sol_2.unassigned_cols]
-        lone_track_to_track_map = {
-            i: k for i, k in enumerate(assign_sol_2.unassigned_cols)
-        }
+                    self.tracks.append(BasicJointBoxTrack(self.t, d2d, d3d, o2d))
+                else:
+                    d2d = lone_2d[i_det - len(lone_fused)]
+                    o2d = obj_types_2d[lone_2d_to_det_map[i_det - len(lone_fused)]]
+                    self.tracks.append(BasicJointBoxTrack(self.t, d2d, None, o2d))
 
-        # -- STAGE 3: assignment between lone fused and lone 2d to tracks via 2D
-        i = 0
-        A = np.zeros((len(lone_fused) + len(lone_2d), len(lone_tracks)))
-        for ds in (lone_fused, lone_2d):
-            for d_ in ds:
-                if i < len(lone_fused):
-                    d_ = d_[0]  # index into tuple for 2D box
-                for j, t in enumerate(lone_tracks):
-                    if t.box2d is None:
-                        t_box = t.box3d.project_to_2d_bbox(self.calib_cam)
-                    else:
-                        t_box = t.box2d
-                    A[i, j] = -d_.IoU(t_box)
-                i += 1
-        assign_sol_3 = greedy_assignment(A, threshold=self.threshold_assoc_3)
-
-        # -- update tracks
-        # ----- from assignment 2
-        for i_det, j_trk in assign_sol_2.assignment_tuples:
-            if i_det < len(fused_detections):
-                d_2 = fused_detections[i_det]
-                o2d = obj_types_2d[fused_to_det_map[i_det][0]]
-                o3d = obj_types_3d[fused_to_det_map[i_det][1]]
-            else:
-                d_2 = lone_3d[i_det - len(fused_detections)]
-                o3d = obj_types_3d[lone_3d_to_det_map[i_det - len(fused_detections)]]
-            self.tracks[j_trk].update(d_2, o3d)
-        # ----- from assignment 3
-        for i_det, j_trk in assign_sol_3.assignment_tuples:
-            if i_det < len(lone_fused):
-                d_3 = lone_fused[i_det]
-                o2d = obj_types_2d[lone_fused_to_det_map[i_det][0]]
-                o3d = obj_types_3d[lone_fused_to_det_map[i_det][1]]
-            else:
-                d_3 = lone_2d[i_det - len(lone_fused)]
-                o2d = obj_types_2d[lone_2d_to_det_map[i_det - len(lone_fused)]]
-            self.tracks[lone_track_to_track_map[j_trk]].update(d_3, o2d)
-
-        # -- unassigned dets for new tracks
-        # ----- unassigned from the 3D to 3D step
-        for i_det in assign_sol_2.unassigned_rows:
-            if i_det < len(fused_detections):
-                continue
-            else:
-                d3d = lone_3d[i_det - len(fused_detections)]
-                o3d = obj_types_3d[lone_3d_to_det_map[i_det - len(fused_detections)]]
-                self.tracks.append(BasicJointBoxTrack(self.t, None, d3d, o3d))
-        # ----- unassigned from the 2D to 2D step
-        for i_det in assign_sol_3.unassigned_rows:
-            if i_det < len(lone_fused):
-                d2d, d3d = lone_fused[i_det]
-                o2d, o3d = (
-                    obj_types_2d[lone_fused_to_det_map[i_det][0]],
-                    obj_types_3d[lone_fused_to_det_map[i_det][1]],
-                )
-                self.tracks.append(BasicJointBoxTrack(self.t, d2d, d3d, o2d))
-            else:
-                d2d = lone_2d[i_det - len(lone_fused)]
-                o2d = obj_types_2d[lone_2d_to_det_map[i_det - len(lone_fused)]]
-                self.tracks.append(BasicJointBoxTrack(self.t, d2d, None, o2d))
-
-        # -- prune dead tracks
-        self.tracks = [
-            trk
-            for trk in self.tracks
-            if (trk.coast_2d < self.threshold_coast_2d)
-            and (trk.coast_3d < self.threshold_coast_3d)
-        ]
+            # -- prune dead tracks
+            self.tracks = [
+                trk
+                for trk in self.tracks
+                if (trk.coast_2d < self.threshold_coast_2d)
+                and (trk.coast_3d < self.threshold_coast_3d)
+            ]
 
         return self.tracks_confirmed
 
@@ -369,23 +373,26 @@ class Ab3dmotTracker(_TrackingAlgorithm):
     def tracks(self, tracks):
         self.tracker.trackers = tracks
 
-    def track(self, t, detections_3d, *args, **kwargs):
+    def track(self, t, frame, detections, **kwargs):
         """
         :detections - list of class Detection
 
         AB3DMOT expects detections in camera coordinates, so do conversion
         """
-        if (len(detections_3d) > 0) and (self.origin is None):
-            self.origin = detections_3d[0].box.origin
+        if detections is None:
+            raise NotImplementedError("Need to implement prediction only")
+
+        if (len(detections) > 0) and (self.origin is None):
+            self.origin = detections[0].box.origin
             self.z_up = np.all(
                 np.round(self.origin.rotation.up_vector) == np.array([0, 0, 1])
             )
 
         # -- get information on the object
-        ori_array = np.asarray([d.box.yaw for d in detections_3d]).reshape((-1, 1))
+        ori_array = np.asarray([d.box.yaw for d in detections]).reshape((-1, 1))
         score = 1
         other_array = np.asarray(
-            [[d.obj_type, None, None, None, None, None] for d in detections_3d]
+            [[d.obj_type, None, None, None, None, None] for d in detections]
         )
         if len(other_array.shape) == 1:
             other_array = other_array[:, None]
@@ -403,7 +410,7 @@ class Ab3dmotTracker(_TrackingAlgorithm):
                     d.box.t[2],
                     d.box.yaw,
                 ]
-                for d in detections_3d
+                for d in detections
             ]
         )
         if len(dets.shape) == 1:
@@ -451,7 +458,10 @@ class EagermotTracker(_TrackingAlgorithm):
         )
         super().__init__(**kwargs)
 
-    def track(self, t, detections_2d, detections_3d, *args, **kwargs):
+    def track(self, t, frame, detections, **kwargs):
+        if detections is None:
+            raise NotImplementedError("Need to implement this")
+        detections_2d, detections_3d = detections['2d'], detections['3d']
         tracks = self.tracker(t, detections_2d, detections_3d)
         return self._format_tracks(tracks, detections_2d, detections_3d)
 
@@ -498,7 +508,9 @@ class Chaser3DBoxTracker(_TrackingAlgorithm):
         )
         super().__init__(**kwargs)
 
-    def track(self, detections, *args, **kwargs):
+    def track(self, t, frame, detections, **kwargs):
+        if detections is None:
+            raise NotImplementedError("Need to implement prediction only")
         detections_3d = detections["object_3d"]
         msmts = self._convert_dets_to_msmts(detections_3d)
         self.tracker.process_msmts(msmts)
