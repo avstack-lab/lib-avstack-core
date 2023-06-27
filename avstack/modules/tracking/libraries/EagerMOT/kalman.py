@@ -8,7 +8,7 @@ import numpy as np
 import quaternion
 from filterpy.kalman import KalmanFilter
 
-from avstack.geometry import Box2D, Box3D
+from avstack.geometry import Box2D, Box3D, Position, Attitude
 from avstack.geometry import transformations as tforms
 
 
@@ -56,7 +56,7 @@ class EagerMOTTrack:
         else:
             bb = box3d
             bbox3D = np.array([bb.t[0], bb.t[1], bb.t[2], bb.yaw, bb.h, bb.w, bb.l])
-            self.box3d_origin = box3d.origin
+            self.box3d_origin = box3d.reference
             self.box3d_initialized = True
             self.kf.x[:7] = bbox3D[:, None]
             self.box3d_n_confirmed = 1
@@ -78,7 +78,9 @@ class EagerMOTTrack:
         if self.box3d_initialized:
             x, y, z, yaw, h, w, l = self.kf.x[:7, 0]
             q = tforms.transform_orientation([0, 0, yaw], "euler", "quat")
-            return Box3D([h, w, l, [x, y, z], q], self.box3d_origin)
+            pos = Position(np.array([x,y,z]), self.box3d_origin)
+            rot = Attitude(q, self.box3d_origin)
+            return Box3D(pos, rot, [h,w,l])
         else:
             return None
 
@@ -148,7 +150,7 @@ class EagerMOTTrack:
                 self.box3d_n_confirmed += 1
                 self.box3d_coast = 0
                 if self.box3d_origin is None:
-                    self.box3d_origin = detection_3d.origin
+                    self.box3d_origin = detection_3d.reference
                 bb = detection_3d
                 bbox3D = np.array([bb.t[0], bb.t[1], bb.t[2], bb.yaw, bb.h, bb.w, bb.l])
                 if not self.box3d_initialized:

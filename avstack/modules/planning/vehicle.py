@@ -12,7 +12,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from avstack.geometry import Rotation, Transform
+from avstack.geometry import Rotation, Pose
 from avstack.geometry import transformations as tforms
 
 from . import components
@@ -38,7 +38,7 @@ class GoStraightPlanner(_PlanningAlgorithm):
     def _get_waypoint(self, ego_state):
         forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
         target_loc = ego_state.position + self.d_forward * forward_vec
-        target_point = Transform(ego_state.attitude, target_loc)
+        target_point = Pose(ego_state.attitude, target_loc)
         dist_wpt = ego_state.position.distance(target_point)
         return dist_wpt, Waypoint(target_point, self.target_speed)
 
@@ -75,9 +75,9 @@ class RandomPlanner(_PlanningAlgorithm):
         d_pos = da + db
         target_loc = ego_state.position + d_pos
         target_rot = deepcopy(ego_state.attitude)
-        target_point = Transform(target_rot, target_loc)
+        target_point = Pose(target_rot, target_loc)
         target_speed = ((1 - 0.2) * np.random.rand() + 0.2) * self.max_speed
-        dist_wpt = ego_state.position.distance(target_point)
+        dist_wpt = ego_state.position.distance(target_loc)
         return dist_wpt, Waypoint(target_point, target_speed)
 
 
@@ -94,7 +94,7 @@ class StationaryPlanner(_PlanningAlgorithm):
         return plan
 
     def _get_waypoint(self, ego_state):
-        target_point = Transform(ego_state.attitude, ego_state.position)
+        target_point = Pose(ego_state.attitude, ego_state.position)
         target_speed = 0
         dist_wpt = ego_state.position.distance(target_point)
         return dist_wpt, Waypoint(target_point, target_speed)
@@ -162,7 +162,7 @@ class AdaptiveCruiseControl(_PlanningAlgorithm):
                 target_speed = speed_limit
             else:
                 target_speed = 0
-            wpt = Waypoint(Transform(ego_state.attitude, loc), target_speed)
+            wpt = Waypoint(Pose(ego_state.attitude, loc), target_speed)
             plan.push(dist, wpt)
         return plan
 
@@ -207,15 +207,15 @@ class LaneKeepingPlanner(_PlanningAlgorithm):
                 ego_state.position + lateral_offset * left_vec + d_forward * forward_vec
             )
             R_b2way = Rotation(
-                tforms.get_rot_yaw_matrix(-yaw_offset, "+z"), target_loc.origin
+                tforms.get_rot_yaw_matrix(-yaw_offset, "+z"), target_loc.reference
             )
             R_world2b = ego_state.attitude
-            target_rot = R_b2way @ R_world2b
+            target_rot = R_b2way * R_world2b
             target_speed = speed_target
         else:
             raise NotImplementedError
         distance = ego_state.position.distance(target_loc)
-        target_point = Transform(target_rot, target_loc)
+        target_point = Pose(target_rot, target_loc)
         return distance, Waypoint(target_point, target_speed)
 
 

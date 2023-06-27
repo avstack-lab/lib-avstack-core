@@ -13,7 +13,6 @@ import sys
 import numpy as np
 
 from avstack import sensors
-from avstack.calibration import NominalCalibration as c1
 from avstack.datastructs import DataBucket, DataManager
 
 
@@ -39,7 +38,7 @@ def test_sensor_data_bucket():
         frame=2,
         timestamp=10,
         data="a",
-        calibration=c1,
+        calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
@@ -47,7 +46,7 @@ def test_sensor_data_bucket():
         frame=3,
         timestamp=11,
         data="b",
-        calibration=c1,
+        calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
@@ -55,7 +54,7 @@ def test_sensor_data_bucket():
         frame=1,
         timestamp=9,
         data="c",
-        calibration=c1,
+        calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
@@ -63,7 +62,7 @@ def test_sensor_data_bucket():
         frame=0,
         timestamp=8,
         data="d",
-        calibration=c1,
+        calibration=lidar_calib,
         source_ID=0,
         source_name="sensor",
     )
@@ -90,7 +89,7 @@ def test_sensor_data_manager():
         frame=2,
         timestamp=10,
         data="a",
-        calibration=c1,
+        calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
@@ -98,7 +97,7 @@ def test_sensor_data_manager():
         frame=3,
         timestamp=11,
         data="b",
-        calibration=c1,
+        calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
@@ -106,7 +105,7 @@ def test_sensor_data_manager():
         frame=1,
         timestamp=9,
         data="c",
-        calibration=c1,
+        calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
@@ -114,7 +113,7 @@ def test_sensor_data_manager():
         frame=0,
         timestamp=8,
         data="d",
-        calibration=c1,
+        calibration=lidar_calib,
         source_ID=0,
         source_name="sensor",
     )

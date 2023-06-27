@@ -15,6 +15,7 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
+from avstack.geometry import ReferenceFrame
 from avstack.modules.perception.detections import BoxDetection, RazelRrtDetection, RazelDetection, RazDetection
 
 from ..assignment import gnn_single_frame_assign
@@ -31,6 +32,7 @@ class _TrackingAlgorithm:
         v_max=None,
         save_output=False,
         save_folder="",
+        check_reference=True,
         **kwargs,
     ):
         """Base class for tracking algorithm
@@ -43,9 +45,16 @@ class _TrackingAlgorithm:
         self.t = 0
         self.assign_metric = assign_metric
         self.assign_radius = assign_radius
+        if assign_metric == 'center_dist':
+            assert cost_threshold == 0, "Cost threshold should be 0 to let dist threshold work"
+        elif assign_metric == 'IoU':
+            assert cost_threshold < 0, "Cost threshold must be negative in IoU mode"
+        else:
+            raise NotImplementedError(assign_metric)
         self.cost_threshold = cost_threshold
         self.threshold_confirmed = threshold_confirmed
         self.threshold_coast = threshold_coast
+        self.check_reference = check_reference
         self.v_max = v_max
         self.save = save_output
         self.save_folder = save_folder
@@ -67,7 +76,28 @@ class _TrackingAlgorithm:
     @property
     def confirmed_tracks(self):
         return self.tracks_confirmed
+    
+    @property
+    def tracks_confirmed(self):
+        return [trk for trk in self.tracks if trk.n_updates >= self.threshold_confirmed]
 
+    @property
+    def tracks_active(self):
+        return [trk for trk in self.tracks if trk.active]
+
+    def __call__(self, t: float, frame: int, detections, platform: ReferenceFrame, **kwargs):
+        self.t = t
+        self.frame = frame
+        self.iframe += 1
+        tracks = self.track(t, frame, detections, platform, **kwargs)
+        if self.save:
+            trk_str = "\n".join([trk.format_as_string() for trk in tracks])
+            fname = os.path.join(self.save_folder, "%06d.txt" % self.frame)
+            with open(fname, "w") as f:
+                f.write(trk_str)
+        track_data = DataContainer(self.frame, self.t, tracks, "tracker")
+        return track_data
+    
     def get_assignment_matrix(self, dets, tracks):
         A = np.zeros((len(dets), len(tracks)))
         for i, det_ in enumerate(dets):
@@ -101,21 +131,23 @@ class _TrackingAlgorithm:
 
                 # -- either way, change origin and use radius to filter coarsely
                 try:
-                    if det.origin != trk.origin:
-                        det.change_origin(trk.origin)
+                    if self.check_reference:
+                        if det.reference != trk.reference:
+                            raise RuntimeError("Should have performed reference transformations earlier...")
+                            # det = det.change_reference(trk.reference, inplace=False)
                 except AttributeError as e:
                     pass
 
                 # -- gating
                 if self.assign_radius is not None:
                     if isinstance(det_, (VehicleState, BoxDetection)):
-                        dist = det.t.distance(trk.t)
+                        dist = det.t.distance(trk.t, check_reference=self.check_reference)
                     else:
                         dist = np.linalg.norm(trk - det)
 
                 # -- use the metric of choice
                 if self.assign_metric == "IoU":
-                    cost = -det.IoU(trk)  # lower is better
+                    cost = -det.IoU(trk, check_reference=self.check_reference)  # lower is better
                 elif self.assign_metric == "center_dist":
                     cost = dist - self.assign_radius  # lower is better
                 else:
@@ -124,41 +156,21 @@ class _TrackingAlgorithm:
                 # -- store result
                 A[i, j] = cost
         return A
-
-    def __call__(self, t, frame, detections, **kwargs):
-        self.t = t
-        self.frame = frame
-        self.iframe += 1
-        tracks = self.track(t, frame, detections, **kwargs)
-        if self.save:
-            trk_str = "\n".join([trk.format_as_string() for trk in tracks])
-            fname = os.path.join(self.save_folder, "%06d.txt" % self.frame)
-            with open(fname, "w") as f:
-                f.write(trk_str)
-        track_data = DataContainer(self.frame, self.t, tracks, "tracker")
-        return track_data
-    
-    @property
-    def tracks_confirmed(self):
-        return [trk for trk in self.tracks if trk.n_updates >= self.threshold_confirmed]
-
-    @property
-    def tracks_active(self):
-        return [trk for trk in self.tracks if trk.active]
     
     def spawn_track_from_detection(self, detection):
         raise NotImplementedError
     
-    def track(self, t, frame, detections, *args, **kwargs):
+    def track(self, t: float, frame: int, detections, platform: ReferenceFrame, *args, **kwargs):
         """"Basic tracking implementation
         
         Note: detections being None means only do a prediction but don't penalize misses
         """
         # -- propagation
-        for trk in self.tracks:
+        for trk in self.tracks_active:
+            trk.change_reference(platform, inplace=True)
             trk.predict(t)
             if self.v_max is not None:
-                if np.linalg.norm(trk.velocity) > self.v_max:
+                if trk.velocity.norm() > self.v_max:
                     trk.active = False
         
         # -- loop over each sensor providing detections
@@ -166,10 +178,14 @@ class _TrackingAlgorithm:
             if not isinstance(detections, dict):
                 detections = {"sensor_1": detections}
             for sensor, dets in detections.items():
+                # -- change to platform reference
+                dets = [det.change_reference(platform, inplace=False) for det in dets]
+
                 # -- assignment with active tracks
                 trks_active = self.tracks_active
                 A = self.get_assignment_matrix(dets, trks_active)
                 assign_sol = gnn_single_frame_assign(A, cost_threshold=self.cost_threshold)
+                # import pdb; pdb.set_trace()
                 # print(assign_sol.assignment_tuples)
                 # print(A)
 

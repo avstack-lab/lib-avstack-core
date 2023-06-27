@@ -20,8 +20,7 @@ from PIL import Image
 
 from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration
-from avstack.geometry import Origin
-from avstack.geometry import transformations as tforms
+from avstack.geometry import transformations as tforms, PointMatrix3D
 
 
 class SensorData:
@@ -46,9 +45,9 @@ class SensorData:
         return self.data.shape
 
     @property
-    def origin(self):
-        """avstack.calibration.Origin: Returns origin of the sensor when data captured."""
-        return self.calibration.origin
+    def reference(self):
+        """avstack.calibration.reference: Returns origin of the sensor when data captured."""
+        return self.calibration.reference
 
     @property
     def _default_subfolder(self):
@@ -272,19 +271,17 @@ class LidarData(SensorData):
 
     def filter(self, mask, inplace: bool = True):
         if inplace:
-            self.data = self.data[mask, :]
+            self.data = self.data.filter(mask)
         else:
-            data = self.data[mask, :]
+            data = self.data.filter(mask)
             return LidarData(
                 self.timestamp, self.frame, data, self.calibration, self.source_ID
             )
 
     def project(self, calib_other):
         if isinstance(calib_other, CameraCalibration):
-            data = calib_other.project_3d_points(
-                self.data, origin_pts=self.calibration.origin
-            )
             depth = np.linalg.norm(self.data[:, :3], axis=1)
+            data = self.data.project_to_2d(calib_other)
             return ProjectedLidarData(
                 self.timestamp,
                 self.frame,
@@ -294,17 +291,15 @@ class LidarData(SensorData):
                 depth=depth,
             )
         else:
-            data = calib_other.project_3d_points(
-                self.data, origin_pts=self.calibration.origin
-            )
+            data = self.data.change_calibration(calib_other)
             return LidarData(
                 self.timestamp, self.frame, data, calib_other, self.source_ID
             )
 
     def transform_to_ground(self):
-        x_old = self.origin.x
+        x_old = self.reference.x
         x_new = np.array([x_old[0], x_old[1], 0])  # flat to the ground
-        eul_old = self.origin.euler
+        eul_old = self.reference.euler
         q_new = tforms.transform_orientation(
             [0, 0, eul_old[2]], "euler", "quat"
         )  # only yaw still applied
@@ -312,26 +307,27 @@ class LidarData(SensorData):
         self.change_origin(O_new)
 
     def change_origin(self, origin_new):
-        self.data[:, :3] = self.origin.change_points_origin(
+        self.data[:, :3] = self.reference.change_points_origin(
             self.data[:, :3], origin_new
         )
         self.calibration.change_origin(origin_new)
 
     def save_to_file(self, filepath: str, flipy: bool = False, as_ply: bool = False):
-        if isinstance(self.data, np.ndarray):
+        if isinstance(self.data, (PointMatrix3D, np.ndarray)):
+            data = self.data if isinstance(self.data, np.ndarray) else self.data.x
             if as_ply:
                 if not filepath.endswith(".ply"):
                     filepath = filepath + ".ply"
                 import open3d as o3d
 
                 pcd = o3d.geometry.PointCloud()
-                pcd.points = o3d.utility.Vector3dVector(self.data[:, :3])
+                pcd.points = o3d.utility.Vector3dVector(data[:, :3])
                 o3d.io.write_point_cloud(filepath, pcd)
             else:
                 if not filepath.endswith(".bin"):
                     filepath = filepath + ".bin"
                 with open(filepath, "wb") as f:
-                    self.data.tofile(f, sep="")
+                    data.tofile(f, sep="")
         else:
             try:
                 if isinstance(self.data.raw_data, memoryview):

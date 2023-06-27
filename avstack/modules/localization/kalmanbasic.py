@@ -11,8 +11,7 @@
 import numpy as np
 import quaternion
 
-from avstack.geometry import NominalOriginStandard
-from avstack.geometry import transformations as tforms
+from avstack.geometry import transformations as tforms, Position, Attitude, Velocity, GlobalOrigin3D
 from avstack.sensors import DataBuffer, ImuBuffer
 
 from .base import _LocalizationAlgorithm
@@ -58,11 +57,10 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
         predict_model="cv",
         sigma_m=1,
         tau_m=5,
-        origin=NominalOriginStandard,
+        reference=GlobalOrigin3D,
     ):
         super().__init__(t_init, ego_init, rate)
         self.ego_template = ego_init
-        self.origin = origin
         self.integrity_delay = integrity_delay
         vR = 5**2
         vV = 10**2
@@ -70,6 +68,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
 
         # Integrity
         self.integrity = integrity
+        self.reference = reference
 
         # Dynamics model
         self.predict_model = predict_model
@@ -93,7 +92,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
         # initialize
         self._t_last_update = None
         if ego_init is not None:
-            x0 = np.concatenate((ego_init.position.vector, np.zeros((3,))), axis=0)
+            x0 = np.concatenate((ego_init.position.x, np.zeros((3,))), axis=0)
             self._initialize(t_init, x0)
 
     def _initialize(self, t0, x0):
@@ -136,7 +135,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
             ), f"{t}, {gps_data.timestamp}"
             t = gps_data.timestamp
             if self.attitude is not None:
-                z = gps_data.data["z"] - self.attitude.T @ gps_data.levar
+                z = gps_data.data["z"] - self.attitude.R.T @ gps_data.levar
             else:
                 z = gps_data.data["z"]
             R = gps_data.data["R"]
@@ -158,11 +157,12 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
                 self._update(t, z, R)
 
             # Make vehicle state object
-            self.position = self.x[:3]  # in ENU
-            self.velocity = self.x[3:6]  # in ENU
+            self.position = Position(self.x[:3], self.reference) # in ENU
+            self.velocity = Velocity(self.x[3:6], self.reference)  # in ENU
             self.acceleration = None
-            if np.linalg.norm(self.velocity) > 0:
+            if self.velocity.norm() > 0:
                 forward = self.velocity / np.linalg.norm(self.velocity)  # in ENU
+                forward = forward.x
             elif self.attitude is None:
                 forward = np.array([1, 0, 0])
             else:
@@ -171,7 +171,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
             left = np.cross(up, forward)
             up = np.cross(forward, left)
             R_enu_2_body = np.array([forward, left, up])  # R_enu_2_body
-            self.attitude = R_enu_2_body  # from velocity
+            self.attitude = Attitude(tforms.transform_orientation(R_enu_2_body, 'dcm', 'quat'), self.reference)  # from velocity
             self.angular_velocity = None
             self.ego_template.set(
                 self.t,
@@ -180,8 +180,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
                 self.velocity,
                 self.acceleration,
                 self.attitude,
-                self.angular_velocity,
-                origin=self.origin,
+                self.angular_velocity
             )
             ego_loc = self.ego_template
 
@@ -204,11 +203,11 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
     Uses GPS and IMU measurements to perform navigation
     """
 
-    def __init__(self, t_init, ego_init, integrity, origin=NominalOriginStandard):
+    def __init__(self, t_init, ego_init, integrity, reference):
         rate = 1e4  # some large number
         super().__init__(t_init, ego_init, rate)
         self.ego_template = ego_init
-        self.origin = origin
+        self.reference = reference
         self.n_states = 9  # p-v-attitude
         vR = 10**2
         vV = 20**2
@@ -225,7 +224,7 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
         # initialize
         self._t_last_update = None
         eulers = tforms.transform_orientation(ego_init.attitude.q, "quat", "euler")
-        x0 = np.concatenate((ego_init.position.vector, np.zeros((3,)), eulers), axis=0)
+        x0 = np.concatenate((ego_init.position.x, np.zeros((3,)), eulers), axis=0)
         self._initialize(t_init, x0)
         self.imu_buffer = ImuBuffer()
         self.gps_buffer = DataBuffer()
@@ -360,9 +359,19 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
             raise RuntimeError(f"Time out of date {t} {self.t}")
 
         # -- set outputs
-        dcm_n2b = tforms.transform_orientation(self.qN2B, "quat", "dcm")
+        position = Position(self.rE, self.reference)
+        velocity = Velocity(self.vE, self.reference)
+        attitude = Attitude(self.qN2B, self.reference)
+        acceleration = None
+        angular_velocity = None
         self.ego_template.set(
-            self.t, self.rE, self.box, self.vE, None, dcm_n2b, None, origin=self.origin
+            self.t,
+            position,
+            self.box,
+            velocity,
+            acceleration,
+            attitude,
+            angular_velocity
         )
 
         return self.ego_template

@@ -178,7 +178,8 @@ class Level2GtPerceptionGtLocalization(VehicleEgoStack):
         objects_2d = []
         # filter to objects within 30 m
         objects_3d = [obj for obj in objects_3d if ego_state.position.distance(obj.box.t) < 30]
-        objects_3d = self.tracking(t=timestamp, frame=frame, detections=objects_3d, identifier='tracker-0')
+        objects_3d = self.tracking(t=timestamp, frame=frame, detections=objects_3d,
+                                   platform=ego_state, identifier='tracker-0')
         lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier="lane_lines")
         # preds_3d = self.prediction(objects_3d, frame=frame)
         self.plan = self.planning(
@@ -218,7 +219,7 @@ class Level2LidarBasedVehicle(VehicleEgoStack):
             data_manager.pop("lidar-0"), frame=frame, identifier="objects_3d"
         )
         objects_2d = []
-        objects_3d = self.tracking(t=timestamp, frame=frame, detections=objects_3d, identifier='tracker-0')
+        objects_3d = self.tracking(t=timestamp, frame=frame, detections=objects_3d, platform=ego_state, identifier='tracker-0')
         lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier="lane_lines")
         # preds_3d = self.prediction(objects_3d, frame=frame)
         self.plan = self.planning(
@@ -262,8 +263,8 @@ class LidarPerceptionAndTrackingVehicle(VehicleEgoStack):
             data_manager.pop("lidar-0"), frame=frame, identifier="lidar_objects_3d"
         )
         tracks_3d = self.tracking(
-            t=timestamp, frame=frame, detections=dets_3d, identifier="tracker-0"
-        )
+            t=timestamp, frame=frame, detections=dets_3d, platform=geometry.GlobalOrigin3D, identifier="tracker-0"
+        )  # TODO: check platform
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
 
@@ -304,7 +305,7 @@ class LidarCollabPerceptionAndTrackingVehicle(VehicleEgoStack):
                     # -- filter out ones far away
                     dets_collab_keep = []
                     for det in dets_collab:
-                        det.box.change_origin(geometry.NominalOriginStandard)
+                        det.box.change_origin(geometry.GlobalOrigin3D)
                         if det.box.t.norm() <= d_thresh:
                             dets_collab_keep.append(det)
                     n_collab += len(dets_collab_keep)
@@ -313,8 +314,8 @@ class LidarCollabPerceptionAndTrackingVehicle(VehicleEgoStack):
         if self.verbose:
             print("Added {} collab detections".format(n_collab))
         tracks_3d = self.tracking(
-            t=timestamp, frame=frame, detections=dets_3d, identifier="tracker-0"
-        )
+            t=timestamp, frame=frame, detections=dets_3d, platform=geometry.GlobalOrigin3D, identifier="tracker-0"
+        )  # TODO: check platform
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
 
@@ -359,6 +360,7 @@ class LidarCameraPerceptionAndTrackingVehicle(VehicleEgoStack):
             t=timestamp,
             frame=frame,
             detections={'2d':dets_2d, '3d':dets_3d},
+            platform=geometry.GlobalOrigin3D,  # TODO: check this
             identifier="tracker-0",
         )
         predictions = self.prediction(tracks_3d, frame=frame)
@@ -419,12 +421,12 @@ class LidarCamera3DFusionVehicle(VehicleEgoStack):
         # -- put in nominal origin due to the fusion module
         for dets in [dets_3d_cam, dets_3d_lid]:
             for det in dets:
-                det.change_origin(geometry.NominalOriginStandard)
+                det.change_origin(geometry.GlobalOrigin3D)
         tracks_camera = self.tracking["camera"](
             dets_3d_cam, frame=frame, identifier="tracker-0"
         )
         tracks_lidar = self.tracking["lidar"](
-            dets_3d_lid, frame=frame, identifier="tracker-1"
+            timestamp=timestamp, frame=frame, detections=dets_3d_lid, platform=geometry.GlobalOrigin3D, identifier="tracker-1"
         )
         tracks_fused = self.fusion(tracks_camera, tracks_lidar, frame=frame)
         predictions = self.prediction(tracks_fused, frame=frame)

@@ -144,7 +144,7 @@ class CollisionDetection:
         for i, preds_trk in enumerate(preds_tracks.values()):
             for t in preds_ego:
                 ego_p = preds_ego[t].position
-                obj_p = preds_trk[t].position.vector
+                obj_p = preds_trk[t].position
                 if self.collision(ego_p, obj_p, i) == True:
                     collision[preds_trk[t].ID] = t
                     break

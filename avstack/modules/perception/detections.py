@@ -16,10 +16,12 @@ from avstack.datastructs import DataContainer
 from avstack.geometry import (
     Box2D,
     Box3D,
-    NominalOriginStandard,
+    Position,
+    ReferenceFrame,
     SegMask2D,
-    Translation,
+    Vector,
     bbox,
+    get_reference_from_line,
 )
 from avstack.geometry.transformations import spherical_to_cartesian, cartesian_to_spherical
 
@@ -44,25 +46,34 @@ def get_detection_from_line(line):
     det_type = items[0]
     sID, obj_type, score = items[1:4]
     if det_type == "box-detection":
+        idx = 4
         box = bbox.get_box_from_line(" ".join(items[4:]))
-        det = BoxDetection(sID, box, obj_type, score)
+        det = BoxDetection(sID, box, box.reference, obj_type, score)
     elif det_type == "mask-detection":
+        idx = 4
         box = bbox.get_box_from_line(" ".join(items[4:34]))
         mask = bbox.get_segmask_from_line(" ".join(items[34:]))
-        det = MaskDetection(sID, box, mask, obj_type, score)
+        det = MaskDetection(sID, box, mask, box.reference, obj_type, score)
     elif det_type == "centroid-detection":
-        n_dims = int(items[4])
-        centroid = np.array([float(d) for d in items[5 : 5 + n_dims]])
-        det = CentroidDetection(sID, centroid, obj_type, score)
+        n_dims = int(items[4]); idx = 5
+        centroid = np.array([float(d) for d in items[idx : idx + n_dims]]); idx += n_dims
+        reference = get_reference_from_line(" ".join(items[idx::]))
+        det = CentroidDetection(sID, centroid, reference, obj_type, score)
     elif det_type == "raz-detection":
-        raz = np.array([float(d) for d in items[4 : 6]])
-        det = RazDetection(sID, raz, obj_type, score)
+        idx = 4
+        raz = np.array([float(d) for d in items[idx : idx + 2]]); idx += 2
+        reference = get_reference_from_line(" ".join(items[idx::]))
+        det = RazDetection(sID, raz, reference, obj_type, score)
     elif det_type == "razel-detection":
-        razel = np.array([float(d) for d in items[4 : 7]])
-        det = RazelDetection(sID, razel, obj_type, score)
+        idx = 4
+        razel = np.array([float(d) for d in items[idx : idx + 3]]); idx += 3
+        reference = get_reference_from_line(" ".join(items[idx::]))
+        det = RazelDetection(sID, razel, reference, obj_type, score)
     elif det_type == "razelrrt-detection":
-        razelrrt = np.array([float(d) for d in items[4 : 8]])
-        det = RazelRrtDetection(sID, razelrrt, obj_type, score)
+        idx = 4
+        razelrrt = np.array([float(d) for d in items[idx : idx + 4]]); idx += 4
+        reference = get_reference_from_line(" ".join(items[idx::]))
+        det = RazelRrtDetection(sID, razelrrt, reference, obj_type, score)
     else:
         raise NotImplementedError(det_type)
     return det
@@ -87,11 +98,21 @@ def get_data_container_from_line(line):
 
 
 class Detection_:
-    def __init__(self, source_identifier, obj_type, score, check_type):
+    def __init__(self, source_identifier, reference, obj_type, score):
+        self.reference = reference
         self.source_identifier = source_identifier
         self.obj_type = obj_type
         self.score = score
-        self.check_type = check_type
+        self.ID = None
+
+    @property
+    def reference(self):
+        return self._reference
+    
+    @reference.setter
+    def reference(self, reference):
+        assert isinstance(reference, ReferenceFrame)
+        self._reference = reference
 
     @property
     def obj_type(self):
@@ -109,23 +130,31 @@ class Detection_:
 
     @property
     def origin(self):
-        return self.data.origin
+        return self.data.reference
 
-    def change_origin(self, origin):
-        self.data.change_origin(origin)
+    def change_reference(self, reference, inplace: bool):
+        """Change reference frame of a detection"""
+        if inplace:
+            self._change_reference(reference, inplace=inplace)
+        else:
+            data = self._change_reference(reference, inplace=inplace)
+            return self.factory()(self.source_identifier, data, reference, obj_type=self.obj_type, score=self.score)
+
+    def _change_reference(self, reference, inplace: bool):
+        raise NotImplementedError
 
     def __str__(self):
         return f"{self.obj_type} detection from sensor {self.source_identifier}\n{self.data}"
 
     def __repr__(self):
         return self.__str__()
-
+        
 
 class CentroidDetection(Detection_):
     def __init__(
-        self, source_identifier, centroid, obj_type=None, score=None, check_type=False
+        self, source_identifier, centroid, reference, obj_type=None, score=None
     ):
-        super().__init__(source_identifier, obj_type, score, check_type)
+        super().__init__(source_identifier, reference, obj_type, score)
         self.centroid = centroid
 
     @property
@@ -142,23 +171,35 @@ class CentroidDetection(Detection_):
 
     @centroid.setter
     def centroid(self, centroid):
-        if self.check_type:
-            if not isinstance(centroid, np.ndarray):
-                raise TypeError(
-                    f"Input centroid of type {type(centroid)} is not of an acceptable type"
-                )
+        if not isinstance(centroid, (np.ndarray)):
+            raise TypeError(
+                f"Input centroid of type {type(centroid)} is not of an acceptable type"
+            )
         self._centroid = centroid
+
+    @staticmethod
+    def factory():
+        return CentroidDetection
+    
+    def _change_reference(self, reference, inplace: bool):
+        vec = Vector(self.centroid, self.reference)
+        vec.change_reference(reference, inplace=True)
+        if inplace:
+            self.centroid = vec.x
+        else:
+            return vec.x
 
     def format_as_string(self):
         """Format data elements"""
-        return f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} {' '.join([str(d) for d in self.centroid])}"
+        return f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} " \
+               f"{' '.join([str(d) for d in self.centroid])} {self.reference.format_as_string()}"
 
 
 class RazDetection(Detection_):
     def __init__(
-        self, source_identifier, raz, obj_type=None, score=None, check_type=False
+        self, source_identifier, raz, reference, obj_type=None, score=None
     ):
-        super().__init__(source_identifier, obj_type, score, check_type)
+        super().__init__(source_identifier, reference, obj_type, score)
         self.raz = raz
 
     @property
@@ -175,28 +216,45 @@ class RazDetection(Detection_):
 
     @raz.setter
     def raz(self, raz):
-        if self.check_type:
-            if not isinstance(raz, np.ndarray):
-                raise TypeError(
-                    f"Input raz of type {type(raz)} is not of an acceptable type"
-                )
+        if not isinstance(raz, np.ndarray):
+            raise TypeError(
+                f"Input raz of type {type(raz)} is not of an acceptable type"
+            )
         self._raz = raz
     
     @property
     def xy(self):
         x, y = self.raz[0] * np.cos(self.raz[1]), self.raz[0] * np.sin(self.raz[1])
         return np.array([x, y])
-        
+    
+    @xy.setter
+    def xy(self, xy):
+        self.raz = cartesian_to_spherical(np.array([xy[0], xy[1], 0]))[:2]
+    
+    @staticmethod
+    def factory():
+        return RazDetection
+    
+    def _change_reference(self, reference, inplace: bool):
+        """Very hacky right now..."""
+        vec = Vector(np.array([self.xy[0], self.xy[1], 0]), self.reference)
+        vec = vec.change_reference(reference, inplace=inplace)
+        if inplace:
+            self.xy = vec.x[:2]
+        else:
+            return cartesian_to_spherical(np.array([vec.x[0], vec.x[1], 0]))[:2]
+    
     def format_as_string(self):
         """Format data elements"""
-        return f"raz-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.raz])}"
+        return f"raz-detection {self.source_identifier} {self.obj_type} {self.score} " \
+               f"{' '.join([str(d) for d in self.raz])} {self.reference.format_as_string()}"
     
 
 class RazelDetection(Detection_):
     def __init__(
-        self, source_identifier, razel, obj_type=None, score=None, check_type=False
+        self, source_identifier, razel, reference, obj_type=None, score=None
     ):
-        super().__init__(source_identifier, obj_type, score, check_type)
+        super().__init__(source_identifier, reference, obj_type, score)
         self.razel = razel
 
     @property
@@ -213,28 +271,49 @@ class RazelDetection(Detection_):
 
     @razel.setter
     def razel(self, razel):
-        if self.check_type:
-            if not isinstance(razel, np.ndarray):
-                raise TypeError(
-                    f"Input razel of type {type(razel)} is not of an acceptable type"
-                )
+        if not isinstance(razel, np.ndarray):
+            raise TypeError(
+                f"Input razel of type {type(razel)} is not of an acceptable type"
+            )
         self._razel = razel
     
+    @property
+    def x(self):
+        return self.xyz
+
     @property
     def xyz(self):
         x, y, z = spherical_to_cartesian(self.razel)
         return np.array([x, y, z])
-        
+    
+    @xyz.setter
+    def xyz(self, xyz):
+        self.razel = cartesian_to_spherical(xyz)
+    
+    @staticmethod
+    def factory():
+        return RazelDetection
+    
+    def _change_reference(self, reference, inplace: bool):
+        vec = Vector(self.xyz, self.reference)
+        vec = vec.change_reference(reference, inplace=inplace)
+        if inplace:
+            self.xyz = vec.x
+        else:
+            return cartesian_to_spherical(vec.x)
+    
     def format_as_string(self):
         """Format data elements"""
-        return f"razel-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.razel])}"
+        return f"razel-detection {self.source_identifier} {self.obj_type} {self.score} " \
+               f"{' '.join([str(d) for d in self.razel])} {self.format_as_string()}"
 
 
 class RazelRrtDetection(Detection_):
+    """NOTE: range rate is defined as positive away from sensor"""
     def __init__(
-        self, source_identifier, razelrrt, obj_type=None, score=None, check_type=False
+        self, source_identifier, razelrrt, reference, obj_type=None, score=None
     ):
-        super().__init__(source_identifier, obj_type, score, check_type)
+        super().__init__(source_identifier, reference, obj_type, score)
         self.razelrrt = razelrrt
 
     @property
@@ -244,33 +323,107 @@ class RazelRrtDetection(Detection_):
     @property
     def razelrrt(self):
         return self._razelrrt
-    
-    @property
-    def z(self):
-        return self.razelrrt
 
     @razelrrt.setter
     def razelrrt(self, razelrrt):
-        if self.check_type:
-            if not isinstance(razelrrt, np.ndarray):
-                raise TypeError(
-                    f"Input razelrrt of type {type(razelrrt)} is not of an acceptable type"
-                )
+        if not isinstance(razelrrt, np.ndarray):
+            raise TypeError(
+                f"Input razelrrt of type {type(razelrrt)} is not of an acceptable type"
+            )
         self._razelrrt = razelrrt
+
+    @property
+    def z(self):
+        return self.razelrrt
 
     @property
     def xyzrrt(self):
         x, y, z = spherical_to_cartesian(self.razelrrt[:3])
         return np.array([x, y, z, self.razelrrt[3]])
     
+    @xyzrrt.setter
+    def xyzrrt(self, xyzrrt):
+        rng, az, el = cartesian_to_spherical(xyzrrt[:3])
+        self.razelrrt = np.array([rng, az, el, xyzrrt[3]])
+
     @property
     def xyz(self):
         x, y, z = spherical_to_cartesian(self.razelrrt[:3])
         return np.array([x, y, z])
+    
+    @staticmethod
+    def factory():
+        return RazelRrtDetection
+    
+    def as_razel(self):
+        return RazelDetection(source_identifier=self.source_identifier,
+                    razel=self.razelrrt[:3], reference=self.reference,
+                    obj_type=self.obj_type, score=self.score)
         
+    def _change_reference(self, reference, inplace: bool):
+        uv_before = self.xyz / np.linalg.norm(self.xyz)
+        x, y, z = Vector(self.xyz, self.reference).change_reference(reference, inplace=False).x
+        uv_after = np.array([x,y,z]) / np.linalg.norm(np.array([x,y,z]))
+        # NOTE: can't really change a range rate measurement reference...
+        rrt = self.razelrrt[3] * np.dot(uv_before, uv_after)
+        if inplace:
+            self.xyzrrt = np.array([x, y, z, rrt])
+            self.reference = reference
+        else:
+            rng, az, el = cartesian_to_spherical([x, y, z])
+            return np.array([rng, az, el, rrt])
+
     def format_as_string(self):
         """Format data elements"""
-        return f"razelrrt-detection {self.source_identifier} {self.obj_type} {self.score} {' '.join([str(d) for d in self.razelrrt])}"
+        return f"razelrrt-detection {self.source_identifier} {self.obj_type} {self.score} " \
+               f"{' '.join([str(d) for d in self.razelrrt])} {self.reference.format_as_string()}"
+
+
+class BoxDetection(Detection_):
+    def __init__(
+        self, source_identifier, box, reference, obj_type=None, score=None
+    ):
+        super().__init__(source_identifier, reference, obj_type, score)
+        self.box = box
+
+    @property
+    def data(self):
+        return self.box
+
+    @property
+    def box(self):
+        return self._box
+
+    @box.setter
+    def box(self, box):
+        if not (isinstance(box, Box2D) or isinstance(box, Box3D)):
+            raise TypeError(
+                f"Input box of type {type(box)} is not of an acceptable type"
+            )
+        self._box = box
+
+    @property
+    def box3d(self):
+        return self.box
+
+    @property
+    def box2d(self):
+        return self.box
+
+    @property
+    def z(self):
+        return self.box
+    
+    @staticmethod
+    def factory():
+        return BoxDetection
+    
+    def _change_reference(self, reference, inplace: bool):
+        return self.data.change_reference(reference, inplace=inplace)
+    
+    def format_as_string(self):
+        """Convert to vehicle state and format"""
+        return f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"
 
 
 class JointBoxDetection(Detection_):
@@ -279,11 +432,11 @@ class JointBoxDetection(Detection_):
         source_identifier,
         box2d,
         box3d,
+        reference,
         obj_type=None,
         score=None,
-        check_type=False,
     ):
-        super().__init__(source_identifier, obj_type, score, check_type)
+        super().__init__(source_identifier, reference, obj_type, score)
         self.box2d = box2d
         self.box3d = box3d
 
@@ -308,11 +461,10 @@ class JointBoxDetection(Detection_):
 
     @box_2d.setter
     def box_2d(self, box2d):
-        if self.check_type:
-            if not isinstance(box2d, Box2D):
-                raise TypeError(
-                    f"Input box of type {type(box2d)} is not of an acceptable type"
-                )
+        if not isinstance(box2d, Box2D):
+            raise TypeError(
+                f"Input box of type {type(box2d)} is not of an acceptable type"
+            )
         self._box2d = box2d
 
     @property
@@ -321,70 +473,29 @@ class JointBoxDetection(Detection_):
 
     @box_3d.setter
     def box_3d(self, box3d):
-        if self.check_type:
-            if not isinstance(box3d, Box3D):
-                raise TypeError(
-                    f"Input box of type {type(box3d)} is not of an acceptable type"
+        if not isinstance(box3d, Box3D):
+            raise TypeError(
+                f"Input box of type {type(box3d)} is not of an acceptable type"
                 )
         self._box_3d = box3d
+
+    @staticmethod
+    def factory():
+        return JointBoxDetection
+    
+    def _change_reference(self, reference, inplace: bool):
+        return super()._change_reference(reference, inplace)
 
 
 class JointBoxDetectionAndOther(JointBoxDetection):
     pass
 
 
-class BoxDetection(Detection_):
-    def __init__(
-        self, source_identifier, box, obj_type=None, score=None, check_type=False
-    ):
-        super().__init__(source_identifier, obj_type, score, check_type)
-        self.box = box
-
-    @property
-    def data(self):
-        return self.box
-
-    @property
-    def box(self):
-        return self._box
-
-    @box.setter
-    def box(self, box):
-        if self.check_type:
-            if not (isinstance(box, Box2D) or isinstance(box, Box3D)):
-                raise TypeError(
-                    f"Input box of type {type(box)} is not of an acceptable type"
-                )
-        self._box = box
-
-    @property
-    def box3d(self):
-        if self.check_type:
-            if not isinstance(self.box, Box3D):
-                raise ValueError
-        return self.box
-
-    @property
-    def box2d(self):
-        if self.check_type:
-            if not isinstance(self.box, Box2D):
-                raise ValueError
-        return self.box
-
-    @property
-    def z(self):
-        return self.box
-    
-    def format_as_string(self):
-        """Convert to vehicle state and format"""
-        return f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"
-
-
 class MaskDetection(Detection_):
     def __init__(
-        self, source_identifier, box, mask, obj_type=None, score=None, check_type=False
+        self, source_identifier, box, mask, reference, obj_type=None, score=None
     ):
-        super().__init__(source_identifier, obj_type, score, check_type)
+        super().__init__(source_identifier, reference, obj_type, score)
         self.box = box
         self.mask = mask
 
@@ -398,11 +509,10 @@ class MaskDetection(Detection_):
 
     @box.setter
     def box(self, box):
-        if self.check_type:
-            if not (isinstance(box, Box2D)):
-                raise TypeError(
-                    f"Input box of type {type(box)} is not of an acceptable type"
-                )
+        if not (isinstance(box, Box2D)):
+            raise TypeError(
+                f"Input box of type {type(box)} is not of an acceptable type"
+            )
         self._box = box
 
     @property
@@ -411,19 +521,22 @@ class MaskDetection(Detection_):
 
     @mask.setter
     def mask(self, mask):
-        if self.check_type:
-            if not (isinstance(mask, SegMask2D)):
-                raise TypeError(
-                    f"Input mask of type {type(mask)} is not of an acceptable type"
-                )
+        if not (isinstance(mask, SegMask2D)):
+            raise TypeError(
+                f"Input mask of type {type(mask)} is not of an acceptable type"
+            )
         self._mask = mask
 
     @property
     def box2d(self):
-        if self.check_type:
-            if not isinstance(self.box, Box2D):
-                raise ValueError
         return self.box
+    
+    @staticmethod
+    def factory():
+        return MaskDetection
+    
+    def _change_reference(self, reference, inplace: bool):
+        return super()._change_reference(reference, inplace)
 
     def format_as_string(self):
         """Convert to vehicle state and format"""
@@ -434,15 +547,15 @@ class MaskDetection(Detection_):
 
 
 class OtherDetection(Detection_):
-    def __init__(self, source_identifier, data, obj_type=None, score=None):
-        super().__init__(source_identifier, obj_type, score)
+    def __init__(self, source_identifier, data, reference, obj_type=None, score=None):
+        super().__init__(source_identifier, reference, obj_type, score)
         self.data = data
 
 
 class LaneLineInSpace:
     """Lane line in terms of cartesian space"""
 
-    def __init__(self, points: List[Translation]):
+    def __init__(self, points: List[Vector]):
         self._points = points
 
     def __len__(self):
@@ -459,11 +572,15 @@ class LaneLineInSpace:
 
     @property
     def x(self):
-        return np.array([p.x for p in self._points])
+        return np.array([p.x[0] for p in self._points])
 
     @property
     def y(self):
-        return np.array([p.y for p in self._points])
+        return np.array([p.x[1] for p in self._points])
+
+    @staticmethod
+    def factory():
+        return LaneLineInSpace
 
     def distance_closest(self, obj):
         ### TODO: IMPROVE THIS WITH INTERPOLATION/CURVE FITTING/DOT PRODUCT
@@ -490,17 +607,17 @@ class LaneLineInSpace:
         for i in range(0, len(self._points)):
             # print(obj.y <= self._points[i].y, obj.y >= other._points[i].y, obj.x >= self._points[i].x - 2)
             if (
-                obj.y <= self._points[i].y
-                and obj.y >= other._points[i].y
-                and obj.x >= self._points[i].x - 2
-                and obj.x <= self._points[i].x + 2
+                obj.x[1] <= self._points[i].x[1]
+                and obj.x[1] >= other._points[i].x[1]
+                and obj.x[0] >= self._points[i].x[0] - 2
+                and obj.x[0] <= self._points[i].x[0] + 2
             ):
                 return True
             elif (
-                obj.y >= self._points[i].y
-                and obj.y <= other._points[i].y
-                and obj.x >= self._points[i].x - 2
-                and obj.x <= self._points[i].x + 2
+                obj.x[1] >= self._points[i].x[1]
+                and obj.x[1] <= other._points[i].x[1]
+                and obj.x[0] >= self._points[i].x[0] - 2
+                and obj.x[0] <= self._points[i].x[0] + 2
             ):
                 return True
         return False
@@ -510,12 +627,12 @@ class LaneLineInSpace:
         lane_left = self if np.mean(self.y) >= np.mean(other.y) else other
         lane_right = self if lane_left == other else other
         # compute center lane
-        min_fwd, max_fwd = max(lane_left[0].x, lane_right[0].x), min(
-            lane_left[-1].x, lane_right[-1].x
+        min_fwd, max_fwd = max(lane_left[0].x[0], lane_right[0].x[0]), min(
+            lane_left[-1].x[0], lane_right[-1].x[0]
         )
         if not (max_fwd > min_fwd >= 0):
             # try to cut lane in half...
-            min_fwd = max(lane_left[0].x, lane_right[0].x)
+            min_fwd = max(lane_left[0].x[0], lane_right[0].x[0])
             max_fwd = min(
                 lane_left[len(lane_left) // 2].x, lane_right[len(lane_right) // 2].x
             )
@@ -529,7 +646,7 @@ class LaneLineInSpace:
         lane_width = np.mean(left_y - right_y)
         center_y = (left_y + right_y) / 2
         center_points = [
-            Translation([x, y, 0], origin=NominalOriginStandard)
+            Vector([x, y, 0], self._points[0].reference)
             for x, y in zip(x_pts, center_y)
         ]
         return LaneLineInSpace(center_points), lane_width
@@ -571,6 +688,10 @@ class LaneLineInPixels:
     @property
     def y(self):
         return np.array([p[1] for p in self._points])
+    
+    @staticmethod
+    def factory():
+        return LaneLineInPixels
 
     def coordinate_by_index(self, index):
         return self._points[index, :]

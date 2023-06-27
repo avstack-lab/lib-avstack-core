@@ -93,8 +93,8 @@ class Coordinates:
         assert isinstance(other, Coordinates)
         if self == other:
             newdata = data
-        elif isinstance(data, avstack.geometry.Translation):
-            newdata = avstack.geometry.Translation(
+        elif isinstance(data, avstack.geometry.Vector):
+            newdata = avstack.geometry.Vector(
                 other, self.convert(data.vector, other)
             )
         elif isinstance(data, np.ndarray):
@@ -134,7 +134,7 @@ class Coordinates:
         """
         # get the projection data
         assert projection in ["fv", "bev"]
-        if isinstance(data, avstack.geometry.Translation):
+        if isinstance(data, avstack.geometry.Vector):
             data = data.vector
         elif isinstance(data, np.ndarray):
             pass

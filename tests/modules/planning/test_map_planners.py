@@ -13,7 +13,7 @@ import pickle
 import sys
 
 import avstack
-from avstack.geometry import NominalOriginStandard
+from avstack.geometry import GlobalOrigin3D
 
 
 sys.path.append("tests/")
@@ -33,7 +33,7 @@ from utilities import get_ego, get_object_global
 #                 print('Could not find carla simulator running')
 #                 return
 #             map_data = world.get_map()
-#             ego_init = get_ego(seed=1, frame=NominalOriginStandard)
+#             ego_init = get_ego(seed=1, frame=GlobalOrigin3D)
 #             planner = avstack.modules.planning.vehicle.MapBasedPlanningAndControl(ego_init, map_data)
 #             destination = ego_init.position + 100*ego_init.attitude.forward_vector
 #             planner.set_destination(destination)

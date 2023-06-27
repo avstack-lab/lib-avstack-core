@@ -9,15 +9,16 @@
 """
 
 import numpy as np
-import quaternion
 
 from avstack.environment.objects import VehicleState
 from avstack.geometry import (
-    NominalOriginStandard,
-    Rotation,
-    Transform,
-    Translation,
-    VectorDirMag,
+    GlobalOrigin3D,
+    Attitude,
+    Pose,
+    Position,
+    Velocity,
+    Acceleration,
+    AngularVelocity,
     bbox,
 )
 from avstack.geometry import transformations as tforms
@@ -37,9 +38,9 @@ def test_pid_base():
 
 
 def test_vehicle_pid_control():
-    box_obj = bbox.Box3D(
-        [2, 2, 5, [0, 0, 0], np.quaternion(1)], NominalOriginStandard
-    )  # box in local coordinates
+    pos = Position(np.zeros((3,)), GlobalOrigin3D)
+    rot = Attitude(np.quaternion(1), GlobalOrigin3D)
+    box_obj = bbox.Box3D(pos, rot, [2,2,5])
     ego_state = VehicleState("car")
     lat = {"K_P": 1.5, "K_D": 0.02, "K_I": 0.01}
     lon = {"K_P": 1.0, "K_D": 0.01, "K_I": 0.05}
@@ -54,15 +55,15 @@ def test_vehicle_pid_control():
     lane_width = 3.7
     yaw = lambda t: 1 / 4 * np.sin(t / 3)
 
-    pos = Translation(np.zeros(3), origin=NominalOriginStandard)
-    rot = Rotation(
+    pos = Position(np.zeros(3), GlobalOrigin3D)
+    rot = Attitude(
         tforms.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
-        origin=NominalOriginStandard,
+        GlobalOrigin3D,
     )
     v = 10
-    vel = v * rot.forward_vector
-    acc = VectorDirMag(np.zeros(3), origin=NominalOriginStandard)
-    ang_vel = VectorDirMag(np.zeros(3), origin=NominalOriginStandard)
+    vel = Velocity(v * rot.forward_vector, GlobalOrigin3D)
+    acc = Acceleration(np.zeros(3), GlobalOrigin3D)
+    ang_vel = AngularVelocity(np.quaternion(*np.zeros(3)), GlobalOrigin3D)
 
     # Run looop
     pos_all = []
@@ -70,34 +71,42 @@ def test_vehicle_pid_control():
     while t < tmax:
         t += dt
         # -- reference
-        rot = Rotation(
+        rot = Attitude(
             tforms.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
-            origin=NominalOriginStandard,
+            GlobalOrigin3D,
         )
-        vel_new = v * rot.forward_vector
-        pos = pos + Translation(dt * (vel + vel_new) / 2, origin=NominalOriginStandard)
+        vel_new = Velocity(v * rot.forward_vector, GlobalOrigin3D)
+        pos = pos + (vel + vel_new) * dt / 2
         vel = vel_new
 
         # -- ego state
         pos_ego = pos + np.random.randn(3)
         vel_ego = vel + np.random.randn(3)
         acc_ego = acc
-        rot_ego = Rotation(
+        rot_ego = Attitude(
             tforms.transform_orientation(
                 [0, 0, yaw(t) + np.random.randn(1)], "euler", "dcm"
             ),
-            origin=NominalOriginStandard,
+            GlobalOrigin3D,
         )
-        ego_state.set(t, pos_ego, box_obj, vel_ego, acc_ego, rot_ego, ang_vel)
+        ego_state.set(
+            t,
+            pos_ego,
+            box_obj,
+            vel_ego,
+            acc_ego, 
+            rot_ego, 
+            ang_vel
+        )
 
         # -- control
         WP.update(ego_state)
         if WP.needs_waypoint():
-            w = Waypoint(Transform(rot, pos), speed_target)
+            w = Waypoint(Pose(pos, rot), speed_target)
             d = pos.distance(pos_ego)
             WP.push(d, w)
         ctrl = controller(ego_state, WP)
         assert np.sign(ctrl.throttle - ctrl.brake) == np.sign(
-            speed_target - np.linalg.norm(vel_ego)
+            speed_target - vel_ego.norm()
         )
         assert (ctrl.throttle + ctrl.brake) > 0

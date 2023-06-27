@@ -65,8 +65,8 @@ class InfrastructureCameraTo3d(_PerceptionAlgorithm):
         # -- use approximation of a flat ground plane to get 3D positioning
         # TODO: add possibility of roll angle?
         # TODO: account for RefChoc
-        z = data.origin.x[2]
-        pitch = data.origin.euler[1]  # pitch down is positive
+        z = data.reference.x[2]
+        pitch = data.reference.euler[1]  # pitch down is positive
 
         # -- from the detections, compute the azimuth and elevation angles
         for det in detections:

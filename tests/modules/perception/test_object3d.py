@@ -38,9 +38,10 @@ def test_groundtruth_perception():
     # -- set up ego and objects
     ego_init = get_ego(seed=3)
     obj1 = get_object_global(seed=4)
-    obj_local = ego_init.global_to_local(obj1)
-    assert obj_local.origin == ego_init.origin == obj1.origin
-    assert not np.allclose(obj1.position.vector, obj_local.position.vector)
+    obj_local = obj1.change_reference(ego_init, inplace=False)
+    assert ego_init.reference == obj1.reference
+    assert obj1.reference != obj_local.reference
+    assert not np.allclose(obj1.position.x, obj_local.position.x)
 
     # GT information
     frame = timestamp = 0
@@ -51,7 +52,7 @@ def test_groundtruth_perception():
     # -- test update
     percep = perception.object3d.GroundTruth3DObjectDetector()
     detections = percep(ground_truth, frame=frame, identifier="percep-1")
-    assert np.allclose(detections[0].box.t.vector, obj_local.position.vector)
+    assert np.allclose(detections[0].box.t.x, obj_local.position.x)
 
 
 class LidarMeasurement():
@@ -70,7 +71,7 @@ def run_mmdet(datatype, model, dataset, as_memoryview=False):
         if datatype == 'lidar':
             data = pc
             if as_memoryview:
-                data.data = LidarMeasurement(memoryview(data.data))
+                data.data = LidarMeasurement(memoryview(data.data.x))
         elif datatype == 'image':
             data = img
         else:

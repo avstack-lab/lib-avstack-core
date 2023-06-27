@@ -52,10 +52,10 @@ class Lidar2dCentroidDetector(_PerceptionAlgorithm):
         self.pca_ratio_ignore = pca_ratio_ignore
         self.merge_dist_thresh = merge_dist_thresh
 
-    def __call__(self, data, alg_name, **kwargs):
+    def __call__(self, data, platform, alg_name, **kwargs):
         data = data.data
         assert data.shape[1] == 2, "Data must be in 2D format"
-        return self._wrap(self._merge(self._detect(self._filter(data))), alg_name)
+        return self._wrap(self._merge(self._detect(self._filter(data))), platform, alg_name)
 
     def _filter(self, data):
         pts_range = data[
@@ -97,8 +97,8 @@ class Lidar2dCentroidDetector(_PerceptionAlgorithm):
                 del centroids[i1]
         return centroids
 
-    def _wrap(self, centroids, alg_name):
+    def _wrap(self, centroids, reference, alg_name):
         dets = []
         for cent in centroids:
-            dets.append(CentroidDetection(alg_name, cent))
+            dets.append(CentroidDetection(alg_name, cent, reference))
         return dets

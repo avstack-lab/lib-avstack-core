@@ -11,7 +11,7 @@
 
 import numpy as np
 
-from avstack.geometry import NominalOriginStandard, planes
+from avstack.geometry import GlobalOrigin3D, planes
 
 
 # def test_convert_plane():
@@ -23,12 +23,12 @@ from avstack.geometry import NominalOriginStandard, planes
 
 def test_plane_angle_self():
     coeffs = [1, 2, 3, 4]
-    P1 = planes.GroundPlane(coeffs, NominalOriginStandard)
+    P1 = planes.GroundPlane(coeffs, GlobalOrigin3D)
     assert P1.angle_between(P1) == 0
 
 
 def tests_plane_to_transform():
     coeffs = [1, 2, 3, 4]
-    P_g = planes.GroundPlane(coeffs, NominalOriginStandard)
-    T_s2g = P_g.as_transform()
-    assert np.all(T_s2g.translation.vector == np.array([0, 0, coeffs[3]]))
+    P_g = planes.GroundPlane(coeffs, GlobalOrigin3D)
+    T_s2g = P_g.as_reference()
+    assert np.all(T_s2g.x == np.array([0, 0, coeffs[3]]))

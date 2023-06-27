@@ -8,8 +8,6 @@
 
 """
 
-import numpy as np
-
 from avstack.datastructs import PriorityQueue
 
 
@@ -34,7 +32,7 @@ class WaypointPlan(PriorityQueue):
         p_wpts = []
         while not self.empty():
             wpt = self.pop()[1]
-            prior = ego_state.position.distance(wpt.target_point)
+            prior = ego_state.position.distance(wpt.target_point.position)
             if prior >= self.dist_arrived:
                 p_wpts.append((prior, wpt))
         for p_wpt in p_wpts:
@@ -60,11 +58,11 @@ class Waypoint:
 
     @property
     def location(self):
-        return self.target_point.translation
+        return self.target_point.position
 
     @property
-    def translation(self):
-        return self.target_point.translation
+    def Vector(self):
+        return self.target_point.position
 
     def __lt__(self, other):
         return False  # for priority queue in case of tie

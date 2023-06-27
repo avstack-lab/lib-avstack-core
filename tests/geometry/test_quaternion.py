@@ -11,7 +11,7 @@ My custom tests for the quaternion package
 import numpy as np
 import quaternion
 
-from avstack.geometry import NominalOriginStandard, Rotation
+from avstack.geometry import GlobalOrigin3D, Rotation
 
 
 def test_compose_rotations():
@@ -35,7 +35,7 @@ def test_compose_rotations():
 
 def test_quat_to_transform():
     q_a_to_b = np.quaternion(*np.random.rand(3))
-    R = Rotation(q_a_to_b, NominalOriginStandard)
+    R = Rotation(q_a_to_b, GlobalOrigin3D)
     assert np.allclose(quaternion.as_rotation_matrix(q_a_to_b), R.R)
 
 

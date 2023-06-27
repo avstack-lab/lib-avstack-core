@@ -10,7 +10,7 @@
 
 import numpy as np
 
-from avstack.geometry import Transform, Translation
+from avstack.geometry import Pose
 
 from .pid import PIDLateralController, PIDLongitudinalController
 
@@ -124,7 +124,7 @@ class VehiclePIDController(_ControlAlgorithm):
         waypoint_target = plan.top()[1]
         current_speed = ego_state.velocity.norm()
         target_speed = waypoint_target.target_speed
-        current_point = Transform(ego_state.attitude, ego_state.position)
+        current_point = Pose(ego_state.position, ego_state.attitude)
         target_point = waypoint_target.target_point
 
         # -- apply details

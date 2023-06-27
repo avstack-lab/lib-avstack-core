@@ -13,6 +13,7 @@ import sys
 import numpy as np
 import quaternion
 
+from avstack.geometry import GlobalOrigin3D
 from avstack.environment.objects import VehicleState
 
 
@@ -28,8 +29,11 @@ def test_vehicle_state_init():
 def test_vehicle_state_convert():
     VS_1 = get_ego(1)
     VS_2 = get_ego(2)
-    VS_2_in_1 = VS_1.global_to_local(VS_2)
-    assert np.allclose(
-        VS_2_in_1.position.vector,
-        (VS_1.attitude @ (VS_2.position - VS_1.position)).vector,
-    )
+    VS_2_in_1 = VS_2.change_reference(VS_1, inplace=False)
+    v1 = VS_2_in_1.change_reference(GlobalOrigin3D, inplace=False).position
+    v2 = VS_2.change_reference(GlobalOrigin3D, inplace=False).position
+    assert v1.allclose(v2)
+
+
+def test_vehicle_state_velocity_diff():
+    pass

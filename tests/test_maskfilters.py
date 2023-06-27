@@ -5,9 +5,8 @@
 # @Last modified time: 2021-08-03
 
 
-import os
 import sys
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import numpy as np
 
@@ -39,7 +38,8 @@ def test_filter_frustum():
 
 
 def test_filter_bbox():
-    bbox_filter = maskfilters.filter_points_in_object_bbox(pc, box_3d)
+    box_3d_2 = box_3d.change_reference(pc.reference, inplace=False)
+    bbox_filter = maskfilters.filter_points_in_object_bbox(pc, box_3d_2)
     assert sum(bbox_filter) > 0
     assert max(np.where(bbox_filter)[0]) < pc.shape[0]
 

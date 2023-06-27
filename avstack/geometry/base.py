@@ -1,4 +1,5 @@
 import numpy as np
+from copy import deepcopy
 from numba import jit
 from numba.types import float64, int64
 
@@ -10,10 +11,20 @@ def q_mult_vec(q, v):
     of the quaternion, respectively, and m is the sum of the squares of the
     components of the quaternion.
     """
+    try:
+        q = q.q  # if input is a Rotation
+    except AttributeError:
+        pass
     s = q.w
     r = q.vec
     m = q.w**2 + q.x**2 + q.y**2 + q.z**2
-    return _q_mult_vec(s, r, m, v)
+    try:
+        v2x = _q_mult_vec(s, r, m, v.x)
+        v2 = deepcopy(v)
+        v2.x = v2x
+        return v2
+    except AttributeError:
+        return _q_mult_vec(s, r, m, v)
 
 
 @jit(nopython=True, fastmath=False)

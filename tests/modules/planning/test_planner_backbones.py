@@ -13,8 +13,8 @@ import numpy as np
 
 from avstack.environment import EnvironmentState
 from avstack.geometry import (
-    NominalOriginStandard,
-    Translation,
+    GlobalOrigin3D,
+    Vector,
 )
 from avstack.modules import planning
 from avstack.modules.perception.detections import LaneLineInSpace
@@ -26,9 +26,9 @@ from utilities import get_ego, get_object_global
 
 
 def get_lanes():
-    l_pts = [Translation([i, 4, 0], origin=NominalOriginStandard) for i in range(20)]
+    l_pts = [Vector([i, 4, 0], GlobalOrigin3D) for i in range(20)]
     left_lane = LaneLineInSpace(l_pts)
-    r_pts = [Translation([i, -3, 0], origin=NominalOriginStandard) for i in range(20)]
+    r_pts = [Vector([i, -3, 0], GlobalOrigin3D) for i in range(20)]
     right_lane = LaneLineInSpace(r_pts)
     return [[left_lane, right_lane]]
 
@@ -36,7 +36,7 @@ def get_lanes():
 def get_tracks(ego, seed):
     trk_0 = get_object_global(seed)
     trk_1 = get_object_global(seed + 1)
-    return [ego.global_to_local(trk_0), ego.global_to_local(trk_1)]
+    return [trk_0.change_reference(ego, inplace=False), trk_1.change_reference(ego, inplace=False)]
 
 
 def test_random_planner():

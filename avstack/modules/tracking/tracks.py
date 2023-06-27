@@ -2,8 +2,13 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
+from avstack.geometry import Position, Velocity, Attitude, ReferenceFrame, get_reference_from_line
 from avstack.geometry.bbox import Box2D, Box3D, get_box_from_line
-from avstack.geometry.transformations import xyzvel_to_razelrrt, razelrrt_to_xyzvel, spherical_to_cartesian, cartesian_to_spherical
+from avstack.geometry.transformations import xyzvel_to_razelrrt, razelrrt_to_xyzvel, spherical_to_cartesian, cartesian_to_spherical, transform_orientation
+
+
+zero3 = np.zeros((3,3))
+eye3  = np.eye(3)
 
 
 def format_data_container_as_string(DC):
@@ -33,15 +38,19 @@ def get_track_from_line(line):
             factory = BasicBoxTrack3D
         else:
             raise NotImplementedError(trk_type)
-        v = items[n_prelim : (n_prelim + n_add)]
-        P = items[(n_prelim + n_add) : (n_prelim + n_add + int(n_dim) ** 2)]
-        box = items[(n_prelim + n_add + int(n_dim) ** 2) : :]
+        n_dim = int(n_dim)
+        idx = n_prelim
+        v = items[idx : idx + n_add]; idx += n_add
+        P = items[idx : idx + n_dim**2]; idx += n_dim**2
+        box = items[idx::]
         v = np.array([float(vi) for vi in v])
         P = np.reshape(np.array([float(pi) for pi in P]), (int(n_dim), int(n_dim)))
         box = get_box_from_line(" ".join(box))
+        reference = box.reference
         trk = factory(
             float(t0),
             box,
+            reference,
             obj_type,
             ID_force=int(ID),
             v=v,
@@ -60,13 +69,16 @@ def get_track_from_line(line):
             factory = XyzFromRazelRrtTrack
         else:
             raise NotImplementedError(trk_type)
-        x = items[n_prelim : (n_prelim + n_dim)]
-        P = items[(n_prelim + n_dim) : (n_prelim + n_dim + n_dim **2)]
+        idx = n_prelim
+        x = items[idx : idx + n_dim]; idx += n_dim
+        P = items[idx : idx + n_dim **2]; idx += n_dim**2
+        reference = get_reference_from_line(" ".join(items[idx::]))
         x = np.array([float(xi) for xi in x])
         P = np.reshape(np.array([float(pi) for pi in P]), (int(n_dim), int(n_dim)))
         trk = factory(
             float(t0),
             None,
+            reference,
             obj_type,
             ID_force=int(ID),
             x=x,
@@ -94,7 +106,7 @@ def get_data_container_from_line(line, identifier_override=None):
 
 class _TrackBase:
     ID_counter = 0
-    def __init__(self, t0, x, P, obj_type, ID_force=None, t=None, coast=0, n_updates=1, age=0) -> None:
+    def __init__(self, t0, x, P, reference, obj_type, ID_force=None, t=None, coast=0, n_updates=1, age=0) -> None:
         if ID_force is None:
             ID = _TrackBase.ID_counter
             _TrackBase.ID_counter += 1
@@ -111,7 +123,34 @@ class _TrackBase:
         self.t_last_predict = self.t
         self.x = x
         self.P = P
+        self.reference = reference
 
+    @property
+    def reference(self):
+        return self._reference
+    
+    @reference.setter
+    def reference(self, reference):
+        if not isinstance(reference, ReferenceFrame):
+            raise ValueError(f"Reference frame type not appropriate, {type(reference)}")
+        self._reference = reference
+
+    @property
+    def position(self):
+        return Position(self.x[self.idx_pos], self.reference)
+    
+    @position.setter
+    def position(self, position: Position):
+        self.x[self.idx_pos] = position.x
+
+    @property
+    def velocity(self):
+        return Velocity(self.x[self.idx_vel], self.reference)
+    
+    @velocity.setter
+    def velocity(self, velocity: Velocity):
+        self.x[self.idx_vel] = velocity.x
+    
     @staticmethod
     def f(x, dt):
         raise NotImplementedError
@@ -160,13 +199,21 @@ class _TrackBase:
         """Can override this in subclass"""
         self._update(z, R)
 
+    def R_old_to_new(self, reference):
+        diff = self.reference.differential(reference)
+        R_old_to_new = transform_orientation(diff.q, 'quat', 'dcm')
+        return R_old_to_new 
+    
+    def change_reference(self, reference, inplace: bool):
+        raise NotImplementedError
+
     def format_as_string(self):
         x_str = " ".join(map(str, self.x))
         P_str = " ".join(map(str, self.P.ravel()))
         return (
             f"{self.NAME} {self.obj_type} {self.t0} {self.t} {self.ID} "
             f"{self.coast} {self.n_updates} {self.age} "
-            f"{len(self.x)} {x_str} {P_str}"
+            f"{len(self.x)} {x_str} {P_str} {self.reference.format_as_string()}"
         )
 
 
@@ -186,6 +233,7 @@ class XyFromRazTrack(_TrackBase):
         self,
         t0,
         raz,
+        reference,
         obj_type,
         ID_force=None,
         x=None,
@@ -211,16 +259,10 @@ class XyFromRazTrack(_TrackBase):
             r_sig = 5
             v_sig = 30
             P = np.diag([r_sig, r_sig, v_sig, v_sig]) ** 2
-        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
+        self.idx_pos = [0, 1]
+        self.idx_vel = [2, 3]
+        super().__init__(t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age)
 
-    @property
-    def position(self):
-        return self.x[:2]
-
-    @property
-    def velocity(self):
-        return self.x[2:4]
-    
     @staticmethod
     def H(x):
         """Partial derivative of the measurement function w.r.t x at x hat
@@ -265,6 +307,15 @@ class XyFromRazTrack(_TrackBase):
     def update(self, z, R=np.diag([10, 1e-2])**2):
         self._update(z, R)
 
+    def change_reference(self, reference, inplace: bool):
+        vec = Position(np.array([self.x[0], self.x[1], 0]), self.reference)
+        vec.change_reference(reference, inplace=True)
+        if inplace:
+            self.x[:2] = vec.x[:2]
+            self.reference = reference
+        else:
+            raise NotImplementedError
+
 
 class XyzFromRazelTrack(_TrackBase):
     """Tracking on razel measurements
@@ -282,6 +333,7 @@ class XyzFromRazelTrack(_TrackBase):
         self,
         t0,
         razel,
+        reference,
         obj_type,
         ID_force=None,
         x=None,
@@ -305,15 +357,9 @@ class XyzFromRazelTrack(_TrackBase):
             r_sig = 5
             v_sig = 30
             P = np.diag([r_sig, r_sig, r_sig, v_sig, v_sig, v_sig]) ** 2
-        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
-
-    @property
-    def position(self):
-        return self.x[:3]
-
-    @property
-    def velocity(self):
-        return self.x[3:6]
+        self.idx_pos = [0, 1, 2]
+        self.idx_vel = [3, 4, 5]
+        super().__init__(t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age)
     
     @staticmethod
     def H(x):
@@ -363,8 +409,21 @@ class XyzFromRazelTrack(_TrackBase):
         """This is most definitely not optimal and should be tuned in the future"""
         return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
     
-    def update(self, z, R=np.diag([10, 1e-2, 5e-2])**2):
+    def update(self, z, R=np.diag([4, 1e-2, 5e-2])**2):
         self._update(z, R)
+
+    def change_reference(self, reference, inplace: bool):
+        if inplace:
+            RO2N = self.R_old_to_new(reference)
+            self.position = self.position.change_reference(reference, inplace=False)
+            self.velocity = self.velocity.change_reference(reference, inplace=False)
+            RO2N_B = np.block([[RO2N,  zero3],
+                               [zero3,  RO2N]])
+            self.P = RO2N_B @ self.P @ RO2N_B.T
+            self.P[self.P < 1e-5] = 0
+            self.reference = reference
+        else:
+            raise NotImplementedError("Need to implement this")
 
 
 class XyzFromRazelRrtTrack(_TrackBase):
@@ -384,7 +443,10 @@ class XyzFromRazelRrtTrack(_TrackBase):
     facing 'forward' which simplifies the calculations. If we are
     wanting to track in some other coordinate frame, we will need to
     explicitly incorporate the sensor's pointing angle and position
-    offset in the calculations."""
+    offset in the calculations.
+    
+    IMPORTANT: range rate is defined as positive moving away from sensor
+    """
 
     NAME = "razelrrttrack"
 
@@ -392,6 +454,7 @@ class XyzFromRazelRrtTrack(_TrackBase):
         self,
         t0,
         razelrrt,
+        reference,
         obj_type,
         ID_force=None,
         x=None,
@@ -419,19 +482,13 @@ class XyzFromRazelRrtTrack(_TrackBase):
             rrt_p_max = v_sig  # complete uncertainty gives 10, total certainty gives 2
             rrt_p_min = 10
             P = np.diag([r_sig, r_sig, r_sig, *np.maximum(rrt_p_min, rrt_p_max * (1-v_unit))]) ** 2
-        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
+        self.idx_pos = [0, 1, 2]
+        self.idx_vel = [3, 4, 5]
+        super().__init__(t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age)
 
-    @property
-    def position(self):
-        return self.x[:3]
-
-    @property
-    def velocity(self):
-        return self.x[3:6]
-    
     @property
     def rrt(self):
-        return self.velocity @ self.position / np.linalg.norm(self.position)
+        return self.velocity @ self.position.unit()
     
     @staticmethod
     def H(x):
@@ -489,12 +546,25 @@ class XyzFromRazelRrtTrack(_TrackBase):
         """This is most definitely not optimal and should be tuned in the future"""
         return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
     
-    def update(self, z, R=np.diag([10, 1e-2, 5e-2, 2])**2):
+    def update(self, z, R=np.diag([1, 1e-2, 5e-2, 10])**2):
         """Construct the pseudo measurement for range rate"""
         z = z.copy()  # copy bc we are doing pseudo measurement manipulation
         z[3] = z[0]*z[3]
         self._update(z, R)
 
+    def change_reference(self, reference, inplace: bool):
+        if inplace:
+            RO2N = self.R_old_to_new(reference)
+            self.position = self.position.change_reference(reference, inplace=False)
+            self.velocity = self.velocity.change_reference(reference, inplace=False)
+            RO2N_B = np.block([[RO2N,  zero3],
+                               [zero3,  RO2N]])
+            self.P = RO2N_B @ self.P @ RO2N_B.T
+            self.P[self.P < 1e-5] = 0
+            self.reference = reference
+        else:
+            raise NotImplementedError("Need to implement this")
+    
 
 class BasicBoxTrack3D(_TrackBase):
 
@@ -504,6 +574,7 @@ class BasicBoxTrack3D(_TrackBase):
         self,
         t0,
         box3d,
+        reference,
         obj_type,
         ID_force=None,
         v=None,
@@ -531,8 +602,9 @@ class BasicBoxTrack3D(_TrackBase):
         )
         if P is None:
             P = np.diag([5, 5, 5, 2, 2, 2, 10, 10, 10]) ** 2
-        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
-        self.origin = box3d.origin
+        self.idx_pos = [0, 1, 2]
+        self.idx_vel = [6, 7, 8]
+        super().__init__(t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age)
         self.where_is_t = box3d.where_is_t
         self.q = box3d.q
 
@@ -562,22 +634,20 @@ class BasicBoxTrack3D(_TrackBase):
         
     @staticmethod
     def Q(dt):
-        return (np.diag([2, 2, 2, 0.5, 0.5, 0.5, 3, 3, 3]) * dt) ** 2
-
+        return (np.diag([2, 2, 2, 0.2, 0.2, 0.2, 3, 3, 3]) * dt) ** 2
+    
     @property
-    def position(self):
-        return self.x[:3]
-
-    @property
-    def velocity(self):
-        return self.x[6:9]
+    def attitude(self):
+        return self.q
+    
+    @attitude.setter
+    def attitude(self, attitude: Attitude):
+        self.q = attitude
 
     @property
     def box3d(self):
-        as_l = [el for el in self.x[3:6]]
-        as_l.extend([el for el in self.x[:3]])
-        as_l.append(self.q)
-        return Box3D(as_l, self.origin, where_is_t=self.where_is_t)
+        hwl = self.x[3:6]
+        return Box3D(self.position, self.attitude, hwl, where_is_t=self.where_is_t)
 
     @property
     def box(self):
@@ -585,11 +655,11 @@ class BasicBoxTrack3D(_TrackBase):
 
     @property
     def yaw(self):
-        return self.box3d.yaw
+        return self.box3d.yaw    
 
-    def update(self, box3d, R=np.diag([1, 1, 1, 0.5, 0.5, 0.5])**2):
-        if box3d.origin != self.origin:
-            box3d.change_origin(self.origin)
+    def update(self, box3d, R=np.diag([1, 1, 1, 0.25, 0.25, 0.25])**2):
+        if box3d.reference != self.reference:
+            raise RuntimeError('Should have converted the box location before this...')
         if self.where_is_t != box3d.where_is_t:
             raise NotImplementedError(
                 "Differing t locations not implemented: {}, {}".format(
@@ -608,12 +678,26 @@ class BasicBoxTrack3D(_TrackBase):
             box=self.box3d,
             velocity=self.velocity,
             acceleration=None,
-            attitude=self.q,
+            attitude=self.attitude,
             angular_velocity=None,
-            origin=self.origin,
         )
         return vs
 
+    def change_reference(self, reference, inplace: bool):
+        if inplace:
+            RO2N = self.R_old_to_new(reference)
+            self.position = self.position.change_reference(reference, inplace=False)
+            self.velocity = self.velocity.change_reference(reference, inplace=False)
+            self.attitude = self.attitude.change_reference(reference, inplace=False)
+            RO2N_B = np.block([[RO2N,   zero3,  zero3],
+                               [zero3,   eye3,  zero3],
+                               [zero3,  zero3,  RO2N]])
+            self.P = RO2N_B @ self.P @ RO2N_B.T
+            self.P[self.P < 1e-5] = 0
+            self.reference = reference
+        else:
+            raise NotImplementedError("Need to implement this")
+        
     def format_as_string(self):
         v_str = " ".join(map(str, self.x[6:9]))
         P_str = " ".join(map(str, self.P.ravel()))
@@ -631,6 +715,7 @@ class BasicBoxTrack2D(_TrackBase):
         self,
         t0,
         box2d,
+        reference,
         obj_type,
         ID_force=None,
         v=None,
@@ -655,16 +740,10 @@ class BasicBoxTrack2D(_TrackBase):
         )
         if P is None:
             P = np.diag([10, 10, 10, 10, 10, 10]) ** 2
-        super().__init__(t0, x, P, obj_type, ID_force, t, coast, n_updates, age)
+        self.idx_pos = [0, 1]
+        self.idx_vel = [2, 3]
+        super().__init__(t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age)
         self.calibration = box2d.calibration
-
-    @property
-    def position(self):
-        return self.x[:2]
-
-    @property
-    def velocity(self):
-        return self.x[4:6]
 
     @property
     def width(self):
@@ -726,6 +805,12 @@ class BasicBoxTrack2D(_TrackBase):
     def Q(dt):
         return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
 
+    def change_reference(self, reference, inplace: bool):
+        if inplace:
+            self.reference = reference
+        else:
+            raise NotImplementedError
+
     def update(self, box2d, R=np.diag([5, 5, 5, 5])**2):
         # if box2d.source_identifier != self.source_identifier:
         #     raise NotImplementedError("Sensor sources must be the same for now")
@@ -745,12 +830,12 @@ class BasicBoxTrack2D(_TrackBase):
 class BasicJointBoxTrack(_TrackBase):
     NAME = "boxtrack2d3d"
 
-    def __init__(self, t0, box2d, box3d, obj_type):
+    def __init__(self, t0, box2d, box3d, reference, obj_type):
         self.track_2d = (
-            BasicBoxTrack2D(t0, box2d, obj_type) if box2d is not None else None
+            BasicBoxTrack2D(t0, box2d, reference, obj_type) if box2d is not None else None
         )
         self.track_3d = (
-            BasicBoxTrack3D(t0, box3d, obj_type) if box3d is not None else None
+            BasicBoxTrack3D(t0, box3d, reference, obj_type) if box3d is not None else None
         )
 
     @property
@@ -830,7 +915,7 @@ class BasicJointBoxTrack(_TrackBase):
     def __str__(self):
         return f"BasicJointBoxTrack w/ {self.track_2d.n_updates} 2D n_updates: {self.box2d}; {self.track_3d.n_updates} 3D n_updates: {self.box3d}"
 
-    def update(self, box, obj_type):
+    def update(self, box, obj_type, reference):
         if isinstance(box, tuple):
             b2 = box[0]
             b3 = box[1]
@@ -845,13 +930,13 @@ class BasicJointBoxTrack(_TrackBase):
 
         # -- update 2d
         if self.track_2d is None and b2 is not None:
-            self.track_2d = BasicBoxTrack2D(self.track_3d.t, b2, obj_type)
+            self.track_2d = BasicBoxTrack2D(self.track_3d.t, b2, objtype=obj_type, reference=reference)
         elif b2 is not None:
             self.track_2d.update(b2)
 
         # -- update 3d
         if self.track_3d is None and b3 is not None:
-            self.track_3d = BasicBoxTrack3D(self.track_2d.t, b3, obj_type)
+            self.track_3d = BasicBoxTrack3D(self.track_2d.t, b3, objtype=obj_type, reference=reference)
         elif b3 is not None:
             self.track_3d.update(b3)
 
@@ -866,6 +951,15 @@ class BasicJointBoxTrack(_TrackBase):
             return self.track_3d.as_object()
         else:
             raise RuntimeError("No 3d track to convert to object")
+
+    def change_reference(self, reference, inplace: bool):
+        if inplace:
+            if self.track_2d is not None:
+                self.track_2d.change_reference(reference, inplace=inplace)
+            if self.track_3d is not None:
+                self.track_3d.change_reference(reference, inplace=inplace)
+        else:
+            raise NotImplementedError
 
     def format_as_string(self):
         v_str = " ".join(map(str, self.x[6:9]))

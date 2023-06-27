@@ -59,6 +59,7 @@ def gnn_single_frame_assign(
 
     assert algorithm in ["JVC"]
     assignments = []
+    A = A.copy()
     nrows = A.shape[0]
     ncols = A.shape[1]
     if A.size == 0:

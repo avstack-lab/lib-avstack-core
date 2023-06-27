@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from avstack.geometry import q_cam_to_stan
+from avstack.geometry import q_cam_to_stan, GlobalOrigin3D, Position, Attitude
 from avstack.geometry.bbox import Box2D, Box3D, SegMask2D
 from avstack.geometry.transformations import transform_orientation
 
@@ -112,7 +112,7 @@ def convert_mm2d_to_avstack(
     # -- make objects
     if segms is None:
         dets = [
-            BoxDetection(source_identifier, Box2D(bbox, calib), obj_type, score)
+            BoxDetection(source_identifier, Box2D(bbox, calib), calib.reference, obj_type, score)
             for bbox, obj_type, score in zip(bboxes, obj_type_text, scores)
             if obj_type in whitelist
         ]
@@ -122,6 +122,7 @@ def convert_mm2d_to_avstack(
                 source_identifier,
                 Box2D(bbox, calib),
                 SegMask2D(segm, calib),
+                calib.reference,
                 obj_type,
                 score,
             )
@@ -183,14 +184,14 @@ def convert_mm3d_to_avstack(
                     if dataset == "kitti":
                         yaw = box[6]
                         q_S_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
-                        q_O_2_obj = q_S_2_obj  # sensor is our origin
+                        q_O_2_obj = q_S_2_obj  # sensor is our reference
                         x_O_2_obj_in_O = cent
                         if "ssn" in model_3d.cfg.filename:
                             x_O_2_obj_in_O[2] += h  # whoops
                             where_is_t = "center"
                         else:
                             where_is_t = "bottom"
-                        origin = calib.origin
+                        reference = calib.reference
                     elif dataset == "nuscenes":
                         yaw = box[6]
                         if "pointpillars" in model_3d.cfg.filename:
@@ -208,21 +209,21 @@ def convert_mm3d_to_avstack(
                             q_O_2_obj = q_O1_2_obj
                         x_O_2_obj_in_O = cent
                         where_is_t = "bottom"
-                        origin = calib.origin
+                        reference = calib.reference
                     elif dataset == "carla":
                         yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += h  # whoops
                         where_is_t = "center"
-                        origin = calib.origin
+                        reference = calib.reference
                     elif dataset == "carla-infrastructure":
                         yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += 1.8
                         where_is_t = "bottom"
-                        origin = calib.origin
+                        reference = calib.reference
                     else:
                         raise NotImplementedError(dataset)
                 elif "pgd" in model_3d.cfg.filename:
@@ -233,14 +234,14 @@ def convert_mm3d_to_avstack(
                         q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
                         where_is_t = "bottom"
-                        origin = calib.origin  # camera origin
+                        reference = calib.reference  # camera reference
                     elif dataset == "nuscenes":
                         yaw = box[6] - np.pi / 2
                         q_L_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
                         where_is_t = "bottom"
-                        origin = calib.origin
+                        reference = calib.reference
                     else:
                         raise NotImplementedError(dataset)
                     x_O_2_obj_in_O = x_C_2_obj_in_C
@@ -249,15 +250,13 @@ def convert_mm3d_to_avstack(
                     raise NotImplementedError(model_3d.cfg.filename)
 
                 # make box output
-                box3d = Box3D(
-                    [h, w, l, x_O_2_obj_in_O, q_O_2_obj],
-                    origin=origin,
-                    where_is_t=where_is_t,
-                )
+                pos = Position(x_O_2_obj_in_O, reference)
+                rot = Attitude(q_O_2_obj, reference)
+                box3d = Box3D(pos, rot, [h,w,l], where_is_t=where_is_t)
 
                 # -- pruning
                 # ---- too low
-                if prune_low and (box3d.t.vector_global[2] < thresh_low):
+                if prune_low and (box3d.t.change_reference(GlobalOrigin3D, inplace=False)[2] < thresh_low):
                     if verbose:
                         print("Box registered uncharacteristically low...skipping")
                     continue
@@ -274,6 +273,6 @@ def convert_mm3d_to_avstack(
                         continue
                 # ---- we made it!
                 prev_locs.append(x_O_2_obj_in_O)
-                dets.append(BoxDetection(source_identifier, box3d, obj_type, score))
+                dets.append(BoxDetection(source_identifier, box3d, box3d.reference, obj_type, score))
 
     return dets

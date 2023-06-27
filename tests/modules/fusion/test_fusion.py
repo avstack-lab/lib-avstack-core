@@ -12,7 +12,7 @@ from copy import copy, deepcopy
 import numpy as np
 import quaternion
 
-from avstack.geometry import NominalOriginStandard, bbox
+from avstack.geometry import GlobalOrigin3D, bbox, Position, Attitude
 from avstack.modules import fusion, tracking
 
 
@@ -21,10 +21,12 @@ def test_track_to_track_CI():
     t0 = 0.0
     frame = 0
     obj_type = "car"
-    box1 = bbox.Box3D([2, 2, 4, [-1, -2, -3], np.quaternion(1)], NominalOriginStandard)
+    pos = Position(np.array([-1,-2,-3]), GlobalOrigin3D)
+    rot = Attitude(np.quaternion(1), GlobalOrigin3D)
+    box1 = bbox.Box3D(pos, rot, [2, 2, 4])
     box2 = deepcopy(box1)
-    track_1 = tracking.tracker3d.BasicBoxTrack3D(t0, box1, obj_type)
-    track_2 = tracking.tracker3d.BasicBoxTrack3D(t0, box2, obj_type)
+    track_1 = tracking.tracker3d.BasicBoxTrack3D(t0, box1, GlobalOrigin3D, obj_type)
+    track_2 = tracking.tracker3d.BasicBoxTrack3D(t0, box2, GlobalOrigin3D, obj_type)
     track_fused = fuser([track_1], [track_2], frame=frame)[0]
     assert fuser.ID_registry == {track_1.ID: {track_2.ID: track_fused.ID}}
-    assert track_fused.box3d == box1
+    assert track_fused.box3d.allclose(box1)

@@ -9,14 +9,13 @@ A collection of slicers, masks, and filtering operations for perception data
 The code is independent of data source so long as format is standard
 """
 
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import numpy as np
 from numba import jit
 
 import avstack.geometry.bbox as bbox
 from avstack.geometry import transformations as tforms
-from avstack.geometry.coordinates import LidarCoordinates
 
 
 # ==============================================================================
@@ -145,9 +144,7 @@ def filter_points_in_image_frustum(point_cloud, box2d, camera_calib):
 
     point_cloud - velo coordinates
     """
-    lidar_in_img_ref = point_cloud.calibration.transform_3d_to_3d(
-        point_cloud.data[:, :3], camera_calib.origin
-    )
+    lidar_in_img_ref = point_cloud.data.change_calibration(camera_calib, inplace=False)
     lidar_mask0 = lidar_in_img_ref[:, 2] >= 0  # assumes z is forward
     lidar_image = point_cloud.project(camera_calib)
     lidar_mask1 = lidar_image.data[:, 0] > box2d.box2d[0]
@@ -189,7 +186,7 @@ def filter_points_in_pillar(point_cloud, box_bev):
 #     pillar_filter = filter_points_in_pillar(point_cloud, box_bev)
 
 #     # Filter by range
-#     box_center_velo = box_calib.transform_3d_to_3d(box3d.t, origin=point_cloud.calibration.origin)
+#     box_center_velo = box_calib.transform_3d_to_3d(box3d.t, origin=point_cloud.calibration.reference)
 #     range_filter = filter_points_range(point_cloud, 0, np.linalg.norm(box_center_velo))
 
 #     return frustum_filter & (~pillar_filter) & (~range_filter)
@@ -246,7 +243,7 @@ def filter_points_in_box(
         if box_dist > max_range:
             return np.zeros((pc.shape[0],), dtype=np.bool)
     # run test
-    box_filter = _check_pts_boundary(pc, box_corners, include_boundary)
+    box_filter = _check_pts_boundary(pc, box_corners.x, include_boundary)
     return box_filter
 
 
@@ -299,10 +296,7 @@ def filter_points_in_object_bbox(point_cloud, box3d):
     """
     # Get points in each bounding box
     box3d_pts_3d = box3d.corners
-    if point_cloud.calibration.origin != box3d.origin:
-        box3d_pts_3d = point_cloud.calibration.origin @ (
-            box3d.origin.inv() @ box3d_pts_3d
-        )
+    box3d_pts_3d.change_reference(point_cloud.reference, inplace=True)
     box_filter = filter_points_in_box(point_cloud.data, box3d_pts_3d)
     return box_filter
 
@@ -323,16 +317,6 @@ def filter_points_in_image(points, P):
     return points_in_im_mask
 
 
-# def _project_rect_to_img(pts_3d_rect, P):
-#     pts_3d_rect_hom = tforms.cart2hom(pts_3d_rect[:,0:3])
-#     pts_2d = np.dot(pts_3d_rect_hom, P.T) # nx3
-#     pts_2d[:,0] /= pts_2d[:,2]
-#     pts_2d[:,1] /= pts_2d[:,2]
-#     pts_2d_cam = pts_2d[:,0:2]
-#     if pts_3d_rect.shape[1] == 4:
-#         pts_2d_cam = np.hstack([pts_2d_cam, pts_3d_rect[:,3][:,None]])
-#     return pts_2d_cam
-
 
 def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
     """Check if a 3d box is in the FOV of the camera
@@ -341,9 +325,9 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
     """
     box_3d_2 = box_3d
     if check_origin:
-        if box_3d_2.origin != camera_calib.origin:
+        if box_3d_2.reference != camera_calib.reference:
             box_3d_2 = deepcopy(box_3d)
-            box_3d_2.change_origin(camera_calib.origin)
+            box_3d_2.change_reference(camera_calib.reference, inplace=True)
     if d_thresh is not None:
         if box_3d_2.t.norm() > d_thresh:
             return False
@@ -356,18 +340,18 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
 
     # -- front edge, center, back edge
     center = box_3d_2.t
-    fv = box_3d_2.rot.forward_vector
-    lv = box_3d_2.rot.left_vector
+    fv = box_3d_2.q.forward_vector
+    lv = box_3d_2.q.left_vector
     front_edge = center + box_3d_2.l / 2 * fv
     left_edge = center + box_3d_2.w / 2 * lv
     back_edge = center - box_3d_2.l / 2 * fv
     right_edge = center - box_3d_2.w / 2 * lv
 
-    c1 = np.dot(front_edge, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
-    c2 = np.dot(center, np.array([0, 0, 1])) > np.cos(fov_half) * center.norm()
-    c3 = np.dot(back_edge, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
-    c4 = np.dot(left_edge, np.array([0, 0, 1])) > np.cos(fov_half) * left_edge.norm()
-    c5 = np.dot(right_edge, np.array([0, 0, 1])) > np.cos(fov_half) * right_edge.norm()
+    c1 = np.dot(front_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
+    c2 = np.dot(center.x, np.array([0, 0, 1])) > np.cos(fov_half) * center.norm()
+    c3 = np.dot(back_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
+    c4 = np.dot(left_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * left_edge.norm()
+    c5 = np.dot(right_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * right_edge.norm()
 
     if any([c1, c2, c3, c4, c5]):
         box_3d_2_2d = box_3d_2.project_to_2d_bbox(calib=camera_calib)

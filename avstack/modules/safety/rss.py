@@ -7,11 +7,7 @@
 
 import itertools
 import math
-
 import numpy as np
-
-from avstack.geometry import NominalOriginStandard
-from avstack.geometry import transformations as tforms
 
 
 try:
@@ -388,7 +384,7 @@ class RssEvaluator:
     def _get_rss_object(
         self, object_ID, object_type, box3d, pos_2d, vel_2d, is_ego, verbose=True
     ):
-        box3d.change_origin(NominalOriginStandard)
+        box3d.change_origin(GlobalOrigin3D)
         obj = ad.rss.world.Object()
         obj.objectId = object_ID
         obj.objectType = object_type

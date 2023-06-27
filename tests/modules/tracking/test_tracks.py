@@ -13,6 +13,7 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.modules.tracking import tracks
+from avstack.geometry import GlobalOrigin3D
 from avstack.geometry.transformations import xyzvel_to_razelrrt, cartesian_to_spherical
 
 
@@ -25,8 +26,8 @@ def test_raz_track():
     t0 = 1.25
     box3d = random_object.box
     obj_type = random_object.obj_type
-    razel = cartesian_to_spherical(box3d.t)
-    random_track = tracks.XyFromRazTrack(t0, razel[:2], obj_type)
+    razel = cartesian_to_spherical(box3d.t.x)
+    random_track = tracks.XyFromRazTrack(t0, razel[:2], GlobalOrigin3D, obj_type)
     trk_string = random_track.format_as_string()
     random_track_reconstruct = tracks.get_track_from_line(trk_string)
     assert np.allclose(random_track.x, random_track_reconstruct.x)
@@ -38,8 +39,8 @@ def test_razel_track():
     t0 = 1.25
     box3d = random_object.box
     obj_type = random_object.obj_type
-    razel = cartesian_to_spherical(box3d.t)
-    random_track = tracks.XyzFromRazelTrack(t0, razel, obj_type)
+    razel = cartesian_to_spherical(box3d.t.x)
+    random_track = tracks.XyzFromRazelTrack(t0, razel, GlobalOrigin3D, obj_type)
     trk_string = random_track.format_as_string()
     random_track_reconstruct = tracks.get_track_from_line(trk_string)
     assert np.allclose(random_track.x, random_track_reconstruct.x)
@@ -49,11 +50,10 @@ def test_razel_track():
 def test_razelrrt_track():
     random_object = get_object_global(1)
     t0 = 1.25
-    box3d = random_object.box
     obj_type = random_object.obj_type
-    razelrrt = xyzvel_to_razelrrt(np.array([*box3d.t, *random_object.velocity.vector]))
-    random_track = tracks.XyzFromRazelRrtTrack(t0, razelrrt, obj_type)
-    assert random_track.rrt == razelrrt[3]
+    razelrrt = xyzvel_to_razelrrt(np.array([*random_object.position.x, *random_object.velocity.x]))
+    random_track = tracks.XyzFromRazelRrtTrack(t0, razelrrt, GlobalOrigin3D, obj_type)
+    assert np.isclose(random_track.rrt, razelrrt[3])
     trk_string = random_track.format_as_string()
     random_track_reconstruct = tracks.get_track_from_line(trk_string)
     assert np.allclose(random_track.x, random_track_reconstruct.x)
@@ -65,7 +65,7 @@ def test_boxtrack3d_as_string():
     t0 = 1.25
     box3d = random_object.box
     obj_type = random_object.obj_type
-    random_track = tracks.BasicBoxTrack3D(t0, box3d, obj_type)
+    random_track = tracks.BasicBoxTrack3D(t0, box3d, GlobalOrigin3D, obj_type)
     trk_string = random_track.format_as_string()
     random_track_reconstruct = tracks.get_track_from_line(trk_string)
     assert np.allclose(random_track.x, random_track_reconstruct.x)
@@ -77,7 +77,7 @@ def test_boxtrack2d_as_string():
     t0 = 1.25
     box2d = random_object.box.project_to_2d_bbox(camera_calib)
     obj_type = random_object.obj_type
-    random_track = tracks.BasicBoxTrack2D(t0, box2d, obj_type)
+    random_track = tracks.BasicBoxTrack2D(t0, box2d, GlobalOrigin3D, obj_type)
     trk_string = random_track.format_as_string()
     random_track_reconstruct = tracks.get_track_from_line(trk_string)
     assert np.allclose(random_track.x, random_track_reconstruct.x)
@@ -89,7 +89,7 @@ def test_trackcontainer_as_string():
     timestamp = 0.0
     n_tracks = 14
     trks = [
-        tracks.BasicBoxTrack3D(timestamp, get_object_global(i).box, "car")
+        tracks.BasicBoxTrack3D(timestamp, get_object_global(i).box, GlobalOrigin3D, "car")
         for i in range(n_tracks)
     ]
     dc = DataContainer(frame, timestamp, trks, source_identifier="tracks-1")

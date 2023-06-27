@@ -7,23 +7,31 @@
 """
 
 """
+from __future__ import annotations
 import itertools
-from copy import copy, deepcopy
+from copy import deepcopy
 from enum import IntEnum
 
 import numpy as np
-import quaternion
 
 from avstack.geometry import (
-    NominalOriginStandard,
+    Box2D,
+    Box3D,
+    ReferenceFrame,
     Rotation,
-    Translation,
-    VectorDirMag,
+    Position,
+    Velocity,
+    VectorHeadTail,
+    Acceleration,
+    Attitude,
+    AngularVelocity,
+    GlobalOrigin3D,
     bbox,
-    get_origin_from_line,
+    get_reference_from_line
 )
 from avstack.geometry import transformations as tforms
 from avstack.maskfilters import box_in_fov, filter_points_in_box
+NoneType = type(None)
 
 
 class Occlusion(IntEnum):
@@ -83,7 +91,22 @@ class ObjectState:
     @property
     def yaw(self):
         return self.box.yaw
-
+    
+    @property
+    def reference(self):
+        if self.position is not None:
+            return self.position.reference
+        elif self.attitude is not None:
+            return self.attitude.reference
+        else:
+            return None
+        
+    @property
+    def velocity_head_tail(self):
+        pos_g = self.position.in_global()
+        vel_g = self.velocity.in_global()
+        return VectorHeadTail(pos_g.x, pos_g.x + vel_g.x, GlobalOrigin3D)
+    
     def __getitem__(self, key):
         if key == "size":
             return self.box3d.size
@@ -92,49 +115,52 @@ class ObjectState:
 
     def deepcopy(self):
         return deepcopy(self)
+    
+    def as_reference(self):
+        pos = self.position.x if self.position else np.zeros((3,))
+        vel = self.velocity.x if self.velocity else np.zeros((3,))
+        acc = self.acceleration.x if self.acceleration else np.zeros((3,))
+        att = self.attitude.q if self.attitude else np.quaternion(1)
+        ang = self.angular_velocity.q if self.angular_velocity else np.quaternion(1)
+        ref = self.reference
+        return ReferenceFrame(x=pos, v=vel, acc=acc, q=att, ang=ang, reference=ref)
 
     def set(
         self,
         t,
-        position,
-        box,
-        velocity=None,
-        acceleration=None,
-        attitude=None,
-        angular_velocity=None,
+        position: Position,
+        box: Box2D | Box3D,
+        velocity: Velocity=None,
+        acceleration: Acceleration=None,
+        attitude: Attitude=None,
+        angular_velocity: AngularVelocity=None,
         occlusion=Occlusion.UNKNOWN,
-        origin=NominalOriginStandard,
     ):
         self.t = t
-        self.origin = origin
         self.occlusion = occlusion
 
         # -- position
-        if isinstance(position, (list, np.ndarray)):
-            position = Translation(position, origin=origin)
+        assert isinstance(position, (Position, NoneType))
         self.position = position
+
         # -- bbox
+        assert isinstance(box, (Box2D, Box3D, NoneType))
         self.box = box
+
         # -- velocity
-        if isinstance(velocity, (list, np.ndarray)):
-            velocity = VectorDirMag(velocity, origin=origin)
+        assert isinstance(velocity, (Velocity, NoneType))
         self.velocity = velocity
+
         # -- accel
-        if isinstance(acceleration, (list, np.ndarray)):
-            acceleration = VectorDirMag(acceleration, origin=origin)
+        assert isinstance(acceleration, (Acceleration, NoneType))
         self.acceleration = acceleration
+
         # -- attitude
-        if isinstance(attitude, (quaternion.quaternion)):
-            attitude = Rotation(attitude, origin=origin)
-        elif isinstance(attitude, (np.ndarray)):
-            if attitude.shape == (3, 3):
-                attitude = Rotation(attitude, origin=origin)
-            else:
-                raise NotImplementedError(attitude.shape)
+        assert isinstance(attitude, (Attitude, NoneType))
         self.attitude = attitude  # world 2 body
+
         # -- angular vel
-        if isinstance(angular_velocity, (list, np.ndarray)):
-            angular_velocity = VectorDirMag(angular_velocity, origin=origin)
+        assert isinstance(angular_velocity, (AngularVelocity, NoneType))
         self.angular_velocity = angular_velocity
 
     def predict(self, dt):
@@ -158,26 +184,40 @@ class ObjectState:
             att,
             ang,
             occlusion=self.occlusion,
-            origin=self.origin,
         )
         return VS
-
-    def local_to_global(self, vehicle):
-        """Transforms another vehicle's state from local to global
-
-        assumes self is in global
-        assumes self is the local origin of vehicle
-        assumes vehicle is in the self frame
+    
+    def change_reference(self, other: ReferenceFrame | ObjectState, inplace: bool):
+        """Transform the reference frame of this object
+        
+        If other is a reference frame, assume it is static.
+        If other is another object state, it may not be static.
         """
-        return local_to_global(self, vehicle)
+        # wrapping reference frame
+        if isinstance(other, ReferenceFrame):
+            reference = other
+        elif isinstance(other, ObjectState):
+            reference = other.as_reference()
+        else:
+            raise NotImplementedError(type(other))
+        obj = self if inplace else deepcopy(self)
 
-    def global_to_local(self, vehicle):
-        """Transforms another vehicle's state from global to local
+        # transforms
+        if obj.position is not None:
+            obj.position.change_reference(reference, inplace=True)
+        if obj.velocity is not None:
+            obj.velocity.change_reference(reference, inplace=True)
+        if obj.acceleration is not None:
+            obj.acceleration.change_reference(reference, inplace=True)
+        if obj.box is not None:
+            obj.box.change_reference(reference, inplace=True)
+        if obj.attitude is not None:
+            obj.attitude.change_reference(reference, inplace=True)
+        if obj.angular_velocity is not None:
+            obj.angular_velocity.change_reference(reference, inplace=True)
 
-        assumes self is in global
-        assumes vehicle is in global
-        """
-        return global_to_local(self, vehicle)
+        if not inplace:
+            return obj
 
     def set_occlusion_by_depth(self, depth_image, check_origin=True):
         """sets occlusion level using depth image
@@ -217,9 +257,9 @@ class ObjectState:
         """Sets occlusion level using lidar captures"""
         box_self = self.box
         if check_origin:
-            if not self.box.origin.allclose(pc.calibration.origin):
+            if not self.box.reference.allclose(pc.calibration.reference):
                 box_self = deepcopy(self.box)
-                box_self.change_origin(pc.calibration.origin)
+                box_self.change_reference(pc.calibration.reference, inplace=True)
 
         # then check the point cloud
         filter_pts_in_box = filter_points_in_box(pc.data, box_self.corners)
@@ -288,31 +328,6 @@ class ObjectState:
                     occ = Occlusion.COMPLETE
         self.occlusion = occ
 
-    def change_origin(self, origin_new):
-        pos = self.position
-        pos.change_origin(origin_new) if pos is not None else None
-        box = self.box
-        box.change_origin(origin_new) if box is not None else None
-        vel = self.velocity
-        vel.change_origin(origin_new) if vel is not None else None
-        acc = self.acceleration
-        acc.change_origin(origin_new) if acc is not None else None
-        att = self.attitude
-        att.change_origin(origin_new) if att is not None else None
-        ang = self.angular_velocity
-        ang.change_origin(origin_new) if ang is not None else None
-        self.set(
-            self.t,
-            pos,
-            box,
-            vel,
-            acc,
-            att,
-            ang,
-            occlusion=self.occlusion,
-            origin=origin_new,
-        )
-
     def format_as(self, format_):
         try:
             box2d = self.box2d
@@ -344,7 +359,7 @@ class ObjectState:
                     box3d.t[2],
                     box3d.yaw,
                     self.score,
-                    self.origin.format_as_string(),
+                    self.reference.format_as_string(),
                 )
             )
         elif format_.lower() == "avstack":
@@ -372,7 +387,7 @@ class ObjectState:
                     box3d.q.y,
                     box3d.q.z,
                     box3d.where_is_t,
-                    self.origin.format_as_string(),
+                    self.reference.format_as_string(),
                 )
             )
         else:
@@ -396,25 +411,29 @@ class ObjectState:
         accel = np.array([float(d) for d in line[idx : idx + 3]])
         idx += 3
         h, w, l, yaw = [float(d) for d in line[idx : idx + 4]]
+        attitude = tforms.rotz(yaw)
         idx += 4
         where_is_t = line[idx]
         idx += 1
-        origin = get_origin_from_line(line[idx])
+        reference = get_reference_from_line(line[idx])
 
-        box = bbox.Box3D([h, w, l, np.zeros((3,)), yaw], origin, where_is_t=where_is_t)
-        self.ID = ID
-        attitude = tforms.rotz(yaw)
+        position = Vector(position, reference)
+        velocity = Vector(velocity, reference)
+        accel = Vector(accel, reference)
+        rotation = Rotation(attitude, reference)
         angular_velocity = None
+        box = bbox.Box3D(position, rotation, [h,w,l])
+        self.ID = ID
+
         self.set(
             timestamp,
             position,
             box,
             velocity,
             accel,
-            attitude,
+            rotation,
             angular_velocity,
             occlusion=occlusion,
-            origin=origin,
         )
 
     def get_location(self, format_as="avstack"):
@@ -496,7 +515,7 @@ def global_to_local(v_self, v_other):
         att,
         ang,
         occlusion=v_self.occlusion,
-        origin=v_other.origin,
+        origin=v_other.reference,
     )
     return VS
 
@@ -546,7 +565,7 @@ def local_to_global(v_self, v_other):
         att,
         ang,
         occlusion=v_self.occlusion,
-        origin=v_self.origin,
+        origin=v_self.reference,
     )
     return VS
 
@@ -578,7 +597,7 @@ def global_to_local_from_origin(o_self, v_other):
         att,
         ang,
         occlusion=v_other.occlusion,
-        origin=v_other.origin,
+        origin=v_other.reference,
     )
     return VS
 

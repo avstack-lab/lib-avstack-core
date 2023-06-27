@@ -26,7 +26,7 @@ class PassthroughTracker2D(_TrackingAlgorithm):
     def __init__(self, **kwargs):
         super().__init__("PassthroughTracker")
 
-    def track(self, t, frame, detections, **kwargs):
+    def track(self, t, frame, detections, platform, **kwargs):
         tracks = []
         t = detections.timestamp
         # frame = detections_2d.frame
@@ -68,9 +68,10 @@ class BasicBoxTracker2D(_TrackingAlgorithm):
 
     def spawn_track_from_detection(self, detection):
         return BasicBoxTrack2D(
-            self.t,
-            detection.box2d,
-            detection.obj_type,
+            t0=self.t,
+            box2d=detection.box2d,
+            reference=detection.reference,
+            obj_type=detection.obj_type,
         )
 
 
@@ -88,7 +89,7 @@ class SortTracker2D(_TrackingAlgorithm):
         )
         self.sort_algorithm = Sort()
 
-    def track(self, t, frame, detections, **kwargs):
+    def track(self, t, frame, detections, platform, **kwargs):
         """Just a wrapping to the sort algorithm
 
         sort inputs: [xmin, ymin, xmax, ymax, score]

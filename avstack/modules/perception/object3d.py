@@ -37,9 +37,9 @@ class GroundTruth3DObjectDetector(_PerceptionAlgorithm):
         if ground_truth.objects is not None:
             for obj in ground_truth.objects:
                 if hasattr(obj, "box"):
-                    obj_in_ego = ground_truth.ego_state.global_to_local(obj)
+                    obj_in_ego = obj.change_reference(ground_truth.ego_state, inplace=False)
                     det = detections.BoxDetection(
-                        self.MODE, obj_in_ego.box, obj.obj_type
+                        self.MODE, obj_in_ego.box, obj_in_ego.box.reference, obj.obj_type
                     )
                 else:
                     raise NotImplementedError(obj)

@@ -7,12 +7,10 @@
 from copy import deepcopy
 
 import numpy as np
-import quaternion
 
 import avstack.geometry.bbox as bbox
 from avstack import calibration, exceptions
-from avstack.geometry import NominalOriginStandard, Origin
-from avstack.geometry import transformations as tforms
+from avstack.geometry import transformations as tforms, q_stan_to_cam, Position, Attitude, GlobalOrigin3D, ReferenceFrame
 
 import sys
 sys.path.append("tests/")
@@ -29,6 +27,38 @@ from utilities import get_test_sensor_data
     box_2d,
     box_3d,
 ) = get_test_sensor_data()
+
+
+def get_box():
+    x = np.array([3.4, 5.4, -10.2])
+    q = tforms.transform_orientation([0, 0, 1.2], "euler", "quat")
+    pos = Position(x, GlobalOrigin3D)
+    rot = Attitude(q, GlobalOrigin3D)
+    return bbox.Box3D(pos, rot, [3, 4, 5])
+
+
+def test_box_translate():
+    box = get_box()
+    L = Position(np.random.rand(3), GlobalOrigin3D)
+    box2 = box.translate(L, inplace=False)
+    assert not box2.position.allclose(box.position)
+    assert box2.rotation.allclose(box.rotation)
+
+
+def test_box_rotation():
+    box = get_box()
+    R = Attitude(q_stan_to_cam, GlobalOrigin3D)
+    box2 = box.rotate(R, inplace=False)
+    assert not box2.position.allclose(box.position)
+    assert not box2.rotation.allclose(box.rotation)
+
+
+def test_box_rotation_attitude():
+    box = get_box()
+    R = Attitude(q_stan_to_cam, GlobalOrigin3D)
+    box2 = box.rotate_attitude(R, inplace=False)
+    assert box2.position.allclose(box.position)
+    assert not box2.rotation.allclose(box.rotation)
 
 
 def test_2d_intersection_union():
@@ -48,17 +78,16 @@ def test_2d_intersection_union():
 
 
 def test_3d_intersection_union():
-    q = tforms.transform_orientation([0, 0, 1.2], "euler", "quat")
-    box1 = bbox.Box3D([3, 4, 5, [3.4, 5.4, -10.2], q], origin=NominalOriginStandard)
-    box1a = box1.translate(np.array([1, 1, 1]))
+    box1 = get_box()
+    box1a = box1.translate(Position(np.array([1, 1, 1]), GlobalOrigin3D), inplace=False)
     assert bbox.box_intersection(box1.corners, box1a.corners) > 0.0
-    box2 = bbox.Box3D([3, 4, 5, [10, 5.4, -10.2], q], origin=NominalOriginStandard)
+    pos2 = Position(np.array([10, 5.4, -10.2]), GlobalOrigin3D)
+    box2 = bbox.Box3D(pos2, box1.rotation, [3,4,5])
     assert bbox.box_intersection(box1.corners, box2.corners) == 0.0
 
 
 def test_same_intersection_union():
-    q = tforms.transform_orientation([0, 0, 1.2], "euler", "quat")
-    box1 = bbox.Box3D([3, 4, 5, [3.4, 5.4, -10.2], q], origin=NominalOriginStandard)
+    box1 = get_box()
     assert abs(
         bbox.box_intersection(box1.corners, box1.corners)
         - bbox.box_union(box1.corners, box1.corners)
@@ -99,24 +128,29 @@ def test_2d_box_valid():
         pass
 
 
-def test_3d_box():
-    q = tforms.transform_orientation([0, 0, 1.2], "euler", "quat")
-    box = bbox.Box3D([3, 4, 5, [3.4, 5.4, -10.2], q], origin=NominalOriginStandard)
-
-
 def test_bbox_from_string():
-    q = tforms.transform_orientation([0, 0, 1.2], "euler", "quat")
-    box = bbox.Box3D([3, 4, 5, [3.4, 5.4, -10.2], q], origin=NominalOriginStandard)
+    box = get_box()
     box_str = box.format_as_string()
     box_from_str = bbox.get_box_from_line(box_str)
-    assert box_from_str == box
+    assert box_from_str.allclose(box)
 
 
 def test_box_IoU():
+    x_1 = np.array([3.4, 5.4, -10.2])
     q_1 = tforms.transform_orientation([0, 0, 1.2], "euler", "quat")
-    box_1 = bbox.Box3D([3, 4, 5, [3.4, 5.4, -10.2], q_1], origin=NominalOriginStandard)
+    box_1 = bbox.Box3D(
+        Position(x_1, GlobalOrigin3D),
+        Attitude(q_1, GlobalOrigin3D),
+        [3, 4, 5]
+    )
+
+    x_2 = np.array([5, 5, -10.4])
     q_2 = tforms.transform_orientation([0, 0, 1.4], "euler", "quat")
-    box_2 = bbox.Box3D([3, 4, 5, [5, 5, -10.4], q_2], origin=NominalOriginStandard)
+    box_2 = bbox.Box3D(
+        Position(x_2, GlobalOrigin3D),
+        Attitude(q_2, GlobalOrigin3D),
+        [3, 4, 5]
+    )
     assert box_1.IoU(box_2) > 0
 
 
@@ -134,8 +168,8 @@ def test_2d_3d_iou():
 
 def corners_close_perm_invar(c1, c2):
     """Sort matrices to be permutation-invariant"""
-    c1_pm = sort_corners_invariant(np.round(c1, 3))
-    c2_pm = sort_corners_invariant(np.round(c2, 3))
+    c1_pm = sort_corners_invariant(np.round(c1.x, 3))
+    c2_pm = sort_corners_invariant(np.round(c2.x, 3))
     return np.allclose(c1_pm, c2_pm)
 
 
@@ -160,48 +194,56 @@ def sort_corners_invariant(mat):
 def get_origins():
     x1 = np.array([1, 1, 1])
     q1 = tforms.transform_orientation([1, 0.2, -0.5], "euler", "quat")
-    O1 = Origin(x1, q1)
+    O1 = ReferenceFrame(x1, q1, GlobalOrigin3D)
     x2 = np.array([-1, 0, -1])
     q2 = tforms.transform_orientation([-0.5, 0.7, -0.1], "euler", "quat")
-    O2 = Origin(x2, q2)
+    O2 = ReferenceFrame(x2, q2, GlobalOrigin3D)
     return O1, O2
 
 
-def test_change_origin_simple_corners():
-    x1 = np.array([1, -1, 1])
-    q1 = tforms.transform_orientation([0, 0, np.pi - np.pi / 3], "euler", "quat")
-    O1 = Origin(x1, q1)
+def test_change_reference_simple_corners():
+    # make box
+    x_obj = np.array([1,2,3])
     q_obj = tforms.transform_orientation([0, 0, 0], "euler", "quat")
-    box_1 = bbox.Box3D([2, 8, 15, [1, 2, 3], q_obj], origin=NominalOriginStandard)
+    box_1 = bbox.Box3D(
+        Position(x_obj, GlobalOrigin3D),
+        Attitude(q_obj, GlobalOrigin3D),
+        [2,8,15]
+    )
+
+    # corners in global
     corners_pre_1 = box_1.corners
     corners_pre_2 = box_1.corners_global
-    box_1.change_origin(O1)
-    # corners_new_full_man = q_mult_vec(q1 , corners_pre_1 - x1)
+    # corners in new reference
+    x1 = np.array([1, -1, 1])
+    q1 = tforms.transform_orientation([0, 0, np.pi - np.pi / 3], "euler", "quat")
+    O1 = ReferenceFrame(x1, q1, GlobalOrigin3D)
+    box_1.change_reference(O1, inplace=True)
     corners_new = box_1.corners
+    # check corners
     corners_new_global = box_1.corners_global
-    corners_new_man = O1 @ corners_pre_1
-    corners_new_invert = O1.inv() @ box_1.corners
-
+    corners_new_man = corners_pre_1.change_reference(O1, inplace=False)
+    corners_new_invert = corners_new_man.change_reference(corners_pre_1.reference, inplace=False)
+    
     assert corners_close_perm_invar(corners_pre_1, corners_pre_2)
     assert corners_close_perm_invar(corners_new_man, corners_new)
     assert corners_close_perm_invar(corners_new_invert, corners_pre_1)
     assert corners_close_perm_invar(corners_pre_1, corners_new_global)
 
 
-def test_change_origin_full_corners():
-    x1 = np.array([1, -1, 1])
-    q1 = tforms.transform_orientation([1, 0.2, -0.5], "euler", "quat")
-    O1 = Origin(x1, q1)
-    # q_obj = tforms.transform_orientation([1.0,0.7,-0.3], 'euler', 'quat')
-    q_obj = tforms.transform_orientation([1.0, 0.7, -0.3], "euler", "quat")
-    box_1 = bbox.Box3D([2, 8, 15, [1, 2, 3], q_obj], origin=NominalOriginStandard)
+def test_change_reference_full_corners():
+    
+    box_1 = get_box()
     corners_pre_1 = box_1.corners
     corners_pre_2 = box_1.corners_global
-    box_1.change_origin(O1)
+    x1 = np.array([1, -1, 1])
+    q1 = tforms.transform_orientation([0, 0, np.pi - np.pi / 3], "euler", "quat")
+    O1 = ReferenceFrame(x1, q1, GlobalOrigin3D)
+    box_1.change_reference(O1, inplace=True)
     corners_new = box_1.corners
     corners_new_global = box_1.corners_global
-    corners_new_man = O1 @ corners_pre_1
-    corners_new_invert = O1.inv() @ box_1.corners
+    corners_new_man = corners_pre_1.change_reference(O1, inplace=False)
+    corners_new_invert = corners_new_man.change_reference(corners_pre_1.reference, inplace=False)
 
     assert corners_close_perm_invar(corners_pre_1, corners_pre_2)
     assert corners_close_perm_invar(corners_new_man, box_1.corners)
@@ -209,20 +251,20 @@ def test_change_origin_full_corners():
     assert corners_close_perm_invar(corners_pre_1, corners_new_global)
 
 
-def test_change_origin_iou():
+def test_change_reference_iou():
     x1 = np.array([1, -1, 1])
     q1 = tforms.transform_orientation([1, 0.2, -0.5], "euler", "quat")
-    O1 = Origin(x1, q1)
+    O1 = ReferenceFrame(x1, q1, GlobalOrigin3D)
     x2 = np.array([-1, 0, -1])
     q2 = tforms.transform_orientation([-0.5, 0.7, -0.1], "euler", "quat")
-    O2 = Origin(x2, q2)
+    O2 = ReferenceFrame(x2, q2, GlobalOrigin3D)
 
     q_obj = tforms.transform_orientation([0, 0, -0.3], "euler", "quat")
-    box_1 = bbox.Box3D([2, 8, 16, [1, 2, 3], q_obj], origin=NominalOriginStandard)
+    box_1 = get_box()
     box_2 = deepcopy(box_1)
-    box_1.change_origin(O1)
-    box_2.change_origin(O2)
-    assert np.allclose(box_1.t.vector_global, box_2.t.vector_global)
+    box_1.change_reference(O1, inplace=True)
+    box_2.change_reference(O2, inplace=True)
+    assert box_1.center_global.allclose(box_2.center_global)
     assert corners_close_perm_invar(box_1.corners_global, box_2.corners_global)
     assert np.allclose(box_1.IoU(box_2), 1.0)
 
@@ -236,7 +278,7 @@ def test_io_2d_bbox():
     P = np.random.rand(3, 4)
     img_shape = (256, 1024)
     cam_calib = calibration.CameraCalibration(
-        NominalOriginStandard, P, img_shape=img_shape
+        GlobalOrigin3D, P, img_shape=img_shape
     )
     box1 = bbox.Box2D([-10, 20, 50, 60], cam_calib)
     box2 = bbox.get_box_from_line(box1.format_as_string())
@@ -244,16 +286,18 @@ def test_io_2d_bbox():
 
 
 def test_io_3d_bbox():
-    box1 = bbox.Box3D([1, 1, 1, [1, 2, 3], np.quaternion(1)], NominalOriginStandard)
+    pos = Position(np.array([1,2,3]), GlobalOrigin3D)
+    rot = Attitude(np.quaternion(1), GlobalOrigin3D)
+    box1 = bbox.Box3D(pos, rot, [1,1,1])
     box2 = bbox.get_box_from_line(box1.format_as_string())
-    assert box1 == box2
+    assert box1.allclose(box2)
 
 
 def test_io_2d_segmask():
     P = np.random.rand(3, 4)
     img_shape = (256, 1024)
     cam_calib = calibration.CameraCalibration(
-        NominalOriginStandard, P, img_shape=img_shape
+        GlobalOrigin3D, P, img_shape=img_shape
     )
     segmask1 = np.random.rand(*img_shape)
     segmask1 = bbox.SegMask2D(segmask1 > 0.5, cam_calib)

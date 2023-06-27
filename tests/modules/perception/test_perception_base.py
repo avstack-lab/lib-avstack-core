@@ -8,23 +8,8 @@
 
 """
 
-import os
 import sys
-
-import numpy as np
-
-from avstack.calibration import Calibration, CameraCalibration
-from avstack.datastructs import DataManager
-from avstack.environment.objects import VehicleState
-from avstack.geometry import (
-    Box3D,
-    CameraCoordinates,
-    Rotation,
-    StandardCoordinates,
-    Transform,
-    Translation,
-    bbox,
-)
+from avstack.geometry import GlobalOrigin3D
 from avstack.modules import perception
 from avstack.sensors import LidarData
 
@@ -48,4 +33,4 @@ pc_bev = LidarData(pc.timestamp, pc.frame, pc.data[:, [1, 2]], lidar_calib, 100)
 
 def test_percep_base():
     percep = perception.object2dbev.Lidar2dCentroidDetector()
-    output = percep(pc_bev, "lidar-detector")
+    output = percep(pc_bev, GlobalOrigin3D, "lidar-detector")

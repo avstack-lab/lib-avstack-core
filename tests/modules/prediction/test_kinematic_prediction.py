@@ -40,6 +40,7 @@ def test_kinematic_prediction():
         t=0.10 * frame,
         frame=frame,
         detections=detector(ground_truth, frame=frame, identifier="detector-1"),
+        platform=ego.as_reference(),
         identifier="tracker-1",
     )
     objects_2d = []
@@ -49,8 +50,5 @@ def test_kinematic_prediction():
     assert len(preds_3d[ID]) == predictor.t_forward / predictor.dt
     t = predictor.dt
     for t in predictor.dt_predicts:
-        assert np.all(
-            preds_3d[ID][t].position
-            == objects_3d[0].position + objects_3d[0].velocity * t
-        )
-        assert np.all(preds_3d[ID][t].velocity == objects_3d[0].velocity)
+        assert preds_3d[ID][t].position.allclose(objects_3d[0].position + objects_3d[0].velocity * t)
+        assert preds_3d[ID][t].velocity.allclose(objects_3d[0].velocity)

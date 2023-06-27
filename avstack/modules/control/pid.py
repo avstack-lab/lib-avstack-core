@@ -12,7 +12,7 @@ from collections import deque
 
 import numpy as np
 
-from avstack.geometry import Transform, Translation
+from avstack.geometry import Pose, Vector
 
 
 """
@@ -89,17 +89,17 @@ class PIDLateralController(_PIDController):
         super().__init__(K_P, K_D, K_I, buffer_len)
         self.last_error = None
 
-    def __call__(self, t, current: Transform, target: Transform):
+    def __call__(self, t, current: Pose, target: Pose):
         """Run lateral control
 
         current and target are in global coordinates, standard
         """
-        v_begin = current.translation
+        v_begin = current.position
         xyz = [math.cos(current.rotation.yaw), math.sin(target.rotation.yaw), 0]
-        v_end = v_begin + Translation(xyz, origin=v_begin.origin)
-        v_vec = np.array([v_end.x - v_begin.x, v_end.y - v_begin.y, 0.0])
+        v_end = v_begin + Vector(xyz, reference=v_begin.reference)
+        v_vec = np.array([v_end.x[0] - v_begin.x[0], v_end.x[1] - v_begin.x[1], 0.0])
         w_vec = np.array(
-            [target.translation.x - v_begin.x, target.translation.y - v_begin.y, 0.0]
+            [target.position.x[0] - v_begin.x[0], target.position.x[1] - v_begin.x[1], 0.0]
         )
         error = -math.acos(
             np.clip(

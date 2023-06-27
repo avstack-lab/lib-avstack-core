@@ -10,16 +10,11 @@
 import sys
 
 import numpy as np
-import quaternion
 
-import avstack
 from avstack import GroundTruthInformation
-from avstack.environment import EnvironmentState
 from avstack.environment.objects import VehicleState
-from avstack.geometry import NominalOriginStandard, bbox
-from avstack.geometry import transformations as tforms
-from avstack.modules import planning, prediction, tracking
-from avstack.modules.perception.detections import LaneLineInSpace
+from avstack.geometry import GlobalOrigin3D, bbox, Position, Velocity, Acceleration, AngularVelocity, Attitude, transformations as tforms
+from avstack.modules import prediction, tracking
 from avstack.modules.planning.components import CollisionDetection
 
 
@@ -27,23 +22,24 @@ sys.path.append("tests/")
 from utilities import get_ego
 
 
+pos_obj = Position(np.array([0, 0, 0]), GlobalOrigin3D)
+rot_obj = Attitude(np.quaternion(1), GlobalOrigin3D)
+box_obj = bbox.Box3D(pos_obj, rot_obj, [2,2,5])
+
+
 def set_seed():
     seed = 10
     np.random.seed(seed)
 
 
-box_obj = bbox.Box3D(
-    [2, 2, 5, [0, 0, 0], np.quaternion(1)], NominalOriginStandard
-)  # box in local coordinates
-
-
 def get_object_no_collision(ego):
     set_seed()
+    ref = ego.position.reference
     pos_obj = ego.position + 10 * np.random.rand(3)
-    vel_obj = np.random.rand(3)
-    acc_obj = np.random.rand(3)
-    rot_obj = np.eye(3)
-    ang_obj = np.random.rand(3)
+    vel_obj = Velocity(np.random.rand(3), ref)
+    acc_obj = Acceleration(np.random.rand(3), ref)
+    rot_obj = Attitude(np.quaternion(1), ref)
+    ang_obj = AngularVelocity(np.quaternion(*np.random.rand(3)), ref)
     obj = VehicleState("car")
     obj.set(
         0,
@@ -53,20 +49,20 @@ def get_object_no_collision(ego):
         acc_obj,
         rot_obj,
         ang_obj,
-        origin=NominalOriginStandard,
     )
     return obj
 
 
 def get_object_collision(ego):
     set_seed()
+    ref = ego.position.reference
     pos_obj = (
-        ego.position + ego.velocity.vector * 3 + 0.5 * ego.acceleration.vector * 3**2
+        ego.position + ego.velocity * 3 + ego.acceleration * 0.5 * 3**2
     )
-    vel_obj = np.zeros(3)
-    acc_obj = np.zeros(3)
-    rot_obj = np.eye(3)
-    ang_obj = np.random.rand(3)
+    vel_obj = Velocity(np.zeros(3), ref)
+    acc_obj = Acceleration(np.zeros(3), ref)
+    rot_obj = Attitude(np.quaternion(1), ref)
+    ang_obj = AngularVelocity(np.quaternion(*np.random.rand(3)), ref)
     obj = VehicleState("car")
     obj.set(
         0,
@@ -76,20 +72,21 @@ def get_object_collision(ego):
         acc_obj,
         rot_obj,
         ang_obj,
-        origin=NominalOriginStandard,
     )
     return obj
 
 
 def get_object_collision_yaw(ego):
     set_seed()
+    ref = ego.position.reference
     pos_obj = (
-        ego.position + ego.velocity.vector * 3 + 0.5 * ego.acceleration.vector * 3**2
+        ego.position + ego.velocity * 3 + ego.acceleration * 0.5 * 3**2
     )
-    vel_obj = np.zeros(3)
-    acc_obj = np.zeros(3)
-    rot_obj = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])  # Anticlockwise 90 degree
-    ang_obj = np.random.rand(3)
+    vel_obj = Velocity(np.zeros(3), ref)
+    acc_obj = Acceleration(np.zeros(3), ref)
+    q = tforms.transform_orientation(np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]]), 'dcm', 'quat')  # Anticlockwise 90 degree
+    rot_obj = Attitude(q, ref)
+    ang_obj = AngularVelocity(np.quaternion(*np.random.rand(3)), ref)
     obj = VehicleState("car")
     obj.set(
         0,
@@ -99,7 +96,6 @@ def get_object_collision_yaw(ego):
         acc_obj,
         rot_obj,
         ang_obj,
-        origin=NominalOriginStandard,
     )
     return obj
 
@@ -124,6 +120,3 @@ def test_collision_detection():
     preds_3d = predictor(tracks, frame=frame)
     collision_detection = CollisionDetection(ego, tracks)
     collision_records = collision_detection.collision_monitor(pred_ego, preds_3d)
-
-    # assert collision_records[1] == 2.5
-    # assert collision_records[2] in [1.0, 1.5]

@@ -9,21 +9,20 @@
 """
 
 import numpy as np
-import quaternion
 
-from avstack.geometry import NominalOriginStandard, Rotation, Transform, Translation
+from avstack.geometry import GlobalOrigin3D, Rotation, Pose, Vector
 from avstack.modules import planning
 
 
 def test_waypoints():
     WPP = planning.WaypointPlan()
     assert WPP.needs_waypoint()
-    t_rot = Rotation(np.quaternion(1), origin=NominalOriginStandard)
-    t_pnt = Translation(5 + np.random.rand(3), origin=NominalOriginStandard)
-    target_point = Transform(t_rot, t_pnt)
+    t_rot = Rotation(np.quaternion(1), GlobalOrigin3D)
+    t_pnt = Vector(5 + np.random.rand(3), GlobalOrigin3D)
+    target_point = Pose(t_rot, t_pnt)
     target_speed = 10
     wp = planning.Waypoint(target_point, target_speed)
-    distance = np.linalg.norm(t_pnt.vector)
+    distance = t_pnt.norm()
     WPP.push(distance, wp)
 
     assert len(WPP) == 1

@@ -38,7 +38,7 @@ class EagerMOT:
     def tracks_confirmed(self):
         return self.tracker.tracks_confirmed
 
-    def __call__(self, t, detections_2d, detections_3d):
+    def __call__(self, t, detections_2d, detections_3d, platform):
         """
         detections_2d: dictionary for {sensor_ID: [detections]}
         detections_3d: dictionary for {sensor_ID: [detections]}
@@ -46,10 +46,10 @@ class EagerMOT:
         self.n_frames += 1
 
         # -- fuse objects
-        lone_2d, lone_3d, fused_detections = self.fusion(detections_2d, detections_3d)
+        lone_2d, lone_3d, fused_detections = self.fusion(detections_2d, detections_3d, platform)
 
         # -- track
-        tracks = self.tracker(t, lone_2d, lone_3d, fused_detections)
+        tracks = self.tracker(t, lone_2d, lone_3d, fused_detections, platform)
 
         return tracks
 
@@ -80,17 +80,17 @@ class EagerMOTTracking:
         self.n_box_confirmed = n_box_confirmed
         self.n_joint_coast = n_joint_coast
 
-    def __call__(self, t, lone_2d, lone_3d, fused_detections):
+    def __call__(self, t, lone_2d, lone_3d, fused_detections, platform):
         """Main call for EagerMOT tracking"""
         # import ipdb; ipdb.set_trace()
         self.n_frames += 1
         for trk in self.tracks:
             trk.predict(t)
         assign_1, lone_fused_1, lone_3d_1, lone_track_1 = self._first_data_association(
-            lone_3d, fused_detections
+            lone_3d, fused_detections, platform
         )
         assign_2, lone_fused_2, lone_2d_2, lone_track_2 = self._second_data_association(
-            lone_2d, lone_fused_1, lone_track_1
+            lone_2d, lone_fused_1, lone_track_1, platform
         )
         self._update(assign_1, assign_2)
         self._maintenance(lone_3d_1, lone_2d_2, lone_fused_2)
@@ -173,7 +173,7 @@ class EagerMOTTracking:
             else:
                 raise NotImplementedError
 
-    def _first_data_association(self, lone_3d, fused_detections):
+    def _first_data_association(self, lone_3d, fused_detections, platform):
         """First association of fused + 3d detections to existing tracks"""
         # Get assignment scores
         i = 0
@@ -206,13 +206,13 @@ class EagerMOTTracking:
         rows = fused_detections + lone_3d
         cols = self.tracks
         lone_3d, lone_tracks, assigns = assign_and_create_results(
-            A, rows, cols, 1, 1, self.threshold_1
+            A, rows, cols, 1, 1, self.threshold_1, platform
         )
         lone_fused = [l for l in lone_3d if isinstance(l, (JointBoxDetection,))]
         lone_3d = [l for l in lone_3d if not isinstance(l, (JointBoxDetection,))]
         return assigns, lone_fused, lone_3d, lone_tracks
 
-    def _second_data_association(self, lone_2d, lone_fused_1, lone_tracks):
+    def _second_data_association(self, lone_2d, lone_fused_1, lone_tracks, platform):
         """Second association of 2d detections to remaining tracks"""
         A = np.zeros((len(lone_2d) + len(lone_fused_1), len(lone_tracks)))
         # Get assignment scores
@@ -241,7 +241,7 @@ class EagerMOTTracking:
         rows = lone_2d + lone_fused_1
         cols = lone_tracks
         lone_2d, lone_tracks, assigns = assign_and_create_results(
-            -A, rows, cols, 1, 1, -self.threshold_2
+            -A, rows, cols, 1, 1, -self.threshold_2, platform
         )
         lone_fused = [l for l in lone_2d if isinstance(l, (JointBoxDetection,))]
         lone_2d = [l for l in lone_2d if not isinstance(l, (JointBoxDetection,))]
@@ -255,7 +255,7 @@ class EagerMOTFusion:
         """
         self.threshold = threshold
 
-    def __call__(self, detections_2d, detections_3d):
+    def __call__(self, detections_2d, detections_3d, platform):
         """
         detections_2d: dictionary for {sensor_ID: [detections]}
         detections_3d: dictionary for {sensor_ID: [detections]}
@@ -305,13 +305,13 @@ class EagerMOTFusion:
         rows = detections_2d
         cols = detections_3d
         lone_2d, lone_3d, fused_detections = assign_and_create_results(
-            -A, rows, cols, ID_2d, ID_3d, -self.threshold
+            -A, rows, cols, ID_2d, ID_3d, -self.threshold, platform
         )
 
         return lone_2d, lone_3d, fused_detections
 
 
-def assign_and_create_results(A, rows, cols, sensor_rows, sensor_cols, threshold):
+def assign_and_create_results(A, rows, cols, sensor_rows, sensor_cols, threshold, reference):
     # Perform greedy association
     assign = assignment.greedy_assignment(A, threshold=threshold)
     assign_map = assign.iterate_over("rows")
@@ -324,11 +324,11 @@ def assign_and_create_results(A, rows, cols, sensor_rows, sensor_cols, threshold
         obj_type = rows[i].obj_type
         try:
             joint_i = JointBoxDetection(
-                [sensor_rows, sensor_cols], rows[i].data, cols[j].data, obj_type
+                [sensor_rows, sensor_cols], rows[i].data, cols[j].data, reference, obj_type
             )
         except AttributeError as e:
             joint_i = JointBoxDetectionAndOther(
-                [sensor_rows, sensor_cols], rows[i].data, cols[j], obj_type
+                [sensor_rows, sensor_cols], rows[i].data, cols[j], reference, obj_type
             )
         joint_instances.append(joint_i)
 
