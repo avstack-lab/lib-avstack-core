@@ -55,15 +55,55 @@ class AngularVelocity(Rotation):
 
 
 class Pose:
-    def __init__(self, position: Vector, rotation: Rotation) -> None:
+    def __init__(self, position: Position, attitude: Attitude) -> None:
         self.position = position
-        self.rotation = rotation
+        self.attitude = attitude
+
+    @property
+    def position(self):
+        return self._position
+    
+    @position.setter
+    def position(self, position):
+        if not isinstance(position, Position):
+            raise TypeError(f"Input position type {type(position)} not allowed")
+        self._position = position
+
+    @property
+    def attitude(self):
+        return self._attitude
+    
+    @attitude.setter
+    def attitude(self, attitude):
+        if not isinstance(attitude, Attitude):
+            raise TypeError(f"Input position type {type(attitude)} not allowed")
+        self._attitude = attitude
 
 
 class Twist:
-    def __init__(self, linear: Vector, angular: Vector) -> None:
+    def __init__(self, linear: Velocity, angular: AngularVelocity) -> None:
         self.linear = linear
         self.angular = angular
+
+    @property
+    def linear(self):
+        return self._linear
+    
+    @linear.setter
+    def linear(self, linear):
+        if not isinstance(linear, Velocity):
+            raise TypeError(f"Input position type {type(linear)} not allowed")
+        self._linear = linear
+
+    @property
+    def angular(self):
+        return self._angular
+    
+    @angular.setter
+    def angular(self, angular):
+        if not isinstance(angular, AngularVelocity):
+            raise TypeError(f"Input position type {type(angular)} not allowed")
+        self._angular = angular
 
 
 class _PointMatrix:
