@@ -8,7 +8,7 @@ import numpy as np
 import quaternion
 from filterpy.kalman import KalmanFilter
 
-from avstack.geometry import Box2D, Box3D, Position, Attitude
+from avstack.geometry import Attitude, Box2D, Box3D, Position
 from avstack.geometry import transformations as tforms
 
 
@@ -78,9 +78,9 @@ class EagerMOTTrack:
         if self.box3d_initialized:
             x, y, z, yaw, h, w, l = self.kf.x[:7, 0]
             q = tforms.transform_orientation([0, 0, yaw], "euler", "quat")
-            pos = Position(np.array([x,y,z]), self.box3d_origin)
+            pos = Position(np.array([x, y, z]), self.box3d_origin)
             rot = Attitude(q, self.box3d_origin)
-            return Box3D(pos, rot, [h,w,l])
+            return Box3D(pos, rot, [h, w, l])
         else:
             return None
 

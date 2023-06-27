@@ -8,8 +8,10 @@
 
 """
 from __future__ import annotations
+
 import numpy as np
-from avstack.geometry import get_reference_from_line
+
+from avstack.geometry.refchoc import get_reference_from_line
 
 
 def read_calibration_from_line(line):
@@ -22,9 +24,11 @@ def read_calibration_from_line(line):
         try:
             channel_order = elems[18]
         except IndexError:
-            channel_order = 'bgr'
+            channel_order = "bgr"
         reference = get_reference_from_line(" ".join(elems[19:]))
-        return CameraCalibration(reference, P_cam, img_shape, channel_order=channel_order)
+        return CameraCalibration(
+            reference, P_cam, img_shape, channel_order=channel_order
+        )
     else:
         reference = get_reference_from_line(" ".join(elems[1:]))
         return Calibration(reference)
@@ -53,7 +57,7 @@ class Calibration:
             filename = filename + ".txt"
         with open(filename, "w") as f:
             f.write(self.format_as_string())
-            
+
 
 class CameraCalibration(Calibration):
     def __init__(

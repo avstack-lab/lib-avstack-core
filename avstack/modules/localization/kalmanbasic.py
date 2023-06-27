@@ -11,7 +11,8 @@
 import numpy as np
 import quaternion
 
-from avstack.geometry import transformations as tforms, Position, Attitude, Velocity, GlobalOrigin3D
+from avstack.geometry import Attitude, GlobalOrigin3D, Position, Velocity
+from avstack.geometry import transformations as tforms
 from avstack.sensors import DataBuffer, ImuBuffer
 
 from .base import _LocalizationAlgorithm
@@ -157,7 +158,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
                 self._update(t, z, R)
 
             # Make vehicle state object
-            self.position = Position(self.x[:3], self.reference) # in ENU
+            self.position = Position(self.x[:3], self.reference)  # in ENU
             self.velocity = Velocity(self.x[3:6], self.reference)  # in ENU
             self.acceleration = None
             if self.velocity.norm() > 0:
@@ -171,7 +172,10 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
             left = np.cross(up, forward)
             up = np.cross(forward, left)
             R_enu_2_body = np.array([forward, left, up])  # R_enu_2_body
-            self.attitude = Attitude(tforms.transform_orientation(R_enu_2_body, 'dcm', 'quat'), self.reference)  # from velocity
+            self.attitude = Attitude(
+                tforms.transform_orientation(R_enu_2_body, "dcm", "quat"),
+                self.reference,
+            )  # from velocity
             self.angular_velocity = None
             self.ego_template.set(
                 self.t,
@@ -180,7 +184,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
                 self.velocity,
                 self.acceleration,
                 self.attitude,
-                self.angular_velocity
+                self.angular_velocity,
             )
             ego_loc = self.ego_template
 
@@ -371,7 +375,7 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
             velocity,
             acceleration,
             attitude,
-            angular_velocity
+            angular_velocity,
         )
 
         return self.ego_template

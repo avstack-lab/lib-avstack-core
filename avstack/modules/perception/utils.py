@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from avstack.geometry import q_cam_to_stan, GlobalOrigin3D, Position, Attitude
+from avstack.geometry import Attitude, GlobalOrigin3D, Position, q_cam_to_stan
 from avstack.geometry.bbox import Box2D, Box3D, SegMask2D
 from avstack.geometry.transformations import transform_orientation
 
@@ -45,7 +45,7 @@ ci_classes = [
     ("bus", ["bus"]),
     ("train", ["train"]),
     ("motorcycle", ["motorcycle"]),
-    ("bicycle", ["bicycle"])
+    ("bicycle", ["bicycle"]),
 ]
 
 carla_clases = [
@@ -60,12 +60,12 @@ coco_classes = [("person", ped_classes), ("car", car_classes), ("bicycle", bic_c
 
 class_maps = {
     "kitti": {k: ks[0] for ks in k_classes for k in ks[1]},
-    "cityscapes" : {k:ks[0] for ks in ci_classes for k in ks[1]},
+    "cityscapes": {k: ks[0] for ks in ci_classes for k in ks[1]},
     "nuscenes": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "nuimages": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "carla": {k: ks[0] for ks in carla_clases for k in ks[1]},
     "coco-person": {k: ks[0] for ks in coco_person_classes for k in ks[1]},
-    "coco":{k: ks[0] for ks in coco_classes for k in ks[1]},
+    "coco": {k: ks[0] for ks in coco_classes for k in ks[1]},
 }
 
 
@@ -112,7 +112,9 @@ def convert_mm2d_to_avstack(
     # -- make objects
     if segms is None:
         dets = [
-            BoxDetection(source_identifier, Box2D(bbox, calib), calib.reference, obj_type, score)
+            BoxDetection(
+                source_identifier, Box2D(bbox, calib), calib.reference, obj_type, score
+            )
             for bbox, obj_type, score in zip(bboxes, obj_type_text, scores)
             if obj_type in whitelist
         ]
@@ -164,7 +166,7 @@ def convert_mm3d_to_avstack(
         scores = result_.pred_instances_3d.scores_3d.cpu().numpy()
     else:
         raise NotImplementedError(input_data)
-    
+
     # -- convert boxes
     prev_locs = []
     for box, label, score in zip(bboxes, labels, scores):
@@ -252,11 +254,14 @@ def convert_mm3d_to_avstack(
                 # make box output
                 pos = Position(x_O_2_obj_in_O, reference)
                 rot = Attitude(q_O_2_obj, reference)
-                box3d = Box3D(pos, rot, [h,w,l], where_is_t=where_is_t)
+                box3d = Box3D(pos, rot, [h, w, l], where_is_t=where_is_t)
 
                 # -- pruning
                 # ---- too low
-                if prune_low and (box3d.t.change_reference(GlobalOrigin3D, inplace=False)[2] < thresh_low):
+                if prune_low and (
+                    box3d.t.change_reference(GlobalOrigin3D, inplace=False)[2]
+                    < thresh_low
+                ):
                     if verbose:
                         print("Box registered uncharacteristically low...skipping")
                     continue
@@ -273,6 +278,10 @@ def convert_mm3d_to_avstack(
                         continue
                 # ---- we made it!
                 prev_locs.append(x_O_2_obj_in_O)
-                dets.append(BoxDetection(source_identifier, box3d, box3d.reference, obj_type, score))
+                dets.append(
+                    BoxDetection(
+                        source_identifier, box3d, box3d.reference, obj_type, score
+                    )
+                )
 
     return dets

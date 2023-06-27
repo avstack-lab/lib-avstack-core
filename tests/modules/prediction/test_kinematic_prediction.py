@@ -50,5 +50,7 @@ def test_kinematic_prediction():
     assert len(preds_3d[ID]) == predictor.t_forward / predictor.dt
     t = predictor.dt
     for t in predictor.dt_predicts:
-        assert preds_3d[ID][t].position.allclose(objects_3d[0].position + objects_3d[0].velocity * t)
+        assert preds_3d[ID][t].position.allclose(
+            objects_3d[0].position + objects_3d[0].velocity * t
+        )
         assert preds_3d[ID][t].velocity.allclose(objects_3d[0].velocity)

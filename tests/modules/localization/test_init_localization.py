@@ -15,7 +15,15 @@ import quaternion
 
 from avstack import GroundTruthInformation
 from avstack.environment.objects import VehicleState
-from avstack.geometry import GlobalOrigin3D, bbox, Position, Velocity, Acceleration, Attitude, AngularVelocity
+from avstack.geometry import (
+    Acceleration,
+    AngularVelocity,
+    Attitude,
+    GlobalOrigin3D,
+    Position,
+    Velocity,
+    bbox,
+)
 from avstack.modules import localization
 
 
@@ -24,7 +32,7 @@ def test_init_ground_truth():
     reference = GlobalOrigin3D
     pos = Position(np.random.rand(3), reference)
     rot = Attitude(np.quaternion(1), reference)
-    hwl = [2,2,5]
+    hwl = [2, 2, 5]
     box = bbox.Box3D(pos, rot, hwl)
     vel = Velocity(np.random.rand(3), reference)
     acc = Acceleration(np.random.rand(3), reference)

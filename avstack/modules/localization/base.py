@@ -11,7 +11,6 @@ import numpy as np
 import quaternion
 
 
-
 class _LocalizationAlgorithm:
     def __init__(self, t_init, ego_init, rate=100):
         self.t_last_exec = -np.inf

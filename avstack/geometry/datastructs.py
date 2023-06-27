@@ -1,9 +1,12 @@
-import numpy as np
 from copy import deepcopy
-from .refchoc import ReferenceFrame, Vector, Rotation
-from .base import q_mult_vec
-from . import transformations as tforms
+
+import numpy as np
+
 import avstack
+
+from . import transformations as tforms
+from .base import q_mult_vec
+from .refchoc import ReferenceFrame, Rotation, Vector
 
 
 class Position(Vector):
@@ -73,11 +76,11 @@ class _PointMatrix:
     @property
     def x(self):
         return self._x
-    
+
     @x.setter
     def x(self, x):
         if len(x.shape) == 1:
-            x = x[:,None]
+            x = x[:, None]
         self._x = x
 
     @property
@@ -90,17 +93,16 @@ class _PointMatrix:
 
     def __len__(self):
         return self.x.shape[0]
-    
+
     def __getitem__(self, indices):
         return self.x[indices]
 
 
 class PointMatrix3D(_PointMatrix):
-
-    def change_calibration(self, calibration, inplace: bool=False):
+    def change_calibration(self, calibration, inplace: bool = False):
         return self.change_reference(calibration.reference, inplace)
 
-    def change_reference(self, reference, inplace: bool=False):
+    def change_reference(self, reference, inplace: bool = False):
         """Change of reference frame of a vector
 
         Step 1: compute the differential
@@ -112,8 +114,10 @@ class PointMatrix3D(_PointMatrix):
 
         x : x_ref2_to_point_in_ref2 <-- diff.q * (self.x - diff.x)
         """
-        diff = self.calibration.reference.differential(reference, in_self=True)  # self to other
-        x = q_mult_vec(diff.q, self.x[:,:3] - diff.x)
+        diff = self.calibration.reference.differential(
+            reference, in_self=True
+        )  # self to other
+        x = q_mult_vec(diff.q, self.x[:, :3] - diff.x)
         if inplace:
             self.x = x
             self.calibration.reference = reference
@@ -121,22 +125,21 @@ class PointMatrix3D(_PointMatrix):
             calib = deepcopy(self.calibration)
             calib.reference = reference
             return PointMatrix3D(x, calib)
-        
+
     def filter(self, mask):
-        return PointMatrix3D(self.x[mask,:], self.calibration)
+        return PointMatrix3D(self.x[mask, :], self.calibration)
 
     def project_to_2d(self, calibration):
-        pts_3d_img = self.change_calibration(calibration).x[:,:3]
+        pts_3d_img = self.change_calibration(calibration).x[:, :3]
         pts_3d_hom = tforms.cart2hom(pts_3d_img)
         pts_2d = np.dot(pts_3d_hom, np.transpose(calibration.P))  # nx3
         pts_2d[:, 0] /= pts_2d[:, 2]
         pts_2d[:, 1] /= pts_2d[:, 2]
         pts_2d_cam = pts_2d[:, 0:2]
         return PointMatrix2D(pts_2d_cam, calibration)
-    
+
 
 class PointMatrix2D(_PointMatrix):
-
     @property
     def angles(self):
         """Takes pixel coordinates and get angles

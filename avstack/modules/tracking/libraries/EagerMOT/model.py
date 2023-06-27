@@ -46,7 +46,9 @@ class EagerMOT:
         self.n_frames += 1
 
         # -- fuse objects
-        lone_2d, lone_3d, fused_detections = self.fusion(detections_2d, detections_3d, platform)
+        lone_2d, lone_3d, fused_detections = self.fusion(
+            detections_2d, detections_3d, platform
+        )
 
         # -- track
         tracks = self.tracker(t, lone_2d, lone_3d, fused_detections, platform)
@@ -311,7 +313,9 @@ class EagerMOTFusion:
         return lone_2d, lone_3d, fused_detections
 
 
-def assign_and_create_results(A, rows, cols, sensor_rows, sensor_cols, threshold, reference):
+def assign_and_create_results(
+    A, rows, cols, sensor_rows, sensor_cols, threshold, reference
+):
     # Perform greedy association
     assign = assignment.greedy_assignment(A, threshold=threshold)
     assign_map = assign.iterate_over("rows")
@@ -324,7 +328,11 @@ def assign_and_create_results(A, rows, cols, sensor_rows, sensor_cols, threshold
         obj_type = rows[i].obj_type
         try:
             joint_i = JointBoxDetection(
-                [sensor_rows, sensor_cols], rows[i].data, cols[j].data, reference, obj_type
+                [sensor_rows, sensor_cols],
+                rows[i].data,
+                cols[j].data,
+                reference,
+                obj_type,
             )
         except AttributeError as e:
             joint_i = JointBoxDetectionAndOther(

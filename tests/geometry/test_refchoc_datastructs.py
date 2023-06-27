@@ -1,8 +1,21 @@
 import numpy as np
-from avstack.geometry import GlobalOrigin3D, PointMatrix3D, PointMatrix2D, q_stan_to_cam, q_mult_vec, ReferenceFrame, transform_orientation
-from avstack.geometry import transformations as tforms
-from avstack.geometry import Position, Velocity, Acceleration, Attitude, AngularVelocity
+
 from avstack.calibration import Calibration, CameraCalibration
+from avstack.geometry import (
+    Acceleration,
+    AngularVelocity,
+    Attitude,
+    GlobalOrigin3D,
+    PointMatrix2D,
+    PointMatrix3D,
+    Position,
+    ReferenceFrame,
+    Velocity,
+    q_mult_vec,
+    q_stan_to_cam,
+    transform_orientation,
+)
+from avstack.geometry import transformations as tforms
 
 
 def x_rand():
@@ -10,17 +23,24 @@ def x_rand():
 
 
 def q_rand():
-    return transform_orientation(np.random.rand(3), 'euler', 'quat')
+    return transform_orientation(np.random.rand(3), "euler", "quat")
 
 
 def get_random_frame():
-    return ReferenceFrame(x=x_rand(), v=x_rand(), acc=x_rand(),
-                          q=q_rand(), ang=q_rand(), reference=GlobalOrigin3D)
+    return ReferenceFrame(
+        x=x_rand(),
+        v=x_rand(),
+        acc=x_rand(),
+        q=q_rand(),
+        ang=q_rand(),
+        reference=GlobalOrigin3D,
+    )
 
 
 # ================================
 # STATES
 # ================================
+
 
 def test_position():
     ref = get_random_frame()
@@ -78,7 +98,7 @@ def test_project_3d_to_2d():
     pm_3d = PointMatrix3D(np.random.rand(100, 3), calibration=calib1)
     calib_cam = get_calib_cam()
     pm_2d = pm_3d.project_to_2d(calib_cam)
-    assert len(pm_2d) == len(pm_3d)    
+    assert len(pm_2d) == len(pm_3d)
 
 
 def test_project_3d_to_2d_2():
@@ -86,7 +106,7 @@ def test_project_3d_to_2d_2():
     pm_3d = PointMatrix3D(np.array([[100, 0, 0]]), calibration=calib1)
     calib_cam = get_calib_cam()
     pm_2d = pm_3d.project_to_2d(calib_cam)
-    assert np.allclose(pm_2d.x, np.array([[calib_cam.width/2, calib_cam.height/2]]))
+    assert np.allclose(pm_2d.x, np.array([[calib_cam.width / 2, calib_cam.height / 2]]))
 
 
 def test_point_matrix_2d_angles():
@@ -104,7 +124,7 @@ def test_point_matrix_2d_angles():
     x_cart = PointMatrix3D(tforms.matrix_spherical_to_cartesian(x_razel), R1)
     x_pixels = x_cart.project_to_2d(calib_cam)
     x_angles = x_pixels.angles
-    assert np.allclose(x_angles, x_razel[:,1:], atol=0.05)
+    assert np.allclose(x_angles, x_razel[:, 1:], atol=0.05)
 
 
 def test_project_to_camera_halves_same_ReferenceFrame():
@@ -129,7 +149,9 @@ def test_project_to_camera_halves_same_ReferenceFrame():
     pts_right = PointMatrix3D(pts_all[pts_all[:, 1] <= 0], calibration=calib_cam)
     pts_proj = pts_right.project_to_2d(calib_cam)
     assert len(pts_proj) == len(pts_right) < len(pts_all)
-    pts_proj_right = pts_proj[calib_cam.img_shape[1] > (pts_proj[:, 0] >= calib_cam.img_shape[1] / 2), :]
+    pts_proj_right = pts_proj[
+        calib_cam.img_shape[1] > (pts_proj[:, 0] >= calib_cam.img_shape[1] / 2), :
+    ]
     assert len(pts_proj_right) == len(pts_right)
 
     # -- points on top half of image
@@ -143,7 +165,9 @@ def test_project_to_camera_halves_same_ReferenceFrame():
     pts_bot = PointMatrix3D(pts_all[pts_all[:, 2] <= 0], calibration=calib_cam)
     pts_proj = pts_bot.project_to_2d(calib_cam)  # same origin
     assert len(pts_proj) == len(pts_bot) < len(pts_all)
-    pts_proj_bot = pts_proj[calib_cam.img_shape[0] > (pts_proj[:, 1] >= calib_cam.img_shape[0] / 2), :]
+    pts_proj_bot = pts_proj[
+        calib_cam.img_shape[0] > (pts_proj[:, 1] >= calib_cam.img_shape[0] / 2), :
+    ]
     assert len(pts_proj_bot) == len(pts_bot)
 
 
@@ -153,4 +177,3 @@ def test_filter_point_matrix():
     mask = np.random.rand(100) < 0.25
     pm_3d_2 = pm_3d.filter(mask)
     assert len(pm_3d_2) < len(pm_3d)
-

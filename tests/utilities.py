@@ -17,17 +17,17 @@ from cv2 import imread
 from avstack.calibration import Calibration, CameraCalibration
 from avstack.environment.objects import VehicleState
 from avstack.geometry import (
-    ReferenceFrame,
+    Acceleration,
+    AngularVelocity,
+    Attitude,
     Box3D,
+    GlobalOrigin3D,
     PointMatrix3D,
+    Position,
+    ReferenceFrame,
     Rotation,
     Vector,
-    Position,
     Velocity,
-    Acceleration,
-    Attitude,
-    AngularVelocity,
-    GlobalOrigin3D,
     q_stan_to_cam,
 )
 from avstack.geometry import transformations as tforms
@@ -36,8 +36,12 @@ from avstack.sensors import ImageData, LidarData
 
 
 # -- calibration data
-ref_lidar = ReferenceFrame(x=np.array([0, 0, 1.73]), q=np.quaternion(1), reference=GlobalOrigin3D)
-ref_camera = ReferenceFrame(x=np.array([0.27, 0.06, 1.65]), q=q_stan_to_cam, reference=GlobalOrigin3D)
+ref_lidar = ReferenceFrame(
+    x=np.array([0, 0, 1.73]), q=np.quaternion(1), reference=GlobalOrigin3D
+)
+ref_camera = ReferenceFrame(
+    x=np.array([0.27, 0.06, 1.65]), q=q_stan_to_cam, reference=GlobalOrigin3D
+)
 P_cam = np.array(
     [
         [7.215377000000e02, 0.000000000000e00, 6.095593000000e02, 4.485728000000e01],
@@ -57,13 +61,9 @@ KITTI_data_dir = os.path.join(os.getcwd(), "data/test_data/object/training")
 def get_lane_lines():
     pt_pairs_left = [(i, 4) for i in range(20)]
     pt_pairs_right = [(i + 1, -3) for i in range(20)]
-    pts_left = [
-        Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left
-    ]
+    pts_left = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left]
     lane_left = detections.LaneLineInSpace(pts_left)
-    pts_right = [
-        Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_right
-    ]
+    pts_right = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_right]
     lane_right = detections.LaneLineInSpace(pts_right)
     return [lane_left, lane_right]
 
@@ -72,7 +72,7 @@ def get_ego(seed, reference=ref_camera):
     np.random.seed(seed)
     rot = Attitude(q_stan_to_cam, reference)
     pos = Position(np.random.rand(3), reference)
-    hwl = [1,2,4]
+    hwl = [1, 2, 4]
     box = Box3D(pos, rot, hwl)  # box in local coordinates
     vel = Velocity(np.random.rand(3), reference)
     acc = Acceleration(np.random.rand(3), reference)
@@ -91,9 +91,7 @@ def get_object_global(seed, reference=ref_camera):
     acc_obj = Acceleration(np.random.rand(3), reference)
     ang_obj = AngularVelocity(np.quaternion(1), reference)
     obj = VehicleState("car")
-    obj.set(
-        0, pos_obj, box_obj, vel_obj, acc_obj, rot_obj, ang_obj
-    )
+    obj.set(0, pos_obj, box_obj, vel_obj, acc_obj, rot_obj, ang_obj)
     return obj
 
 
@@ -105,7 +103,9 @@ def get_object_local(ego, seed):
 
 def get_lidar_data(t, frame, lidar_ID=0):
     pc_fname = os.path.join(KITTI_data_dir, "velodyne", "%06d.bin" % frame)
-    pc = PointMatrix3D(np.fromfile(pc_fname, dtype=np.float32).reshape((-1, 4)), lidar_calib)
+    pc = PointMatrix3D(
+        np.fromfile(pc_fname, dtype=np.float32).reshape((-1, 4)), lidar_calib
+    )
     pc = LidarData(t, frame, pc, lidar_calib, lidar_ID)
     return pc
 
@@ -129,7 +129,9 @@ def get_test_sensor_data(frame=1000, reference=ref_camera):
     h = 1.47
     w = 1.77
     l = 4.49
-    attitude = Attitude(tforms.transform_orientation([0, 0, yaw], "euler", "quat"), reference=reference)
+    attitude = Attitude(
+        tforms.transform_orientation([0, 0, yaw], "euler", "quat"), reference=reference
+    )
     box_3d = Box3D(position, attitude, [h, w, l])
     vel = acc = ang = None
     obj.set(
@@ -139,7 +141,7 @@ def get_test_sensor_data(frame=1000, reference=ref_camera):
         velocity=vel,
         acceleration=acc,
         attitude=attitude,
-        angular_velocity=ang
+        angular_velocity=ang,
     )
 
     # -- sensor data

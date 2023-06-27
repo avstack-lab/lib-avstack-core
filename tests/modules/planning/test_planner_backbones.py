@@ -12,10 +12,7 @@ import sys
 import numpy as np
 
 from avstack.environment import EnvironmentState
-from avstack.geometry import (
-    GlobalOrigin3D,
-    Vector,
-)
+from avstack.geometry import GlobalOrigin3D, Vector
 from avstack.modules import planning
 from avstack.modules.perception.detections import LaneLineInSpace
 from avstack.modules.planning.vehicle import components
@@ -36,7 +33,10 @@ def get_lanes():
 def get_tracks(ego, seed):
     trk_0 = get_object_global(seed)
     trk_1 = get_object_global(seed + 1)
-    return [trk_0.change_reference(ego, inplace=False), trk_1.change_reference(ego, inplace=False)]
+    return [
+        trk_0.change_reference(ego, inplace=False),
+        trk_1.change_reference(ego, inplace=False),
+    ]
 
 
 def test_random_planner():

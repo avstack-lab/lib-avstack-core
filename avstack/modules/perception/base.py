@@ -85,10 +85,10 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             mod_path = os.path.join(mm3d_root, config_file)
             chk_path = os.path.join(mm3d_root, checkpoint_file)
             if not os.path.exists(mod_path):
-                raise FileNotFoundError(f'Cannot find {config_file} config')
+                raise FileNotFoundError(f"Cannot find {config_file} config")
             if not os.path.exists(chk_path):
-                raise FileNotFoundError(f'Cannot find {checkpoint_file} checkpoint')
+                raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint")
         if not os.path.exists(chk_path):
-            raise FileNotFoundError(f'Cannot find {checkpoint_file} checkpoint')
+            raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint")
         self.mod_path = mod_path
         self.chk_path = chk_path

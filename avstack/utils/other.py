@@ -1,4 +1,5 @@
 import time
+
 import numpy as np
 
 
@@ -10,8 +11,8 @@ def check_xor(a, b):
     return (a or b) and (not a or not b)
 
 
-class IterationMonitor():
-    def __init__(self, sim_dt, print_method="real_time", print_rate=1/2) -> None:
+class IterationMonitor:
+    def __init__(self, sim_dt, print_method="real_time", print_rate=1 / 2) -> None:
         self.sim_dt = sim_dt
         self.iteration = 0
         self.print_method = print_method
@@ -19,7 +20,7 @@ class IterationMonitor():
         self.tf = time.time()
         self.t_last_print = -np.inf
         self.print_rate = print_rate
-        self.print_interval = 1./print_rate
+        self.print_interval = 1.0 / print_rate
 
     def tick(self):
         self.iteration += 1
@@ -30,7 +31,9 @@ class IterationMonitor():
         if self.print_method == "real_time":
             if (self.tf - self.t_last_print + 1e-6) >= self.print_interval:
                 self.t_last_print = self.tf
-                print(f"Iteration: {self.iteration:5d}, {self.tf-self.t0:5.2f} Seconds Elapsed")
+                print(
+                    f"Iteration: {self.iteration:5d}, {self.tf-self.t0:5.2f} Seconds Elapsed"
+                )
         elif self.print_method == "sim_time":
             raise NotImplementedError
         elif self.print_method == "iteration":

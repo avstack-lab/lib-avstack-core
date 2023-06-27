@@ -9,7 +9,7 @@
 """
 import numpy as np
 
-from avstack.geometry import bbox, Position
+from avstack.geometry import Position, bbox
 from avstack.modules.assignment import build_A_from_iou, gnn_single_frame_assign
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
 
@@ -95,16 +95,18 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
                 v_f = [vx, vy, vz]
                 t = t2.t0
                 obj_type = t2.obj_type
-                reference = t2.reference                
-                pos = Position(np.array([x,y,z]), reference)
+                reference = t2.reference
+                pos = Position(np.array([x, y, z]), reference)
                 rot = t2.q
-                box_f = bbox.Box3D(pos, rot, [h,w,l], where_is_t=t2.box3d.where_is_t)
+                box_f = bbox.Box3D(pos, rot, [h, w, l], where_is_t=t2.box3d.where_is_t)
                 ID = None
                 if t1.ID in self.ID_registry:
                     ID = self.ID_registry[t1.ID].get(t2.ID, None)
                 else:
                     self.ID_registry[t1.ID] = {}
-                fused = BasicBoxTrack3D(t, box_f, box_f.reference, obj_type, ID_force=ID, v=v_f, P=P_f)
+                fused = BasicBoxTrack3D(
+                    t, box_f, box_f.reference, obj_type, ID_force=ID, v=v_f, P=P_f
+                )
                 self.ID_registry[t1.ID][t2.ID] = fused.ID
                 tracks3d_fused.append(fused)
         else:

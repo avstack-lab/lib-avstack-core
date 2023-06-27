@@ -13,7 +13,16 @@ import numpy as np
 
 from avstack import GroundTruthInformation
 from avstack.environment.objects import VehicleState
-from avstack.geometry import GlobalOrigin3D, bbox, Position, Velocity, Acceleration, AngularVelocity, Attitude, transformations as tforms
+from avstack.geometry import (
+    Acceleration,
+    AngularVelocity,
+    Attitude,
+    GlobalOrigin3D,
+    Position,
+    Velocity,
+    bbox,
+)
+from avstack.geometry import transformations as tforms
 from avstack.modules import prediction, tracking
 from avstack.modules.planning.components import CollisionDetection
 
@@ -24,7 +33,7 @@ from utilities import get_ego
 
 pos_obj = Position(np.array([0, 0, 0]), GlobalOrigin3D)
 rot_obj = Attitude(np.quaternion(1), GlobalOrigin3D)
-box_obj = bbox.Box3D(pos_obj, rot_obj, [2,2,5])
+box_obj = bbox.Box3D(pos_obj, rot_obj, [2, 2, 5])
 
 
 def set_seed():
@@ -56,9 +65,7 @@ def get_object_no_collision(ego):
 def get_object_collision(ego):
     set_seed()
     ref = ego.position.reference
-    pos_obj = (
-        ego.position + ego.velocity * 3 + ego.acceleration * 0.5 * 3**2
-    )
+    pos_obj = ego.position + ego.velocity * 3 + ego.acceleration * 0.5 * 3**2
     vel_obj = Velocity(np.zeros(3), ref)
     acc_obj = Acceleration(np.zeros(3), ref)
     rot_obj = Attitude(np.quaternion(1), ref)
@@ -79,12 +86,12 @@ def get_object_collision(ego):
 def get_object_collision_yaw(ego):
     set_seed()
     ref = ego.position.reference
-    pos_obj = (
-        ego.position + ego.velocity * 3 + ego.acceleration * 0.5 * 3**2
-    )
+    pos_obj = ego.position + ego.velocity * 3 + ego.acceleration * 0.5 * 3**2
     vel_obj = Velocity(np.zeros(3), ref)
     acc_obj = Acceleration(np.zeros(3), ref)
-    q = tforms.transform_orientation(np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]]), 'dcm', 'quat')  # Anticlockwise 90 degree
+    q = tforms.transform_orientation(
+        np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]]), "dcm", "quat"
+    )  # Anticlockwise 90 degree
     rot_obj = Attitude(q, ref)
     ang_obj = AngularVelocity(np.quaternion(*np.random.rand(3)), ref)
     obj = VehicleState("car")
@@ -114,7 +121,9 @@ def test_collision_detection():
         frame, timestamp, ego_state=ego, objects=[obj0, obj1, obj2]
     )
     tracker = tracking.tracker3d.GroundTruthTracker()
-    tracks = tracker(t=timestamp, frame=frame, detections=None, ground_truth=ground_truth)
+    tracks = tracker(
+        t=timestamp, frame=frame, detections=None, ground_truth=ground_truth
+    )
     pred_ego = predictor(tracks, frame=frame)
     pred_ego = pred_ego[list(pred_ego.keys())[0]]
     preds_3d = predictor(tracks, frame=frame)

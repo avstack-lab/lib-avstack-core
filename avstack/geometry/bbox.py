@@ -7,21 +7,21 @@
 
 import logging
 from copy import copy, deepcopy
-from numba import jit
 
 import numpy as np
 import quaternion
+from numba import jit
 from scipy import sparse
 from scipy.spatial import ConvexHull, QhullError
 
 from avstack import exceptions
-from avstack.geometry import transformations as tforms, GlobalOrigin3D, PointMatrix3D
+from avstack.geometry import transformations as tforms
 
 from ..calibration import read_calibration_from_line
-from .base import q_mult_vec, _q_mult_vec
+from .base import _q_mult_vec, q_mult_vec
 from .coordinates import CameraCoordinates, LidarCoordinates, StandardCoordinates
-from .refchoc import get_reference_from_line
-from .datastructs import Position, Attitude
+from .datastructs import Attitude, PointMatrix3D, Position
+from .refchoc import GlobalOrigin3D, get_reference_from_line
 
 
 R_stan_to_cam = StandardCoordinates.get_conversion_matrix(CameraCoordinates)
@@ -56,7 +56,7 @@ def get_box_from_line(line):
             h, w, l, x, y, z, qw, qx, qy, qz = [float(i) for i in items[1:11]]
             q = np.quaternion(qw, qx, qy, qz)
             reference = get_reference_from_line(" ".join(items[11:]))
-            pos = Position(np.array([x,y,z]), reference)
+            pos = Position(np.array([x, y, z]), reference)
             rot = Attitude(q, reference)
             box = Box3D(pos, rot, [h, w, l])
         else:
@@ -148,16 +148,14 @@ class Box2D:
 
     def __eq__(self, other):
         return np.allclose(self.box2d, other.box2d)
-    
+
     @property
     def box2d(self):
         return np.array([self.xmin, self.ymin, self.xmax, self.ymax])
 
     @property
     def center(self):
-        return np.asarray(
-            [(self.xmin + self.xmax) / 2, (self.ymin + self.ymax) / 2]
-        )
+        return np.asarray([(self.xmin + self.xmax) / 2, (self.ymin + self.ymax) / 2])
 
     @property
     def corners(self):
@@ -169,7 +167,7 @@ class Box2D:
                 [self.xmax, self.ymin],
             ]
         )
-    
+
     @property
     def reference(self):
         return self.calibration.reference
@@ -257,7 +255,9 @@ class Box2D:
         self.ymin += noisy_vals[1]
         self.xmax += noisy_vals[2]
         self.ymax += noisy_vals[3]
-        self.squeeze(self.calibration.img_shape[0], self.calibration.img_shape[1], inplace=True)
+        self.squeeze(
+            self.calibration.img_shape[0], self.calibration.img_shape[1], inplace=True
+        )
 
     def change_reference(self, reference, inplace: bool):
         if not inplace:
@@ -273,8 +273,8 @@ class Box3D:
         position: Position,
         rotation: Attitude,
         hwl: list,
-        where_is_t: str="center",
-        enforce_mins: bool=True,
+        where_is_t: str = "center",
+        enforce_mins: bool = True,
         obj_type=None,
         ID=None,
     ):
@@ -295,7 +295,7 @@ class Box3D:
         self.rotation = rotation
         self.obj_type = obj_type
         self.ID = ID
-        
+
     def __repr__(self):
         return self.__str__()
 
@@ -319,11 +319,11 @@ class Box3D:
         c2 = self.t == other.t
         c3 = self.q == other.q
         return c1 and c2 and c3
-    
+
     @property
     def t(self):
         return self.position
-    
+
     @t.setter
     def t(self, t):
         assert isinstance(t, Position)
@@ -332,12 +332,12 @@ class Box3D:
     @property
     def q(self):
         return self.rotation
-    
+
     @q.setter
     def q(self, q):
         assert isinstance(q, Attitude)
         self.rotation = q
-    
+
     @property
     def reference(self):
         return self.position.reference
@@ -442,11 +442,19 @@ class Box3D:
         else:
             newt = self.t.change_reference(reference_new, inplace=inplace)
             newr = self.q.change_reference(reference_new, inplace=inplace)
-            newself = Box3D(newt, newr, [self.h, self.w, self.l], where_is_t=self.where_is_t)
+            newself = Box3D(
+                newt, newr, [self.h, self.w, self.l], where_is_t=self.where_is_t
+            )
             return newself
 
-    def IoU(self, other, metric="3D", run_angle_check=True, error_on_angle_check=False,
-            check_reference=True):
+    def IoU(
+        self,
+        other,
+        metric="3D",
+        run_angle_check=True,
+        error_on_angle_check=False,
+        check_reference=True,
+    ):
         """
         IMPORTANT NOTE: THIS METRIC ONLY WORKS WITH A YAW ANGLE
         (YAW AS DEFINED IN THE STANDARD FRAME) IT DOES NOT WORK
@@ -470,7 +478,9 @@ class Box3D:
 
             if run_angle_check:
                 eps = 0.05
-                q_stand_to_box = self.q.q * self.reference.integrate(start_at=GlobalOrigin3D).q
+                q_stand_to_box = (
+                    self.q.q * self.reference.integrate(start_at=GlobalOrigin3D).q
+                )
                 # q_stand_to_box = self.q * self.reference.q
                 if (abs(q_stand_to_box.x) > eps) or (abs(q_stand_to_box.y) > eps):
                     msg = (
@@ -505,7 +515,9 @@ class Box3D:
                 raise NotImplementedError(metric)
             iou = max(0.0, min(1.0, iou))
         elif isinstance(other, Box2D):
-            box2d_self = self.project_to_2d_bbox(other.calibration, check_reference=check_reference)
+            box2d_self = self.project_to_2d_bbox(
+                other.calibration, check_reference=check_reference
+            )
             iou = other.IoU(box2d_self)
         else:
             raise NotImplementedError(type(other))
@@ -534,7 +546,7 @@ class Box3D:
         if inplace:
             self.position += L
         else:
-            return Box3D(self.position+L, deepcopy(self.rotation), self.size)
+            return Box3D(self.position + L, deepcopy(self.rotation), self.size)
 
     def project_to_2d_bbox(self, calib, check_reference=True):
         """Project 3D bounding box into a 2D bounding box"""
@@ -818,14 +830,23 @@ def compute_box_3d_corners(box3d):
     qcs = qcon.w
     qcr = qcon.vec
     qcm = qcon.w**2 + qcon.x**2 + qcon.y**2 + qcon.z**2
-    corners = _compute_box_3d_corners(box3d.t.x, box3d.h, box3d.w,
-        box3d.l, qcs, qcr, qcm, box3d.where_is_t)
+    corners = _compute_box_3d_corners(
+        box3d.t.x, box3d.h, box3d.w, box3d.l, qcs, qcr, qcm, box3d.where_is_t
+    )
     return PointMatrix3D(corners, box3d.reference)
 
 
 @jit(nopython=True, parallel=True)
-def _compute_box_3d_corners(t: np.ndarray, h: float, w: float, l: float,
-                            qcs: float, qcr: float, qcm: float, where_is_t: str):
+def _compute_box_3d_corners(
+    t: np.ndarray,
+    h: float,
+    w: float,
+    l: float,
+    qcs: float,
+    qcr: float,
+    qcm: float,
+    where_is_t: str,
+):
     """Computes the 3D bounding box in the box's coordinate frame
 
     X - forward, Y - left, Z - up

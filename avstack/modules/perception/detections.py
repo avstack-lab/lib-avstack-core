@@ -23,7 +23,10 @@ from avstack.geometry import (
     bbox,
     get_reference_from_line,
 )
-from avstack.geometry.transformations import spherical_to_cartesian, cartesian_to_spherical
+from avstack.geometry.transformations import (
+    cartesian_to_spherical,
+    spherical_to_cartesian,
+)
 
 
 # detection_map = {'vehicle':'car', 'car':'car', 'pedestrian':'pedestrian', 'cyclist':'cyclist',
@@ -55,23 +58,28 @@ def get_detection_from_line(line):
         mask = bbox.get_segmask_from_line(" ".join(items[34:]))
         det = MaskDetection(sID, box, mask, box.reference, obj_type, score)
     elif det_type == "centroid-detection":
-        n_dims = int(items[4]); idx = 5
-        centroid = np.array([float(d) for d in items[idx : idx + n_dims]]); idx += n_dims
+        n_dims = int(items[4])
+        idx = 5
+        centroid = np.array([float(d) for d in items[idx : idx + n_dims]])
+        idx += n_dims
         reference = get_reference_from_line(" ".join(items[idx::]))
         det = CentroidDetection(sID, centroid, reference, obj_type, score)
     elif det_type == "raz-detection":
         idx = 4
-        raz = np.array([float(d) for d in items[idx : idx + 2]]); idx += 2
+        raz = np.array([float(d) for d in items[idx : idx + 2]])
+        idx += 2
         reference = get_reference_from_line(" ".join(items[idx::]))
         det = RazDetection(sID, raz, reference, obj_type, score)
     elif det_type == "razel-detection":
         idx = 4
-        razel = np.array([float(d) for d in items[idx : idx + 3]]); idx += 3
+        razel = np.array([float(d) for d in items[idx : idx + 3]])
+        idx += 3
         reference = get_reference_from_line(" ".join(items[idx::]))
         det = RazelDetection(sID, razel, reference, obj_type, score)
     elif det_type == "razelrrt-detection":
         idx = 4
-        razelrrt = np.array([float(d) for d in items[idx : idx + 4]]); idx += 4
+        razelrrt = np.array([float(d) for d in items[idx : idx + 4]])
+        idx += 4
         reference = get_reference_from_line(" ".join(items[idx::]))
         det = RazelRrtDetection(sID, razelrrt, reference, obj_type, score)
     else:
@@ -108,7 +116,7 @@ class Detection_:
     @property
     def reference(self):
         return self._reference
-    
+
     @reference.setter
     def reference(self, reference):
         assert isinstance(reference, ReferenceFrame)
@@ -138,7 +146,13 @@ class Detection_:
             self._change_reference(reference, inplace=inplace)
         else:
             data = self._change_reference(reference, inplace=inplace)
-            return self.factory()(self.source_identifier, data, reference, obj_type=self.obj_type, score=self.score)
+            return self.factory()(
+                self.source_identifier,
+                data,
+                reference,
+                obj_type=self.obj_type,
+                score=self.score,
+            )
 
     def _change_reference(self, reference, inplace: bool):
         raise NotImplementedError
@@ -148,7 +162,7 @@ class Detection_:
 
     def __repr__(self):
         return self.__str__()
-        
+
 
 class CentroidDetection(Detection_):
     def __init__(
@@ -164,7 +178,7 @@ class CentroidDetection(Detection_):
     @property
     def centroid(self):
         return self._centroid
-    
+
     @property
     def z(self):
         return self.centroid
@@ -180,7 +194,7 @@ class CentroidDetection(Detection_):
     @staticmethod
     def factory():
         return CentroidDetection
-    
+
     def _change_reference(self, reference, inplace: bool):
         vec = Vector(self.centroid, self.reference)
         vec.change_reference(reference, inplace=True)
@@ -191,14 +205,14 @@ class CentroidDetection(Detection_):
 
     def format_as_string(self):
         """Format data elements"""
-        return f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} " \
-               f"{' '.join([str(d) for d in self.centroid])} {self.reference.format_as_string()}"
+        return (
+            f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} "
+            f"{' '.join([str(d) for d in self.centroid])} {self.reference.format_as_string()}"
+        )
 
 
 class RazDetection(Detection_):
-    def __init__(
-        self, source_identifier, raz, reference, obj_type=None, score=None
-    ):
+    def __init__(self, source_identifier, raz, reference, obj_type=None, score=None):
         super().__init__(source_identifier, reference, obj_type, score)
         self.raz = raz
 
@@ -209,7 +223,7 @@ class RazDetection(Detection_):
     @property
     def raz(self):
         return self._raz
-    
+
     @property
     def z(self):
         return self.raz
@@ -221,20 +235,20 @@ class RazDetection(Detection_):
                 f"Input raz of type {type(raz)} is not of an acceptable type"
             )
         self._raz = raz
-    
+
     @property
     def xy(self):
         x, y = self.raz[0] * np.cos(self.raz[1]), self.raz[0] * np.sin(self.raz[1])
         return np.array([x, y])
-    
+
     @xy.setter
     def xy(self, xy):
         self.raz = cartesian_to_spherical(np.array([xy[0], xy[1], 0]))[:2]
-    
+
     @staticmethod
     def factory():
         return RazDetection
-    
+
     def _change_reference(self, reference, inplace: bool):
         """Very hacky right now..."""
         vec = Vector(np.array([self.xy[0], self.xy[1], 0]), self.reference)
@@ -243,17 +257,17 @@ class RazDetection(Detection_):
             self.xy = vec.x[:2]
         else:
             return cartesian_to_spherical(np.array([vec.x[0], vec.x[1], 0]))[:2]
-    
+
     def format_as_string(self):
         """Format data elements"""
-        return f"raz-detection {self.source_identifier} {self.obj_type} {self.score} " \
-               f"{' '.join([str(d) for d in self.raz])} {self.reference.format_as_string()}"
-    
+        return (
+            f"raz-detection {self.source_identifier} {self.obj_type} {self.score} "
+            f"{' '.join([str(d) for d in self.raz])} {self.reference.format_as_string()}"
+        )
+
 
 class RazelDetection(Detection_):
-    def __init__(
-        self, source_identifier, razel, reference, obj_type=None, score=None
-    ):
+    def __init__(self, source_identifier, razel, reference, obj_type=None, score=None):
         super().__init__(source_identifier, reference, obj_type, score)
         self.razel = razel
 
@@ -264,7 +278,7 @@ class RazelDetection(Detection_):
     @property
     def razel(self):
         return self._razel
-    
+
     @property
     def z(self):
         return self.razel
@@ -276,7 +290,7 @@ class RazelDetection(Detection_):
                 f"Input razel of type {type(razel)} is not of an acceptable type"
             )
         self._razel = razel
-    
+
     @property
     def x(self):
         return self.xyz
@@ -285,15 +299,15 @@ class RazelDetection(Detection_):
     def xyz(self):
         x, y, z = spherical_to_cartesian(self.razel)
         return np.array([x, y, z])
-    
+
     @xyz.setter
     def xyz(self, xyz):
         self.razel = cartesian_to_spherical(xyz)
-    
+
     @staticmethod
     def factory():
         return RazelDetection
-    
+
     def _change_reference(self, reference, inplace: bool):
         vec = Vector(self.xyz, self.reference)
         vec = vec.change_reference(reference, inplace=inplace)
@@ -301,15 +315,18 @@ class RazelDetection(Detection_):
             self.xyz = vec.x
         else:
             return cartesian_to_spherical(vec.x)
-    
+
     def format_as_string(self):
         """Format data elements"""
-        return f"razel-detection {self.source_identifier} {self.obj_type} {self.score} " \
-               f"{' '.join([str(d) for d in self.razel])} {self.format_as_string()}"
+        return (
+            f"razel-detection {self.source_identifier} {self.obj_type} {self.score} "
+            f"{' '.join([str(d) for d in self.razel])} {self.format_as_string()}"
+        )
 
 
 class RazelRrtDetection(Detection_):
     """NOTE: range rate is defined as positive away from sensor"""
+
     def __init__(
         self, source_identifier, razelrrt, reference, obj_type=None, score=None
     ):
@@ -340,7 +357,7 @@ class RazelRrtDetection(Detection_):
     def xyzrrt(self):
         x, y, z = spherical_to_cartesian(self.razelrrt[:3])
         return np.array([x, y, z, self.razelrrt[3]])
-    
+
     @xyzrrt.setter
     def xyzrrt(self, xyzrrt):
         rng, az, el = cartesian_to_spherical(xyzrrt[:3])
@@ -350,20 +367,28 @@ class RazelRrtDetection(Detection_):
     def xyz(self):
         x, y, z = spherical_to_cartesian(self.razelrrt[:3])
         return np.array([x, y, z])
-    
+
     @staticmethod
     def factory():
         return RazelRrtDetection
-    
+
     def as_razel(self):
-        return RazelDetection(source_identifier=self.source_identifier,
-                    razel=self.razelrrt[:3], reference=self.reference,
-                    obj_type=self.obj_type, score=self.score)
-        
+        return RazelDetection(
+            source_identifier=self.source_identifier,
+            razel=self.razelrrt[:3],
+            reference=self.reference,
+            obj_type=self.obj_type,
+            score=self.score,
+        )
+
     def _change_reference(self, reference, inplace: bool):
         uv_before = self.xyz / np.linalg.norm(self.xyz)
-        x, y, z = Vector(self.xyz, self.reference).change_reference(reference, inplace=False).x
-        uv_after = np.array([x,y,z]) / np.linalg.norm(np.array([x,y,z]))
+        x, y, z = (
+            Vector(self.xyz, self.reference)
+            .change_reference(reference, inplace=False)
+            .x
+        )
+        uv_after = np.array([x, y, z]) / np.linalg.norm(np.array([x, y, z]))
         # NOTE: can't really change a range rate measurement reference...
         rrt = self.razelrrt[3] * np.dot(uv_before, uv_after)
         if inplace:
@@ -375,14 +400,14 @@ class RazelRrtDetection(Detection_):
 
     def format_as_string(self):
         """Format data elements"""
-        return f"razelrrt-detection {self.source_identifier} {self.obj_type} {self.score} " \
-               f"{' '.join([str(d) for d in self.razelrrt])} {self.reference.format_as_string()}"
+        return (
+            f"razelrrt-detection {self.source_identifier} {self.obj_type} {self.score} "
+            f"{' '.join([str(d) for d in self.razelrrt])} {self.reference.format_as_string()}"
+        )
 
 
 class BoxDetection(Detection_):
-    def __init__(
-        self, source_identifier, box, reference, obj_type=None, score=None
-    ):
+    def __init__(self, source_identifier, box, reference, obj_type=None, score=None):
         super().__init__(source_identifier, reference, obj_type, score)
         self.box = box
 
@@ -413,14 +438,14 @@ class BoxDetection(Detection_):
     @property
     def z(self):
         return self.box
-    
+
     @staticmethod
     def factory():
         return BoxDetection
-    
+
     def _change_reference(self, reference, inplace: bool):
         return self.data.change_reference(reference, inplace=inplace)
-    
+
     def format_as_string(self):
         """Convert to vehicle state and format"""
         return f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"
@@ -476,13 +501,13 @@ class JointBoxDetection(Detection_):
         if not isinstance(box3d, Box3D):
             raise TypeError(
                 f"Input box of type {type(box3d)} is not of an acceptable type"
-                )
+            )
         self._box_3d = box3d
 
     @staticmethod
     def factory():
         return JointBoxDetection
-    
+
     def _change_reference(self, reference, inplace: bool):
         return super()._change_reference(reference, inplace)
 
@@ -530,11 +555,11 @@ class MaskDetection(Detection_):
     @property
     def box2d(self):
         return self.box
-    
+
     @staticmethod
     def factory():
         return MaskDetection
-    
+
     def _change_reference(self, reference, inplace: bool):
         return super()._change_reference(reference, inplace)
 
@@ -688,7 +713,7 @@ class LaneLineInPixels:
     @property
     def y(self):
         return np.array([p[1] for p in self._points])
-    
+
     @staticmethod
     def factory():
         return LaneLineInPixels

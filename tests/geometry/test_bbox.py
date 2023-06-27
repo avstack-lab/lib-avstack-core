@@ -4,15 +4,23 @@
 # @Last modified by:   spencer
 # @Last modified time: 2021-08-10
 
+import sys
 from copy import deepcopy
 
 import numpy as np
 
 import avstack.geometry.bbox as bbox
 from avstack import calibration, exceptions
-from avstack.geometry import transformations as tforms, q_stan_to_cam, Position, Attitude, GlobalOrigin3D, ReferenceFrame
+from avstack.geometry import (
+    Attitude,
+    GlobalOrigin3D,
+    Position,
+    ReferenceFrame,
+    q_stan_to_cam,
+)
+from avstack.geometry import transformations as tforms
 
-import sys
+
 sys.path.append("tests/")
 from utilities import get_test_sensor_data
 
@@ -82,7 +90,7 @@ def test_3d_intersection_union():
     box1a = box1.translate(Position(np.array([1, 1, 1]), GlobalOrigin3D), inplace=False)
     assert bbox.box_intersection(box1.corners, box1a.corners) > 0.0
     pos2 = Position(np.array([10, 5.4, -10.2]), GlobalOrigin3D)
-    box2 = bbox.Box3D(pos2, box1.rotation, [3,4,5])
+    box2 = bbox.Box3D(pos2, box1.rotation, [3, 4, 5])
     assert bbox.box_intersection(box1.corners, box2.corners) == 0.0
 
 
@@ -139,17 +147,13 @@ def test_box_IoU():
     x_1 = np.array([3.4, 5.4, -10.2])
     q_1 = tforms.transform_orientation([0, 0, 1.2], "euler", "quat")
     box_1 = bbox.Box3D(
-        Position(x_1, GlobalOrigin3D),
-        Attitude(q_1, GlobalOrigin3D),
-        [3, 4, 5]
+        Position(x_1, GlobalOrigin3D), Attitude(q_1, GlobalOrigin3D), [3, 4, 5]
     )
 
     x_2 = np.array([5, 5, -10.4])
     q_2 = tforms.transform_orientation([0, 0, 1.4], "euler", "quat")
     box_2 = bbox.Box3D(
-        Position(x_2, GlobalOrigin3D),
-        Attitude(q_2, GlobalOrigin3D),
-        [3, 4, 5]
+        Position(x_2, GlobalOrigin3D), Attitude(q_2, GlobalOrigin3D), [3, 4, 5]
     )
     assert box_1.IoU(box_2) > 0
 
@@ -203,12 +207,10 @@ def get_origins():
 
 def test_change_reference_simple_corners():
     # make box
-    x_obj = np.array([1,2,3])
+    x_obj = np.array([1, 2, 3])
     q_obj = tforms.transform_orientation([0, 0, 0], "euler", "quat")
     box_1 = bbox.Box3D(
-        Position(x_obj, GlobalOrigin3D),
-        Attitude(q_obj, GlobalOrigin3D),
-        [2,8,15]
+        Position(x_obj, GlobalOrigin3D), Attitude(q_obj, GlobalOrigin3D), [2, 8, 15]
     )
 
     # corners in global
@@ -223,8 +225,10 @@ def test_change_reference_simple_corners():
     # check corners
     corners_new_global = box_1.corners_global
     corners_new_man = corners_pre_1.change_reference(O1, inplace=False)
-    corners_new_invert = corners_new_man.change_reference(corners_pre_1.reference, inplace=False)
-    
+    corners_new_invert = corners_new_man.change_reference(
+        corners_pre_1.reference, inplace=False
+    )
+
     assert corners_close_perm_invar(corners_pre_1, corners_pre_2)
     assert corners_close_perm_invar(corners_new_man, corners_new)
     assert corners_close_perm_invar(corners_new_invert, corners_pre_1)
@@ -232,7 +236,7 @@ def test_change_reference_simple_corners():
 
 
 def test_change_reference_full_corners():
-    
+
     box_1 = get_box()
     corners_pre_1 = box_1.corners
     corners_pre_2 = box_1.corners_global
@@ -243,7 +247,9 @@ def test_change_reference_full_corners():
     corners_new = box_1.corners
     corners_new_global = box_1.corners_global
     corners_new_man = corners_pre_1.change_reference(O1, inplace=False)
-    corners_new_invert = corners_new_man.change_reference(corners_pre_1.reference, inplace=False)
+    corners_new_invert = corners_new_man.change_reference(
+        corners_pre_1.reference, inplace=False
+    )
 
     assert corners_close_perm_invar(corners_pre_1, corners_pre_2)
     assert corners_close_perm_invar(corners_new_man, box_1.corners)
@@ -277,18 +283,16 @@ def test_change_reference_iou():
 def test_io_2d_bbox():
     P = np.random.rand(3, 4)
     img_shape = (256, 1024)
-    cam_calib = calibration.CameraCalibration(
-        GlobalOrigin3D, P, img_shape=img_shape
-    )
+    cam_calib = calibration.CameraCalibration(GlobalOrigin3D, P, img_shape=img_shape)
     box1 = bbox.Box2D([-10, 20, 50, 60], cam_calib)
     box2 = bbox.get_box_from_line(box1.format_as_string())
     assert box1 == box2
 
 
 def test_io_3d_bbox():
-    pos = Position(np.array([1,2,3]), GlobalOrigin3D)
+    pos = Position(np.array([1, 2, 3]), GlobalOrigin3D)
     rot = Attitude(np.quaternion(1), GlobalOrigin3D)
-    box1 = bbox.Box3D(pos, rot, [1,1,1])
+    box1 = bbox.Box3D(pos, rot, [1, 1, 1])
     box2 = bbox.get_box_from_line(box1.format_as_string())
     assert box1.allclose(box2)
 
@@ -296,9 +300,7 @@ def test_io_3d_bbox():
 def test_io_2d_segmask():
     P = np.random.rand(3, 4)
     img_shape = (256, 1024)
-    cam_calib = calibration.CameraCalibration(
-        GlobalOrigin3D, P, img_shape=img_shape
-    )
+    cam_calib = calibration.CameraCalibration(GlobalOrigin3D, P, img_shape=img_shape)
     segmask1 = np.random.rand(*img_shape)
     segmask1 = bbox.SegMask2D(segmask1 > 0.5, cam_calib)
     segmask2 = bbox.get_segmask_from_line(segmask1.format_as_string())

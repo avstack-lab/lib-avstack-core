@@ -12,7 +12,7 @@ from copy import copy, deepcopy
 import numpy as np
 import quaternion
 
-from avstack.geometry import GlobalOrigin3D, bbox, Position, Attitude
+from avstack.geometry import Attitude, GlobalOrigin3D, Position, bbox
 from avstack.modules import fusion, tracking
 
 
@@ -21,7 +21,7 @@ def test_track_to_track_CI():
     t0 = 0.0
     frame = 0
     obj_type = "car"
-    pos = Position(np.array([-1,-2,-3]), GlobalOrigin3D)
+    pos = Position(np.array([-1, -2, -3]), GlobalOrigin3D)
     rot = Attitude(np.quaternion(1), GlobalOrigin3D)
     box1 = bbox.Box3D(pos, rot, [2, 2, 4])
     box2 = deepcopy(box1)

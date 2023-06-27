@@ -94,9 +94,7 @@ class Coordinates:
         if self == other:
             newdata = data
         elif isinstance(data, avstack.geometry.Vector):
-            newdata = avstack.geometry.Vector(
-                other, self.convert(data.vector, other)
-            )
+            newdata = avstack.geometry.Vector(other, self.convert(data.vector, other))
         elif isinstance(data, np.ndarray):
             if len(data.shape) == 1:
                 data = np.asarray(data)[:, None].T

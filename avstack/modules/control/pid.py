@@ -99,7 +99,11 @@ class PIDLateralController(_PIDController):
         v_end = v_begin + Vector(xyz, reference=v_begin.reference)
         v_vec = np.array([v_end.x[0] - v_begin.x[0], v_end.x[1] - v_begin.x[1], 0.0])
         w_vec = np.array(
-            [target.position.x[0] - v_begin.x[0], target.position.x[1] - v_begin.x[1], 0.0]
+            [
+                target.position.x[0] - v_begin.x[0],
+                target.position.x[1] - v_begin.x[1],
+                0.0,
+            ]
         )
         error = -math.acos(
             np.clip(

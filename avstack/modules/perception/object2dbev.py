@@ -55,7 +55,9 @@ class Lidar2dCentroidDetector(_PerceptionAlgorithm):
     def __call__(self, data, platform, alg_name, **kwargs):
         data = data.data
         assert data.shape[1] == 2, "Data must be in 2D format"
-        return self._wrap(self._merge(self._detect(self._filter(data))), platform, alg_name)
+        return self._wrap(
+            self._merge(self._detect(self._filter(data))), platform, alg_name
+        )
 
     def _filter(self, data):
         pts_range = data[

@@ -14,7 +14,15 @@ import numpy as np
 import quaternion
 
 from avstack.environment.objects import VehicleState
-from avstack.geometry import transformations as tforms, GlobalOrigin3D, Position, Velocity, Acceleration, Attitude, AngularVelocity
+from avstack.geometry import (
+    Acceleration,
+    AngularVelocity,
+    Attitude,
+    GlobalOrigin3D,
+    Position,
+    Velocity,
+)
+from avstack.geometry import transformations as tforms
 from avstack.modules import localization
 from avstack.sensors import GpsData, ImuData
 
@@ -37,7 +45,9 @@ def run_gps_localization(L, ego_true):
     while t <= t_max:
         ego_true = F(dt) @ ego_true
         z = ego_true[:3] + rs * np.random.randn(3)
-        gps_data = GpsData(t, frame, {"z": z, "R": R}, GlobalOrigin3D, gps_ID, levar=levar)
+        gps_data = GpsData(
+            t, frame, {"z": z, "R": R}, GlobalOrigin3D, gps_ID, levar=levar
+        )
         ego_est = L(t, gps_data)
         if ego_est is not None:
             last_ego = ego_est
@@ -164,10 +174,10 @@ def tests_gps_imu_kalman_filter():
     )
     ego_init.set(
         t=0,
-        position=Position(pos, reference), 
-        box=None, 
-        velocity=Velocity(vel, reference), 
-        acceleration=None, 
+        position=Position(pos, reference),
+        box=None,
+        velocity=Velocity(vel, reference),
+        acceleration=None,
         attitude=Attitude(att, reference),
         angular_velocity=None,
     )

@@ -317,7 +317,6 @@ def filter_points_in_image(points, P):
     return points_in_im_mask
 
 
-
 def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
     """Check if a 3d box is in the FOV of the camera
 
@@ -347,11 +346,15 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
     back_edge = center - box_3d_2.l / 2 * fv
     right_edge = center - box_3d_2.w / 2 * lv
 
-    c1 = np.dot(front_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
+    c1 = (
+        np.dot(front_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
+    )
     c2 = np.dot(center.x, np.array([0, 0, 1])) > np.cos(fov_half) * center.norm()
     c3 = np.dot(back_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
     c4 = np.dot(left_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * left_edge.norm()
-    c5 = np.dot(right_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * right_edge.norm()
+    c5 = (
+        np.dot(right_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * right_edge.norm()
+    )
 
     if any([c1, c2, c3, c4, c5]):
         box_3d_2_2d = box_3d_2.project_to_2d_bbox(calib=camera_calib)

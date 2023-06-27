@@ -20,7 +20,8 @@ from PIL import Image
 
 from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration
-from avstack.geometry import transformations as tforms, PointMatrix3D
+from avstack.geometry import PointMatrix3D
+from avstack.geometry import transformations as tforms
 
 
 class SensorData:
@@ -165,7 +166,11 @@ class ImageData(SensorData):
         save_image_file(self.data, filepath, self.source_name)
 
     def view(self, axis=False, extent=None):
-        img_data = self.data if self.calibration.channel_order=='rgb' else self.data[:,:,::-1]
+        img_data = (
+            self.data
+            if self.calibration.channel_order == "rgb"
+            else self.data[:, :, ::-1]
+        )
         pil_im = Image.fromarray(img_data)
         plt.figure(figsize=[2 * x for x in plt.rcParams["figure.figsize"]])
         plt.imshow(pil_im, extent=extent)
@@ -340,9 +345,9 @@ class LidarData(SensorData):
                     # filepath = filepath.replace(".ply", ".bin")
                     if not filepath.endswith(".bin"):
                         filepath += ".bin"
-                    data = np.frombuffer(
-                        self.data.raw_data, dtype=np.float32
-                    ).reshape([-1, self.n_features])
+                    data = np.frombuffer(self.data.raw_data, dtype=np.float32).reshape(
+                        [-1, self.n_features]
+                    )
                     if flipy:
                         try:
                             data[:, 1] *= -1
@@ -352,7 +357,7 @@ class LidarData(SensorData):
                     with open(filepath, "wb") as f:
                         data.tofile(filepath)
                     # else:
-                        # self.data.save_to_disk(filepath) # later we'll figure out this way
+                    # self.data.save_to_disk(filepath) # later we'll figure out this way
                     return
             except AttributeError as e:
                 pass

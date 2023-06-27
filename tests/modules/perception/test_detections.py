@@ -10,7 +10,7 @@
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import Box3D, GlobalOrigin3D, Vector, Position, Attitude
+from avstack.geometry import Attitude, Box3D, GlobalOrigin3D, Position, Vector
 from avstack.modules.perception import detections
 
 
@@ -23,7 +23,9 @@ def make_data_container(n_datas):
     timestamp = 0
     alg_name = "detector-1"
     dets = [
-        detections.CentroidDetection(alg_name, np.random.randn(3), GlobalOrigin3D, obj_type="Car")
+        detections.CentroidDetection(
+            alg_name, np.random.randn(3), GlobalOrigin3D, obj_type="Car"
+        )
         for _ in range(n_datas)
     ]
     dc = DataContainer(frame, timestamp, dets, source_identifier=alg_name)
@@ -47,7 +49,10 @@ def test_detection_container_as_string():
 def test_centroid_detection():
     centroid = np.array([10, -20, 2])
     d = detections.CentroidDetection(
-        source_identifier=alg_name, centroid=centroid, reference=GlobalOrigin3D, obj_type="Car"
+        source_identifier=alg_name,
+        centroid=centroid,
+        reference=GlobalOrigin3D,
+        obj_type="Car",
     )
     assert np.all(d.centroid == centroid)
 
@@ -63,7 +68,10 @@ def test_razel_detection():
 def test_razel_detection():
     razel = np.array([100, 1.0, -0.3])
     d = detections.RazelDetection(
-        source_identifier=alg_name, razel=razel, reference=GlobalOrigin3D, obj_type="Car"
+        source_identifier=alg_name,
+        razel=razel,
+        reference=GlobalOrigin3D,
+        obj_type="Car",
     )
     assert np.all(d.razel == razel)
 
@@ -71,7 +79,10 @@ def test_razel_detection():
 def test_razelrrt_detection():
     razelrrt = np.array([100, 1.0, -0.3, 1.23])
     d = detections.RazelRrtDetection(
-        source_identifier=alg_name, razelrrt=razelrrt, reference=GlobalOrigin3D, obj_type="Car"
+        source_identifier=alg_name,
+        razelrrt=razelrrt,
+        reference=GlobalOrigin3D,
+        obj_type="Car",
     )
     assert np.all(d.razelrrt == razelrrt)
 
@@ -83,8 +94,10 @@ def test_box_detection():
     t = [10, -4, 1]
     pos = Position(t, GlobalOrigin3D)
     rot = Attitude(np.quaternion(1), GlobalOrigin3D)
-    box = Box3D(pos, rot, [h,w,l])
-    d = detections.BoxDetection(source_identifier=alg_name, box=box, reference=GlobalOrigin3D, obj_type="Car")
+    box = Box3D(pos, rot, [h, w, l])
+    d = detections.BoxDetection(
+        source_identifier=alg_name, box=box, reference=GlobalOrigin3D, obj_type="Car"
+    )
     assert d.box == box
 
 
@@ -107,13 +120,9 @@ def test_lane_line_in_space():
 def test_lane_line_in_space_detection():
     pt_pairs_left = [(i, 4) for i in range(20)]
     pt_pairs_right = [(i + 1, -3) for i in range(20)]
-    pts_left = [
-        Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left
-    ]
+    pts_left = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left]
     lane_left = detections.LaneLineInSpace(pts_left)
-    pts_right = [
-        Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_right
-    ]
+    pts_right = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_right]
     lane_right = detections.LaneLineInSpace(pts_right)
     lane_center, lane_width = lane_left.compute_center_lane(lane_right)
     assert lane_center[0].x[0] == 1
@@ -144,9 +153,7 @@ def test_lane_line_in_pixels_detection():
 
 def test_distance_closest():
     pt_pairs_left = [(i, 4) for i in range(20)]
-    pts_left = [
-        Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left
-    ]
+    pts_left = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left]
     lane_left = detections.LaneLineInSpace(pts_left)
     obj_1 = Vector([10, 1, 0], GlobalOrigin3D)
     assert lane_left.distance_closest(obj_1) == 3
@@ -157,13 +164,9 @@ def test_distance_closest():
 def test_object_in_lane():
     pt_pairs_left = [(i, 4) for i in range(20)]
     pt_pairs_right = [(i + 1, -3) for i in range(20)]
-    pts_left = [
-        Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left
-    ]
+    pts_left = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left]
     lane_left = detections.LaneLineInSpace(pts_left)
-    pts_right = [
-        Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_right
-    ]
+    pts_right = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_right]
     lane_right = detections.LaneLineInSpace(pts_right)
     obj_1 = Vector([10, 1, 0], GlobalOrigin3D)
     assert lane_left.object_between_lanes(lane_right, obj_1)

@@ -13,8 +13,8 @@ import sys
 import numpy as np
 import quaternion
 
-from avstack.geometry import GlobalOrigin3D
 from avstack.environment.objects import VehicleState
+from avstack.geometry import GlobalOrigin3D
 
 
 sys.path.append("tests/")

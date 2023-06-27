@@ -1,7 +1,14 @@
 import numpy as np
 import quaternion
-from avstack.geometry.refchoc import ReferenceFrame, GlobalOrigin3D, Vector, Rotation, get_reference_from_line
-from avstack.geometry import transform_orientation, q_mult_vec, q_stan_to_cam
+
+from avstack.geometry import q_mult_vec, q_stan_to_cam, transform_orientation
+from avstack.geometry.refchoc import (
+    GlobalOrigin3D,
+    ReferenceFrame,
+    Rotation,
+    Vector,
+    get_reference_from_line,
+)
 
 
 def x_rand():
@@ -9,12 +16,13 @@ def x_rand():
 
 
 def q_rand():
-    return transform_orientation(np.random.rand(3), 'euler', 'quat')
+    return transform_orientation(np.random.rand(3), "euler", "quat")
 
 
 # --------------------------------
 # COORDINATE FRAME
 # --------------------------------
+
 
 def test_ref_frame_from_string():
     cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
@@ -103,12 +111,16 @@ def test_differential_2():
 
 
 def test_differential_moving_frame():
-    cf1 = ReferenceFrame(np.array([2,0,0]), np.quaternion(1), GlobalOrigin3D, v=np.array([1,0,0]))
-    cf2 = ReferenceFrame(np.array([0,2,0]), cf1.q, GlobalOrigin3D, v=np.array([0,1,0]))
+    cf1 = ReferenceFrame(
+        np.array([2, 0, 0]), np.quaternion(1), GlobalOrigin3D, v=np.array([1, 0, 0])
+    )
+    cf2 = ReferenceFrame(
+        np.array([0, 2, 0]), cf1.q, GlobalOrigin3D, v=np.array([0, 1, 0])
+    )
     assert not cf1.allclose(cf2)
     cf_int = cf1.differential(cf2)
-    assert np.allclose(cf_int.x, np.array([-2,2,0]))
-    assert np.allclose(cf_int.v, np.array([-1,1,0]))
+    assert np.allclose(cf_int.x, np.array([-2, 2, 0]))
+    assert np.allclose(cf_int.v, np.array([-1, 1, 0]))
     cf_int_int = cf_int.integrate(start_at=GlobalOrigin3D)
     assert cf_int_int.allclose(cf2)
     assert not cf_int_int.allclose(cf1)
@@ -117,6 +129,7 @@ def test_differential_moving_frame():
 # --------------------------------
 # VECTOR
 # --------------------------------
+
 
 def test_change_vector_frame():
     v1 = Vector(x_rand(), GlobalOrigin3D)
@@ -162,7 +175,7 @@ def test_vector_distance():
 def test_vector_known_frame():
     cf1 = ReferenceFrame(np.zeros((3,)), np.quaternion(1), GlobalOrigin3D)
     cf2 = ReferenceFrame(np.zeros((3,)), q_stan_to_cam, GlobalOrigin3D)
-    v1 = Vector(np.array([100., 0, 0]), cf1)
+    v1 = Vector(np.array([100.0, 0, 0]), cf1)
     v2 = v1.change_reference(cf2, inplace=False)
     assert np.allclose(v2.x, q_mult_vec(q_stan_to_cam, v1.x))
 
@@ -170,6 +183,7 @@ def test_vector_known_frame():
 # --------------------------------
 # ROTATION
 # --------------------------------
+
 
 def change_rotation_frame():
     q1 = Rotation(q_rand(), GlobalOrigin3D)

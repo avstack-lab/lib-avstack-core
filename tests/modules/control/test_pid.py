@@ -12,13 +12,13 @@ import numpy as np
 
 from avstack.environment.objects import VehicleState
 from avstack.geometry import (
-    GlobalOrigin3D,
+    Acceleration,
+    AngularVelocity,
     Attitude,
+    GlobalOrigin3D,
     Pose,
     Position,
     Velocity,
-    Acceleration,
-    AngularVelocity,
     bbox,
 )
 from avstack.geometry import transformations as tforms
@@ -40,7 +40,7 @@ def test_pid_base():
 def test_vehicle_pid_control():
     pos = Position(np.zeros((3,)), GlobalOrigin3D)
     rot = Attitude(np.quaternion(1), GlobalOrigin3D)
-    box_obj = bbox.Box3D(pos, rot, [2,2,5])
+    box_obj = bbox.Box3D(pos, rot, [2, 2, 5])
     ego_state = VehicleState("car")
     lat = {"K_P": 1.5, "K_D": 0.02, "K_I": 0.01}
     lon = {"K_P": 1.0, "K_D": 0.01, "K_I": 0.05}
@@ -89,15 +89,7 @@ def test_vehicle_pid_control():
             ),
             GlobalOrigin3D,
         )
-        ego_state.set(
-            t,
-            pos_ego,
-            box_obj,
-            vel_ego,
-            acc_ego, 
-            rot_ego, 
-            ang_vel
-        )
+        ego_state.set(t, pos_ego, box_obj, vel_ego, acc_ego, rot_ego, ang_vel)
 
         # -- control
         WP.update(ego_state)

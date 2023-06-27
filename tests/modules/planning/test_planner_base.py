@@ -10,7 +10,7 @@
 
 import numpy as np
 
-from avstack.geometry import GlobalOrigin3D, Rotation, Pose, Vector
+from avstack.geometry import GlobalOrigin3D, Pose, Rotation, Vector
 from avstack.modules import planning
 
 

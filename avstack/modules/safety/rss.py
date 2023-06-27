@@ -7,13 +7,16 @@
 
 import itertools
 import math
+
 import numpy as np
 
 
 try:
     import ad_rss as ad
 except ModuleNotFoundError as e:
-    print("Cannot import rss library -- don't worry about this unless you need 'safety' evals")
+    print(
+        "Cannot import rss library -- don't worry about this unless you need 'safety' evals"
+    )
     use_rss = False
 else:
     use_rss = True

@@ -55,8 +55,9 @@ def test_groundtruth_perception():
     assert np.allclose(detections[0].box.t.x, obj_local.position.x)
 
 
-class LidarMeasurement():
+class LidarMeasurement:
     """To emulate the carla measurements"""
+
     def __init__(self, raw_data: memoryview) -> None:
         assert isinstance(raw_data, memoryview)
         self.raw_data = raw_data
@@ -68,26 +69,28 @@ def run_mmdet(datatype, model, dataset, as_memoryview=False):
     except ModuleNotFoundError as e:
         print("Cannot run mmdet test without the module")
     else:
-        if datatype == 'lidar':
+        if datatype == "lidar":
             data = pc
             if as_memoryview:
                 data.data = LidarMeasurement(memoryview(data.data.x))
-        elif datatype == 'image':
+        elif datatype == "image":
             data = img
         else:
             raise NotImplementedError(datatype)
-        detector = perception.object3d.MMDetObjectDetector3D(model=model, dataset=dataset)
+        detector = perception.object3d.MMDetObjectDetector3D(
+            model=model, dataset=dataset
+        )
         detections = detector(data, frame=frame, identifier="lidar_objects_3d")
         assert len(detections) > 2
 
 
 def test_mmdet_3d_pgd_kitti():
-    run_mmdet('image', 'pgd', 'kitti')
+    run_mmdet("image", "pgd", "kitti")
 
 
 def test_mmdet_3d_pillars_nuscenes():
-    run_mmdet('lidar', 'pointpillars', 'nuscenes')
-    
+    run_mmdet("lidar", "pointpillars", "nuscenes")
+
 
 def test_mmdet_3d_pillars_nuscenes_memoryview():
-    run_mmdet('lidar', 'pointpillars', 'nuscenes', as_memoryview=True)
+    run_mmdet("lidar", "pointpillars", "nuscenes", as_memoryview=True)

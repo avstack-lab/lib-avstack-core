@@ -10,7 +10,7 @@
 import numpy as np
 import quaternion
 
-from .refchoc import Rotation, Vector, ReferenceFrame
+from .refchoc import ReferenceFrame, Rotation, Vector
 
 
 def plane_2_transform(plane):
@@ -59,7 +59,9 @@ class GroundPlane:
     def angle_between(self, other):
         """Gets the angle between normal vectors of two planes"""
         if isinstance(other, GroundPlane):
-            assert self.reference == other.reference, "For now references must be the same"
+            assert (
+                self.reference == other.reference
+            ), "For now references must be the same"
             v1 = self.normal
             v2 = other.normal
             angle = np.arccos(np.dot(v1, v2))

@@ -37,9 +37,14 @@ class GroundTruth3DObjectDetector(_PerceptionAlgorithm):
         if ground_truth.objects is not None:
             for obj in ground_truth.objects:
                 if hasattr(obj, "box"):
-                    obj_in_ego = obj.change_reference(ground_truth.ego_state, inplace=False)
+                    obj_in_ego = obj.change_reference(
+                        ground_truth.ego_state, inplace=False
+                    )
                     det = detections.BoxDetection(
-                        self.MODE, obj_in_ego.box, obj_in_ego.box.reference, obj.obj_type
+                        self.MODE,
+                        obj_in_ego.box,
+                        obj_in_ego.box.reference,
+                        obj.obj_type,
                     )
                 else:
                     raise NotImplementedError(obj)
@@ -69,14 +74,17 @@ class MMDetObjectDetector3D(_MMObjectDetector):
     ):
         super().__init__(model, dataset, gpu, epoch, threshold, **kwargs)
         from mmdet3d.utils import register_all_modules
+
         register_all_modules(init_default_scope=False)
-        
+
         if self.input_data == "camera":
             from mmdet3d.apis import inference_mono_3d_detector, init_model
+
             self.inference_detector = inference_mono_3d_detector
             self.inference_mode = "from_mono"
         elif self.input_data == "lidar":
             from mmdet3d.apis import inference_detector, init_model
+
             self.inference_detector = inference_detector
             self.inference_mode = "from_lidar"
         else:
@@ -86,9 +94,10 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         if model == "3dssd":
             assert gpu == 0, "For some reason, 3dssd must be on gpu 0"
         self.model = init_model(self.mod_path, self.chk_path, device=f"cuda:{gpu}")
-        
+
     def _execute(self, data, identifier, eval_method="file", **kwargs):
         from mmdet3d.utils import register_all_modules
+
         register_all_modules(init_default_scope=True)
 
         # -- inference
@@ -197,7 +206,9 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/kitti/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class_20220301_150306-37dc2420.pth"
             elif dataset == "nuscenes":
                 threshold = 0.4
-                config_file = "configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
+                config_file = (
+                    "configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
+                )
                 checkpoint_file = "checkpoints/nuscenes/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_nus-3d_20201021_120719-269f9dd6.pth"
             elif dataset == "carla":
                 threshold = 0.5

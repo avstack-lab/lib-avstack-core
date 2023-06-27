@@ -8,6 +8,7 @@
 
 """
 from __future__ import annotations
+
 import itertools
 from copy import deepcopy
 from enum import IntEnum
@@ -15,22 +16,24 @@ from enum import IntEnum
 import numpy as np
 
 from avstack.geometry import (
+    Acceleration,
+    AngularVelocity,
+    Attitude,
     Box2D,
     Box3D,
+    GlobalOrigin3D,
+    Position,
     ReferenceFrame,
     Rotation,
-    Position,
-    Velocity,
     VectorHeadTail,
-    Acceleration,
-    Attitude,
-    AngularVelocity,
-    GlobalOrigin3D,
+    Velocity,
     bbox,
-    get_reference_from_line
+    get_reference_from_line,
 )
 from avstack.geometry import transformations as tforms
 from avstack.maskfilters import box_in_fov, filter_points_in_box
+
+
 NoneType = type(None)
 
 
@@ -91,7 +94,7 @@ class ObjectState:
     @property
     def yaw(self):
         return self.box.yaw
-    
+
     @property
     def reference(self):
         if self.position is not None:
@@ -100,13 +103,13 @@ class ObjectState:
             return self.attitude.reference
         else:
             return None
-        
+
     @property
     def velocity_head_tail(self):
         pos_g = self.position.in_global()
         vel_g = self.velocity.in_global()
         return VectorHeadTail(pos_g.x, pos_g.x + vel_g.x, GlobalOrigin3D)
-    
+
     def __getitem__(self, key):
         if key == "size":
             return self.box3d.size
@@ -115,7 +118,7 @@ class ObjectState:
 
     def deepcopy(self):
         return deepcopy(self)
-    
+
     def as_reference(self):
         pos = self.position.x if self.position else np.zeros((3,))
         vel = self.velocity.x if self.velocity else np.zeros((3,))
@@ -130,10 +133,10 @@ class ObjectState:
         t,
         position: Position,
         box: Box2D | Box3D,
-        velocity: Velocity=None,
-        acceleration: Acceleration=None,
-        attitude: Attitude=None,
-        angular_velocity: AngularVelocity=None,
+        velocity: Velocity = None,
+        acceleration: Acceleration = None,
+        attitude: Attitude = None,
+        angular_velocity: AngularVelocity = None,
         occlusion=Occlusion.UNKNOWN,
     ):
         self.t = t
@@ -186,10 +189,10 @@ class ObjectState:
             occlusion=self.occlusion,
         )
         return VS
-    
+
     def change_reference(self, other: ReferenceFrame | ObjectState, inplace: bool):
         """Transform the reference frame of this object
-        
+
         If other is a reference frame, assume it is static.
         If other is another object state, it may not be static.
         """
@@ -422,7 +425,7 @@ class ObjectState:
         accel = Vector(accel, reference)
         rotation = Rotation(attitude, reference)
         angular_velocity = None
-        box = bbox.Box3D(position, rotation, [h,w,l])
+        box = bbox.Box3D(position, rotation, [h, w, l])
         self.ID = ID
 
         self.set(

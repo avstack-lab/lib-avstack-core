@@ -151,6 +151,7 @@ class AutopilotWithCameraPerception(VehicleEgoStack):
 # LEVEL 2 AV'S
 # ==========================================================
 
+
 class Level2GtPerceptionGtLocalization(VehicleEgoStack):
     def _initialize_modules(self, t_init, ego_init, *args, **kwargs):
         self.localization = modules.localization.GroundTruthLocalizer(
@@ -174,13 +175,24 @@ class Level2GtPerceptionGtLocalization(VehicleEgoStack):
         self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
     ):
         ego_state = self.localization(timestamp, ground_truth)
-        objects_3d = self.perception["object_3d"](ground_truth, frame=frame, identifier="objects_3d")
+        objects_3d = self.perception["object_3d"](
+            ground_truth, frame=frame, identifier="objects_3d"
+        )
         objects_2d = []
         # filter to objects within 30 m
-        objects_3d = [obj for obj in objects_3d if ego_state.position.distance(obj.box.t) < 30]
-        objects_3d = self.tracking(t=timestamp, frame=frame, detections=objects_3d,
-                                   platform=ego_state, identifier='tracker-0')
-        lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier="lane_lines")
+        objects_3d = [
+            obj for obj in objects_3d if ego_state.position.distance(obj.box.t) < 30
+        ]
+        objects_3d = self.tracking(
+            t=timestamp,
+            frame=frame,
+            detections=objects_3d,
+            platform=ego_state,
+            identifier="tracker-0",
+        )
+        lanes = self.perception["lane_lines"](
+            ground_truth, frame=frame, identifier="lane_lines"
+        )
         # preds_3d = self.prediction(objects_3d, frame=frame)
         self.plan = self.planning(
             self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
@@ -199,7 +211,9 @@ class Level2LidarBasedVehicle(VehicleEgoStack):
             t_init, ego_init, rate=10, integrity=integrity
         )
         self.perception = {
-            "object_3d": modules.perception.object3d.MMDetObjectDetector3D(model="pointpillars", dataset="nuscenes"),
+            "object_3d": modules.perception.object3d.MMDetObjectDetector3D(
+                model="pointpillars", dataset="nuscenes"
+            ),
             "lane_lines": modules.perception.lanelines.GroundTruthLaneLineDetector(),
         }
         self.tracking = modules.tracking.tracker3d.Ab3dmotTracker(framerate=10)
@@ -212,15 +226,25 @@ class Level2LidarBasedVehicle(VehicleEgoStack):
         ctrl_lon = {"K_P": 1.0, "K_D": 0.2, "K_I": 0.2}
         self.control = modules.control.vehicle.VehiclePIDController(ctrl_lat, ctrl_lon)
 
-    def _tick_modules(self, frame, timestamp, data_manager, ground_truth, *args, **kwargs):
+    def _tick_modules(
+        self, frame, timestamp, data_manager, ground_truth, *args, **kwargs
+    ):
         ego_state = self.localization(timestamp, data_manager.pop("gnss-0"))
         # TODO: handle the case when there isn't data yet -- should NOT be a "missed detection"
         objects_3d = self.perception["object_3d"](
             data_manager.pop("lidar-0"), frame=frame, identifier="objects_3d"
         )
         objects_2d = []
-        objects_3d = self.tracking(t=timestamp, frame=frame, detections=objects_3d, platform=ego_state, identifier='tracker-0')
-        lanes = self.perception["lane_lines"](ground_truth, frame=frame, identifier="lane_lines")
+        objects_3d = self.tracking(
+            t=timestamp,
+            frame=frame,
+            detections=objects_3d,
+            platform=ego_state,
+            identifier="tracker-0",
+        )
+        lanes = self.perception["lane_lines"](
+            ground_truth, frame=frame, identifier="lane_lines"
+        )
         # preds_3d = self.prediction(objects_3d, frame=frame)
         self.plan = self.planning(
             self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
@@ -231,7 +255,7 @@ class Level2LidarBasedVehicle(VehicleEgoStack):
     def set_destination(self, *args, **kwargs):
         print("Ignoring destination...this type of vehicle does not take a destination")
 
-        
+
 # ==========================================================
 # ANALYSIS AV'S --> perception, tracking, prediction
 # ==========================================================
@@ -263,7 +287,11 @@ class LidarPerceptionAndTrackingVehicle(VehicleEgoStack):
             data_manager.pop("lidar-0"), frame=frame, identifier="lidar_objects_3d"
         )
         tracks_3d = self.tracking(
-            t=timestamp, frame=frame, detections=dets_3d, platform=geometry.GlobalOrigin3D, identifier="tracker-0"
+            t=timestamp,
+            frame=frame,
+            detections=dets_3d,
+            platform=geometry.GlobalOrigin3D,
+            identifier="tracker-0",
         )  # TODO: check platform
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
@@ -314,7 +342,11 @@ class LidarCollabPerceptionAndTrackingVehicle(VehicleEgoStack):
         if self.verbose:
             print("Added {} collab detections".format(n_collab))
         tracks_3d = self.tracking(
-            t=timestamp, frame=frame, detections=dets_3d, platform=geometry.GlobalOrigin3D, identifier="tracker-0"
+            t=timestamp,
+            frame=frame,
+            detections=dets_3d,
+            platform=geometry.GlobalOrigin3D,
+            identifier="tracker-0",
         )  # TODO: check platform
         predictions = self.prediction(tracks_3d, frame=frame)
         return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
@@ -359,7 +391,7 @@ class LidarCameraPerceptionAndTrackingVehicle(VehicleEgoStack):
         tracks_3d = self.tracking(
             t=timestamp,
             frame=frame,
-            detections={'2d':dets_2d, '3d':dets_3d},
+            detections={"2d": dets_2d, "3d": dets_3d},
             platform=geometry.GlobalOrigin3D,  # TODO: check this
             identifier="tracker-0",
         )
@@ -426,7 +458,11 @@ class LidarCamera3DFusionVehicle(VehicleEgoStack):
             dets_3d_cam, frame=frame, identifier="tracker-0"
         )
         tracks_lidar = self.tracking["lidar"](
-            timestamp=timestamp, frame=frame, detections=dets_3d_lid, platform=geometry.GlobalOrigin3D, identifier="tracker-1"
+            timestamp=timestamp,
+            frame=frame,
+            detections=dets_3d_lid,
+            platform=geometry.GlobalOrigin3D,
+            identifier="tracker-1",
         )
         tracks_fused = self.fusion(tracks_camera, tracks_lidar, frame=frame)
         predictions = self.prediction(tracks_fused, frame=frame)
