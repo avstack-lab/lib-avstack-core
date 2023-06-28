@@ -688,15 +688,15 @@ class Rotation:
 
     @property
     def forward_vector(self):
-        return self.R[:, 0]
+        return self.R[0, :]
 
     @property
     def left_vector(self):
-        return self.R[:, 1]
+        return self.R[1, :]
 
     @property
     def up_vector(self):
-        return self.R[:, 2]
+        return self.R[2, :]
 
     @property
     def yaw(self):

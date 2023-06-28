@@ -184,6 +184,11 @@ def test_vector_known_frame():
 # ROTATION
 # --------------------------------
 
+def test_forward_vector():
+    q1 = Rotation(transform_orientation([0, 0, np.pi/2], 'euler', 'quat'), GlobalOrigin3D)
+    assert np.allclose(q1.forward_vector, np.array([0, 1, 0]))
+    assert np.allclose(q1.yaw, np.pi/2)
+
 
 def change_rotation_frame():
     q1 = Rotation(q_rand(), GlobalOrigin3D)

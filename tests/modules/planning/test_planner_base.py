@@ -10,16 +10,16 @@
 
 import numpy as np
 
-from avstack.geometry import GlobalOrigin3D, Pose, Rotation, Vector
+from avstack.geometry import GlobalOrigin3D, Pose, Position, Attitude
 from avstack.modules import planning
 
 
 def test_waypoints():
     WPP = planning.WaypointPlan()
     assert WPP.needs_waypoint()
-    t_rot = Rotation(np.quaternion(1), GlobalOrigin3D)
-    t_pnt = Vector(5 + np.random.rand(3), GlobalOrigin3D)
-    target_point = Pose(t_rot, t_pnt)
+    t_rot = Attitude(np.quaternion(1), GlobalOrigin3D)
+    t_pnt = Position(5 + np.random.rand(3), GlobalOrigin3D)
+    target_point = Pose(t_pnt, t_rot)
     target_speed = 10
     wp = planning.Waypoint(target_point, target_speed)
     distance = t_pnt.norm()

@@ -95,7 +95,7 @@ class PIDLateralController(_PIDController):
         current and target are in global coordinates, standard
         """
         v_begin = current.position
-        xyz = [math.cos(current.rotation.yaw), math.sin(target.rotation.yaw), 0]
+        xyz = [math.cos(current.attitude.yaw), math.sin(target.attitude.yaw), 0]
         v_end = v_begin + Vector(xyz, reference=v_begin.reference)
         v_vec = np.array([v_end.x[0] - v_begin.x[0], v_end.x[1] - v_begin.x[1], 0.0])
         w_vec = np.array(
