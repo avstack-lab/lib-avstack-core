@@ -628,6 +628,9 @@ class Spherical(Vector):
 
 
 class Rotation:
+    """
+    Rotation is defined as q_reference_to_object
+    """
     def __init__(self, q: np.quaternion, reference: ReferenceFrame, n_prec=8) -> None:
         self.n_prec = n_prec
         if isinstance(q, np.quaternion):
@@ -677,7 +680,7 @@ class Rotation:
 
     @property
     def R(self):
-        return quaternion.as_rotation_matrix(self.q)
+        return tforms.transform_orientation(self.q, "quat", "dcm")
 
     @property
     def euler(self):
