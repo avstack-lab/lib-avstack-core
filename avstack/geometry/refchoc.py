@@ -728,6 +728,11 @@ class Rotation:
         else:
             other = other.change_reference(self.reference, inplace=False)
             return np.allclose(self.q.vec, other.q.vec)
+        
+    def angle_between(self, other: Rotation):
+        if self.reference != other.reference:
+            other = other.change_reference(self.reference, inplace=False)
+        return 2*np.arcsin(np.linalg.norm((self.q * other.q.conjugate()).vec))
 
     def change_reference(self, reference: ReferenceFrame, inplace: bool):
         """Change of reference frame of a vector
