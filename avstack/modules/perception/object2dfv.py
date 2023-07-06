@@ -12,6 +12,7 @@ import tempfile
 
 import numpy as np
 from cv2 import imwrite
+import torch
 
 from avstack.datastructs import DataContainer
 from avstack.modules.perception import utils
@@ -136,14 +137,17 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 fd_data, data_file = tempfile.mkstemp(suffix=".png", dir=temp_dir)
                 os.close(fd_data)  # need to start with the file closed...
                 if is_rgb:
-                    imwrite(data_file, data.data[:, :, ::-1])
+                    img = data.data[:,:,::-1] if isinstance(data.data, np.ndarray) else torch.flip(data.data, dims=(2,))
                 else:
-                    imwrite(data_file, data.data)
+                    img = data.data
+                imwrite(data_file, data.data[:, :, ::-1])
                 result_ = inference_detector(model, data_file)
         elif eval_method == "data":
-            result_ = inference_detector(
-                model, data.data if not is_rgb else data.data[:, :, ::-1]
-            )
+            if is_rgb:
+                img = data.data[:,:,::-1] if isinstance(data.data, np.ndarray) else torch.flip(data.data, dims=(2,))
+            else:
+                img = data.data
+            result_ = inference_detector(model, img)
         else:
             raise NotImplementedError(eval_method)
         return result_
