@@ -631,6 +631,7 @@ class Rotation:
     """
     Rotation is defined as q_reference_to_object
     """
+
     def __init__(self, q: np.quaternion, reference: ReferenceFrame, n_prec=8) -> None:
         self.n_prec = n_prec
         if isinstance(q, np.quaternion):
@@ -728,11 +729,11 @@ class Rotation:
         else:
             other = other.change_reference(self.reference, inplace=False)
             return np.allclose(self.q.vec, other.q.vec)
-        
+
     def angle_between(self, other: Rotation):
         if self.reference != other.reference:
             other = other.change_reference(self.reference, inplace=False)
-        return 2*np.arcsin(np.linalg.norm((self.q * other.q.conjugate()).vec))
+        return 2 * np.arcsin(np.linalg.norm((self.q * other.q.conjugate()).vec))
 
     def change_reference(self, reference: ReferenceFrame, inplace: bool):
         """Change of reference frame of a vector

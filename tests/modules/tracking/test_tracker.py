@@ -182,7 +182,7 @@ def test_raz_tracker_3d():
     dets_3d_all = make_kitti_tracking_data(
         dt=dt, n_frames=20, n_targs=4, det_type="raz"
     )
-    tracker = tracking.tracker3d.BasicRazTracker(threshold_coast=5)
+    tracker = tracking.tracker2d.BasicRazTracker(threshold_coast=5)
     for frame, dets_3d in enumerate(dets_3d_all):
         tracks = tracker(
             t=frame * dt,

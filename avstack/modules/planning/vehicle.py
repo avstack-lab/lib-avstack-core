@@ -12,7 +12,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from avstack.geometry import Pose, Attitude
+from avstack.geometry import Attitude, Pose
 from avstack.geometry import transformations as tforms
 
 from . import components

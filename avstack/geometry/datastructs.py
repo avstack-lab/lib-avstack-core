@@ -62,7 +62,7 @@ class Pose:
     @property
     def position(self):
         return self._position
-    
+
     @position.setter
     def position(self, position):
         if not isinstance(position, Position):
@@ -72,7 +72,7 @@ class Pose:
     @property
     def attitude(self):
         return self._attitude
-    
+
     @attitude.setter
     def attitude(self, attitude):
         if not isinstance(attitude, Attitude):
@@ -88,7 +88,7 @@ class Twist:
     @property
     def linear(self):
         return self._linear
-    
+
     @linear.setter
     def linear(self, linear):
         if not isinstance(linear, Velocity):
@@ -98,7 +98,7 @@ class Twist:
     @property
     def angular(self):
         return self._angular
-    
+
     @angular.setter
     def angular(self, angular):
         if not isinstance(angular, AngularVelocity):

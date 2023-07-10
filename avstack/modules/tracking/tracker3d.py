@@ -21,7 +21,6 @@ from .base import _TrackingAlgorithm
 from .tracks import (
     BasicBoxTrack3D,
     BasicJointBoxTrack,
-    XyFromRazTrack,
     XyzFromRazelRrtTrack,
     XyzFromRazelTrack,
 )
@@ -34,11 +33,6 @@ class GroundTruthTracker(_TrackingAlgorithm):
 
     def __call__(self, t, frame, detections, ground_truth, **kwargs):
         return ground_truth.objects
-
-
-# ==============================================================
-# BASIC BOX TRACKER
-# ==============================================================
 
 
 class BasicBoxTracker3D(_TrackingAlgorithm):
@@ -286,35 +280,6 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
             ]
 
         return self.tracks_confirmed
-
-
-class BasicRazTracker(_TrackingAlgorithm):
-    def __init__(
-        self,
-        threshold_confirmed=10,
-        threshold_coast=8,
-        v_max=60,  # meters per second
-        assign_metric="center_dist",
-        assign_radius=8,
-        **kwargs,
-    ):
-        super().__init__(
-            assign_metric=assign_metric,
-            assign_radius=assign_radius,
-            threshold_confirmed=threshold_confirmed,
-            threshold_coast=threshold_coast,
-            cost_threshold=0,  # bc we are subtracting off assign radius
-            v_max=v_max,
-            **kwargs,
-        )
-
-    def spawn_track_from_detection(self, detection):
-        return XyFromRazTrack(
-            t0=self.t,
-            raz=detection.raz,
-            reference=detection.reference,
-            obj_type=detection.obj_type,
-        )
 
 
 class BasicRazelTracker(_TrackingAlgorithm):

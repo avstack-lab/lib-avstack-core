@@ -184,10 +184,13 @@ def test_vector_known_frame():
 # ROTATION
 # --------------------------------
 
+
 def test_forward_vector():
-    q1 = Rotation(transform_orientation([0, 0, np.pi/2], 'euler', 'quat'), GlobalOrigin3D)
+    q1 = Rotation(
+        transform_orientation([0, 0, np.pi / 2], "euler", "quat"), GlobalOrigin3D
+    )
     assert np.allclose(q1.forward_vector, np.array([0, 1, 0]))
-    assert np.allclose(q1.yaw, np.pi/2)
+    assert np.allclose(q1.yaw, np.pi / 2)
 
 
 def change_rotation_frame():
@@ -207,11 +210,11 @@ def test_compose_rotations_same():
 
 def test_angle_between():
     for idx in range(3):
-        e1 = [0]*3
-        e2 = [0]*3
-        e1[idx] = np.pi/2
-        e2[idx] = np.pi/6
-        q1 = Rotation(transform_orientation(e1, 'euler', 'quat'), GlobalOrigin3D)
-        q2 = Rotation(transform_orientation(e2, 'euler', 'quat'), GlobalOrigin3D)
-        assert np.isclose(q1.angle_between(q2), np.pi/2 - np.pi/6)
-        assert np.isclose(q2.angle_between(q1), np.pi/2 - np.pi/6)
+        e1 = [0] * 3
+        e2 = [0] * 3
+        e1[idx] = np.pi / 2
+        e2[idx] = np.pi / 6
+        q1 = Rotation(transform_orientation(e1, "euler", "quat"), GlobalOrigin3D)
+        q2 = Rotation(transform_orientation(e2, "euler", "quat"), GlobalOrigin3D)
+        assert np.isclose(q1.angle_between(q2), np.pi / 2 - np.pi / 6)
+        assert np.isclose(q2.angle_between(q1), np.pi / 2 - np.pi / 6)

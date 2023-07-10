@@ -10,7 +10,7 @@
 
 import numpy as np
 
-from avstack.geometry import GlobalOrigin3D, Pose, Position, Attitude
+from avstack.geometry import Attitude, GlobalOrigin3D, Pose, Position
 from avstack.modules import planning
 
 
