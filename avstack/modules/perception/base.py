@@ -38,10 +38,7 @@ class _PerceptionAlgorithm:
                 data, frame=frame, identifier=identifier, *args, **kwargs
             )
             if self.save:
-                per_str = "\n".join([det.format_as_string() for det in detections])
-                fname = os.path.join(self.save_folder, "%06i.txt" % frame)
-                with open(fname, "w") as f:
-                    f.write(per_str)
+                raise NotImplementedError
             return detections
 
 

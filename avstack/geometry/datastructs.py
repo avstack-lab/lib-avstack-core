@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 
 import numpy as np
@@ -6,7 +7,63 @@ import avstack
 
 from . import transformations as tforms
 from .base import q_mult_vec
-from .refchoc import ReferenceFrame, Rotation, Vector
+from .refchoc import ReferenceDecoder, ReferenceFrame, Rotation, Vector
+
+
+class VectorDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        if "vector" in json_object:
+            json_object = json_object["vector"]
+            factory = Vector
+        elif "position" in json_object:
+            json_object = json_object["position"]
+            factory = Position
+        elif "velocity" in json_object:
+            json_object = json_object["velocity"]
+            factory = Velocity
+        elif "acceleration" in json_object:
+            json_object = json_object["acceleration"]
+            factory = Acceleration
+        else:
+            return json_object
+        reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
+        return factory(
+            x=np.array(json_object["x"]),
+            reference=reference,
+            n_prec=json_object["n_prec"],
+        )
+
+
+class RotationDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        if "rotation" in json_object:
+            json_object = json_object["rotation"]
+            factory = Rotation
+        elif "attitude" in json_object:
+            json_object = json_object["attitude"]
+            factory = Attitude
+        elif "angular" in json_object:
+            json_object = json_object["angular"]
+            factory = AngularVelocity
+        elif "angularvelocity" in json_object:
+            json_object = json_object["angularvelocity"]
+            factory = AngularVelocity
+        else:
+            return json_object
+        reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
+        return factory(
+            q=np.quaternion(json_object["qw"], *json_object["qv"]),
+            reference=reference,
+            n_prec=json_object["n_prec"],
+        )
 
 
 class Position(Vector):

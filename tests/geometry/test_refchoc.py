@@ -1,13 +1,15 @@
+import json
+
 import numpy as np
 import quaternion
 
 from avstack.geometry import q_mult_vec, q_stan_to_cam, transform_orientation
 from avstack.geometry.refchoc import (
     GlobalOrigin3D,
+    ReferenceDecoder,
     ReferenceFrame,
     Rotation,
     Vector,
-    get_reference_from_line,
 )
 
 
@@ -24,12 +26,11 @@ def q_rand():
 # --------------------------------
 
 
-def test_ref_frame_from_string():
+def test_encode_decode_reference():
     cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
-    cf2 = ReferenceFrame(x_rand(), q_rand(), cf1)
-    cf2_string = cf2.format_as_string()
-    cf2_recon = get_reference_from_line(cf2_string)
-    assert cf2.allclose(cf2_recon)
+    cf2_1 = ReferenceFrame(x_rand(), q_rand(), cf1)
+    cf2_2 = json.loads(cf2_1.encode(), cls=ReferenceDecoder)
+    assert cf2_1.allclose(cf2_2)
 
 
 def test_one_level_coordinate_frame():

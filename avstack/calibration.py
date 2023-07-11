@@ -9,29 +9,49 @@
 """
 from __future__ import annotations
 
+import json
+
 import numpy as np
 
-from avstack.geometry.refchoc import get_reference_from_line
+from avstack.geometry.refchoc import ReferenceDecoder
 
 
-def read_calibration_from_line(line):
-    elems = line.split(" ")
-    assert elems[0] == "calibration", elems[0]
-    if elems[1] == "intrinsics":
-        P_cam = np.reshape(np.array([float(e) for e in elems[2:14]]), (3, 4))
-        assert elems[14] == "img_shape"
-        img_shape = tuple([int(e) for e in elems[15:17]])
-        try:
-            channel_order = elems[18]
-        except IndexError:
-            channel_order = "bgr"
-        reference = get_reference_from_line(" ".join(elems[19:]))
-        return CameraCalibration(
-            reference, P_cam, img_shape, channel_order=channel_order
-        )
-    else:
-        reference = get_reference_from_line(" ".join(elems[1:]))
-        return Calibration(reference)
+class CalibrationEncoder(json.JSONEncoder):
+    def default(self, o):
+        calib_dict = {"reference": o.reference.encode()}
+        if isinstance(o, CameraCalibration):
+            calib_dict["P"] = o.P.tolist()
+            calib_dict["img_shape"] = o.img_shape
+            calib_dict["fov_horizontal"] = o.fov_horizontal
+            calib_dict["fov_vertical"] = o.fov_vertical
+            calib_dict["square_pixels"] = o.square_pixels
+            calib_dict["channel_order"] = o.channel_order
+        return {"calibration": calib_dict}
+
+
+class CalibrationDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        if "calibration" in json_object:
+            json_object = json_object["calibration"]
+            reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
+            if "P" in json_object:
+                return CameraCalibration(
+                    reference=reference,
+                    P=np.array(json_object["P"]),
+                    img_shape=json_object["img_shape"],
+                    fov_horizontal=json_object["fov_horizontal"],
+                    fov_vertical=json_object["fov_vertical"],
+                    square_pixels=json_object["square_pixels"],
+                    channel_order=json_object["channel_order"],
+                )
+            else:
+                return Calibration(reference=reference)
+        else:
+            return json_object
 
 
 class Calibration:
@@ -49,14 +69,11 @@ class Calibration:
     def __str__(self):
         return f"Calibration with reference: {self.reference}"
 
-    def format_as_string(self):
-        return "calibration " + self.reference.format_as_string()
+    def encode(self):
+        return json.dumps(self, cls=CalibrationEncoder)
 
-    def save_to_file(self, filename):
-        if not filename.endswith(".txt"):
-            filename = filename + ".txt"
-        with open(filename, "w") as f:
-            f.write(self.format_as_string())
+    def allclose(self, other: Calibration):
+        return self.reference.allclose(other.reference)
 
 
 class CameraCalibration(Calibration):
@@ -113,20 +130,14 @@ class CameraCalibration(Calibration):
             else:
                 pix_size = fov_vertical / (2 * self.f_v)
             self.pixel_size_u = self.pixel_size_v = pix_size
+        self.fov_horizontal = fov_horizontal
+        self.fov_vertical = fov_vertical
+        self.square_pixels = square_pixels
         self.channel_order = channel_order
         super().__init__(reference)
 
     def __str__(self):
         return f"Camera Calibration with reference: {self.reference}; P:{self.P}"
 
-    def format_as_string(self):
-        P_as_str = " ".join([str(v) for v in np.ravel(self.P)])
-        c_str = (
-            "calibration "
-            + "intrinsics "
-            + P_as_str
-            + f" img_shape {self.img_shape[0]} {self.img_shape[1]}"
-            + f" channel_order {self.channel_order} "
-            + self.reference.format_as_string()
-        )
-        return c_str
+    def allclose(self, other: CameraCalibration):
+        return self.reference.allclose(other.reference) and np.allclose(self.P, other.P)

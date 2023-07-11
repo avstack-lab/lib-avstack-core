@@ -10,6 +10,7 @@ Custom data structures. Some based on the heapq library.
 from __future__ import annotations
 
 import heapq
+import json
 import time
 from copy import deepcopy
 from functools import total_ordering
@@ -617,6 +618,37 @@ class DataBucket(PriorityQueue):
             return super(DataBucket, self).pop()[1]
 
 
+class DataContainerEncoder(json.JSONEncoder):
+    def default(self, o):
+        dc_dict = {
+            "frame": o.frame,
+            "timestamp": o.timestamp,
+            "source_identifier": o.source_identifier,
+            "data": [d.encode() for d in o.data],
+        }
+        return {"datacontainer": dc_dict}
+
+
+class DataContainerDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+        self.data_decoder = None
+
+    def object_hook(self, json_object):
+        if "datacontainer" in json_object:
+            json_object = json_object["datacontainer"]
+            return DataContainer(
+                frame=json_object["frame"],
+                timestamp=json_object["timestamp"],
+                data=[
+                    json.loads(d, cls=self.data_decoder) for d in json_object["data"]
+                ],
+                source_identifier=json_object["source_identifier"],
+            )
+        else:
+            return json_object
+
+
 class DataContainer:
     """Manages data elements at single snapshot in time
 
@@ -704,6 +736,9 @@ class DataContainer:
                 f"Input timestamp of type {type(timestamp)} is not of an acceptable type"
             )
         self._timestamp = timestamp
+
+    def encode(self):
+        return json.dumps(self, cls=DataContainerEncoder)
 
     def append(self, other):
         self.data.append(other)

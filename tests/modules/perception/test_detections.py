@@ -7,9 +7,11 @@
 """
 
 """
+import json
+
 import numpy as np
 
-from avstack.datastructs import DataContainer
+from avstack.datastructs import DataContainer, DataContainerDecoder
 from avstack.geometry import Attitude, Box3D, GlobalOrigin3D, Position, Vector
 from avstack.modules.perception import detections
 
@@ -38,12 +40,11 @@ def test_detection_container():
     assert len(dc) == n_datas
 
 
-def test_detection_container_as_string():
+def test_detection_container_encode_decode():
     n_datas = 4
-    dc = make_data_container(n_datas=n_datas)
-    dc_string = detections.format_data_container_as_string(dc)
-    dc_reconstruct = detections.get_data_container_from_line(dc_string)
-    assert len(dc_reconstruct) == len(dc)
+    dc_1 = make_data_container(n_datas=n_datas)
+    dc_2 = json.loads(dc_1.encode(), cls=detections.DetectionContainerDecoder)
+    assert len(dc_1) == len(dc_2)
 
 
 def test_centroid_detection():

@@ -12,7 +12,7 @@ import quaternion
 
 from . import transformations
 from .base import q_mult_vec
-from .bbox import Box2D, Box3D, SegMask2D
+from .bbox import Box2D, Box3D, BoxDecoder, SegMask2D
 from .coordinates import CameraCoordinates, StandardCoordinates
 from .datastructs import (
     Acceleration,
@@ -22,17 +22,21 @@ from .datastructs import (
     PointMatrix3D,
     Pose,
     Position,
+    RotationDecoder,
     Twist,
+    VectorDecoder,
     Velocity,
 )
 from .planes import GroundPlane, plane_2_transform
 from .refchoc import (
     GlobalOrigin3D,
+    ReferenceDecoder,
     ReferenceFrame,
     Rotation,
+    RotationEncoder,
     Vector,
+    VectorEncoder,
     VectorHeadTail,
-    get_reference_from_line,
 )
 from .transformations import transform_orientation
 

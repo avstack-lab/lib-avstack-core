@@ -5,6 +5,7 @@
 # @Last modified time: 2021-08-11
 
 
+import json
 import logging
 from copy import copy, deepcopy
 
@@ -17,11 +18,17 @@ from scipy.spatial import ConvexHull, QhullError
 from avstack import exceptions
 from avstack.geometry import transformations as tforms
 
-from ..calibration import read_calibration_from_line
+from ..calibration import CalibrationDecoder
 from .base import _q_mult_vec, q_mult_vec
 from .coordinates import CameraCoordinates, LidarCoordinates, StandardCoordinates
-from .datastructs import Attitude, PointMatrix3D, Position
-from .refchoc import GlobalOrigin3D, get_reference_from_line
+from .datastructs import (
+    Attitude,
+    PointMatrix3D,
+    Position,
+    RotationDecoder,
+    VectorDecoder,
+)
+from .refchoc import GlobalOrigin3D
 
 
 R_stan_to_cam = StandardCoordinates.get_conversion_matrix(CameraCoordinates)
@@ -35,57 +42,76 @@ q_cam_to_stan = q_stan_to_cam.conjugate()
 # ==============================================================================
 
 
-def get_boxes_from_file(box_file_path):
-    with open(box_file_path, "r") as f:
-        lines = [l.strip() for l in f.readlines()]
-    boxes = []
-    for line in lines:
-        boxes.append(get_box_from_line(line))
-    return boxes
-
-
-def get_box_from_line(line):
-    items = line.split()
-    try:
-        box_type = items[0]
-        if box_type == "box2d":
-            xmin, ymin, xmax, ymax = [float(i) for i in items[1:5]]
-            calib = read_calibration_from_line(" ".join(items[5:]))
-            box = Box2D([xmin, ymin, xmax, ymax], calib)
-        elif box_type == "box3d":
-            h, w, l, x, y, z, qw, qx, qy, qz = [float(i) for i in items[1:11]]
-            q = np.quaternion(qw, qx, qy, qz)
-            reference = get_reference_from_line(" ".join(items[11:]))
-            pos = Position(np.array([x, y, z]), reference)
-            rot = Attitude(q, reference)
-            box = Box3D(pos, rot, [h, w, l])
-        else:
-            raise NotImplementedError(f"{box_type} ---- {line}")
-    except Exception as e:
-        print(items)
-        raise e
-    return box
-
-
-def get_segmask_from_line(line):
-    items = line.split(" ")
-    assert items[0] == "segmask-2d", items[0]
-    mat_type = items[1]
-    if mat_type == "coo-matrix":
-        shape = (int(items[2].split("-")[0]), int(items[2].split("-")[1]))
-        rows = np.array([float(v) for v in items[3].split("-")])
-        cols = np.array([float(v) for v in items[4].split("-")])
-        data = np.array([float(v) for v in items[5].split("-")])
-        mask = sparse.coo_matrix((data, (rows, cols)), shape=shape).toarray()
-    else:
-        raise NotImplementedError(mat_type)
-    calib = read_calibration_from_line(" ".join(items[6:]))
-    return SegMask2D(mask, calib)
-
-
 def wrap_minus_pi_to_pi(phases):
     phases = (phases + np.pi) % (2 * np.pi) - np.pi
     return phases
+
+
+class BoxEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Box2D):
+            box2d = o.box2d if isinstance(o.box2d, list) else o.box2d.tolist()
+            box_dict = {"box": box2d, "calibration": o.calibration.encode(), "ID": o.ID}
+            return {"box2d": box_dict}
+        elif isinstance(o, Box3D):
+            box_dict = {
+                "position": o.position.encode(),
+                "attitude": o.attitude.encode(),
+                "hwl": [o.h, o.w, o.l],
+                "where_is_t": o.where_is_t,
+                "obj_type": o.obj_type,
+                "ID": o.ID,
+            }
+            return {"box3d": box_dict}
+        elif isinstance(o, SegMask2D):
+            seg_dict = {
+                "shape": o.sparse_mask.shape,
+                "rows": o.sparse_mask.row.tolist(),
+                "cols": o.sparse_mask.col.tolist(),
+                "data": o.sparse_mask.data.tolist(),
+                "calibration": o.calibration.encode(),
+            }
+            return {"segmask2d": seg_dict}
+        else:
+            raise NotImplementedError(type(o))
+
+
+class BoxDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        if "box2d" in json_object:
+            json_object = json_object["box2d"]
+            calibration = json.loads(json_object["calibration"], cls=CalibrationDecoder)
+            return Box2D(
+                box2d=json_object["box"], calibration=calibration, ID=json_object["ID"]
+            )
+        elif "box3d" in json_object:
+            json_object = json_object["box3d"]
+            position = json.loads(json_object["position"], cls=VectorDecoder)
+            attitude = json.loads(json_object["attitude"], cls=RotationDecoder)
+            return Box3D(
+                position=position,
+                attitude=attitude,
+                hwl=json_object["hwl"],
+                where_is_t=json_object["where_is_t"],
+                obj_type=json_object["obj_type"],
+                ID=json_object["ID"],
+            )
+        elif "segmask2d" in json_object:
+            json_object = json_object["segmask2d"]
+            calibration = json.loads(json_object["calibration"], cls=CalibrationDecoder)
+            data = np.array(json_object["data"])
+            rows = np.array(json_object["rows"])
+            cols = np.array(json_object["cols"])
+            mask = sparse.coo_matrix(
+                (data, (rows, cols)), shape=json_object["shape"]
+            ).toarray()
+            return SegMask2D(mask=mask, calibration=calibration)
+        else:
+            return json_object
 
 
 class SegMask2D:
@@ -111,17 +137,13 @@ class SegMask2D:
         else:
             return False
 
-    def sparse_mask_as_string(self):
-        # TODO: convert this to a CSC matrix to be even more compressed
-        shape_str = "-".join([str(v) for v in self.sparse_mask.shape])
-        row_str = "-".join([str(v) for v in self.sparse_mask.row])
-        col_str = "-".join([str(v) for v in self.sparse_mask.col])
-        data_str = "-".join([str(v) for v in self.sparse_mask.data.astype(int)])
-        sm_str = f"coo-matrix {shape_str} {row_str} {col_str} {data_str}"
-        return sm_str
+    def encode(self):
+        return json.dumps(self, cls=BoxEncoder)
 
-    def format_as_string(self) -> str:
-        return f"segmask-2d {self.sparse_mask_as_string()} {self.calibration.format_as_string()}"
+    def allclose(self, other):
+        return np.allclose(self.data, other.data) and self.calibration.allclose(
+            other.calibration
+        )
 
 
 class Box2D:
@@ -172,6 +194,11 @@ class Box2D:
     def reference(self):
         return self.calibration.reference
 
+    def allclose(self, other):
+        return self.calibration.allclose(other.calibration) and np.allclose(
+            np.array(self.box2d), np.array(other.box2d)
+        )
+
     def deepcopy(self):
         return deepcopy(self)
 
@@ -214,6 +241,9 @@ class Box2D:
     @property
     def box2d_xywh(self):
         return [self.xmin, self.ymin, self.w, self.h]
+
+    def encode(self):
+        return json.dumps(self, cls=BoxEncoder)
 
     def IoU(self, other, check_reference=True):
         if isinstance(other, Box2D):
@@ -263,15 +293,12 @@ class Box2D:
         if not inplace:
             return deepcopy(self)
 
-    def format_as_string(self):
-        return f"box2d {self.xmin} {self.ymin} {self.xmax} {self.ymax} {self.calibration.format_as_string()}"
-
 
 class Box3D:
     def __init__(
         self,
         position: Position,
-        rotation: Attitude,
+        attitude: Attitude,
         hwl: list,
         where_is_t: str = "center",
         enforce_mins: bool = True,
@@ -291,8 +318,8 @@ class Box3D:
         self.h, self.w, self.l = h, w, l
         assert isinstance(position, Position)
         self.position = position
-        assert isinstance(rotation, Attitude)
-        self.rotation = rotation
+        assert isinstance(attitude, Attitude)
+        self.attitude = attitude
         self.obj_type = obj_type
         self.ID = ID
 
@@ -331,16 +358,19 @@ class Box3D:
 
     @property
     def q(self):
-        return self.rotation
+        return self.attitude
 
     @q.setter
     def q(self, q):
         assert isinstance(q, Attitude)
-        self.rotation = q
+        self.attitude = q
 
     @property
     def reference(self):
         return self.position.reference
+
+    def encode(self):
+        return json.dumps(self, cls=BoxEncoder)
 
     def deepcopy(self):
         return deepcopy(self)
@@ -527,7 +557,7 @@ class Box3D:
         """Rotates the attitude AND the translation of the box"""
         if inplace:
             self.position = q_mult_vec(q, self.position)
-            self.rotation = q * self.q
+            self.attitude = q * self.q
         else:
             pos = q_mult_vec(q, self.position)
             rot = q * self.q
@@ -536,7 +566,7 @@ class Box3D:
     def rotate_attitude(self, q, inplace=True):
         """Rotates the attitude of the box only"""
         if inplace:
-            self.rotation = q * self.q
+            self.attitude = q * self.q
         else:
             rot = q * self.q
             return Box3D(deepcopy(self.position), rot, self.size)
@@ -546,7 +576,7 @@ class Box3D:
         if inplace:
             self.position += L
         else:
-            return Box3D(self.position + L, deepcopy(self.rotation), self.size)
+            return Box3D(self.position + L, deepcopy(self.attitude), self.size)
 
     def project_to_2d_bbox(self, calib, check_reference=True):
         """Project 3D bounding box into a 2D bounding box"""
@@ -557,13 +587,6 @@ class Box3D:
     def project_corners_to_2d_image_plane(self, calib, check_reference=True):
         """Project 3D bounding box corners only image plane"""
         return proj_3d_bbox_to_image_plane(self, calib, check_reference=check_reference)
-
-    def format_as_string(self):
-        return (
-            f"box3d {self.h} {self.w} {self.l} {self.t.x[0]} "
-            f"{self.t.x[1]} {self.t.x[2]} {self.q.qw} "
-            f"{self.q.qx} {self.q.qy} {self.q.qz} {self.reference.format_as_string()}"
-        )
 
 
 # ==============================================================================
@@ -817,7 +840,7 @@ def compute_box_size(corners_3d, heading_angle):
     Assumes corner convention in order to specify which is which
     """
     R = tforms.roty(heading_angle)
-    box_oriented = corners_3d @ R  # invert the rotation
+    box_oriented = corners_3d @ R  # invert the attitude
     l = max(box_oriented[:, 0]) - min(box_oriented[:, 0])
     h = max(box_oriented[:, 1]) - min(box_oriented[:, 1])
     w = max(box_oriented[:, 2]) - min(box_oriented[:, 2])

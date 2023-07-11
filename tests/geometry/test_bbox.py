@@ -4,6 +4,7 @@
 # @Last modified by:   spencer
 # @Last modified time: 2021-08-10
 
+import json
 import sys
 from copy import deepcopy
 
@@ -50,7 +51,7 @@ def test_box_translate():
     L = Position(np.random.rand(3), GlobalOrigin3D)
     box2 = box.translate(L, inplace=False)
     assert not box2.position.allclose(box.position)
-    assert box2.rotation.allclose(box.rotation)
+    assert box2.attitude.allclose(box.attitude)
 
 
 def test_box_rotation():
@@ -58,7 +59,7 @@ def test_box_rotation():
     R = Attitude(q_stan_to_cam, GlobalOrigin3D)
     box2 = box.rotate(R, inplace=False)
     assert not box2.position.allclose(box.position)
-    assert not box2.rotation.allclose(box.rotation)
+    assert not box2.attitude.allclose(box.attitude)
 
 
 def test_box_rotation_attitude():
@@ -66,7 +67,7 @@ def test_box_rotation_attitude():
     R = Attitude(q_stan_to_cam, GlobalOrigin3D)
     box2 = box.rotate_attitude(R, inplace=False)
     assert box2.position.allclose(box.position)
-    assert not box2.rotation.allclose(box.rotation)
+    assert not box2.attitude.allclose(box.attitude)
 
 
 def test_2d_intersection_union():
@@ -90,7 +91,7 @@ def test_3d_intersection_union():
     box1a = box1.translate(Position(np.array([1, 1, 1]), GlobalOrigin3D), inplace=False)
     assert bbox.box_intersection(box1.corners, box1a.corners) > 0.0
     pos2 = Position(np.array([10, 5.4, -10.2]), GlobalOrigin3D)
-    box2 = bbox.Box3D(pos2, box1.rotation, [3, 4, 5])
+    box2 = bbox.Box3D(pos2, box1.attitude, [3, 4, 5])
     assert bbox.box_intersection(box1.corners, box2.corners) == 0.0
 
 
@@ -134,13 +135,6 @@ def test_2d_box_valid():
         box = bbox.Box2D([10, 20, 50, 10], cam_calib)
     except exceptions.BoundingBoxError as e:
         pass
-
-
-def test_bbox_from_string():
-    box = get_box()
-    box_str = box.format_as_string()
-    box_from_str = bbox.get_box_from_line(box_str)
-    assert box_from_str.allclose(box)
 
 
 def test_box_IoU():
@@ -281,20 +275,13 @@ def test_change_reference_iou():
 
 
 def test_io_2d_bbox():
-    P = np.random.rand(3, 4)
-    img_shape = (256, 1024)
-    cam_calib = calibration.CameraCalibration(GlobalOrigin3D, P, img_shape=img_shape)
-    box1 = bbox.Box2D([-10, 20, 50, 60], cam_calib)
-    box2 = bbox.get_box_from_line(box1.format_as_string())
-    assert box1 == box2
+    box_2d_2 = json.loads(box_2d.encode(), cls=bbox.BoxDecoder)
+    assert box_2d_2.allclose(box_2d)
 
 
 def test_io_3d_bbox():
-    pos = Position(np.array([1, 2, 3]), GlobalOrigin3D)
-    rot = Attitude(np.quaternion(1), GlobalOrigin3D)
-    box1 = bbox.Box3D(pos, rot, [1, 1, 1])
-    box2 = bbox.get_box_from_line(box1.format_as_string())
-    assert box1.allclose(box2)
+    box_3d_2 = json.loads(box_3d.encode(), cls=bbox.BoxDecoder)
+    assert box_3d_2.allclose(box_3d)
 
 
 def test_io_2d_segmask():
@@ -303,5 +290,5 @@ def test_io_2d_segmask():
     cam_calib = calibration.CameraCalibration(GlobalOrigin3D, P, img_shape=img_shape)
     segmask1 = np.random.rand(*img_shape)
     segmask1 = bbox.SegMask2D(segmask1 > 0.5, cam_calib)
-    segmask2 = bbox.get_segmask_from_line(segmask1.format_as_string())
-    assert segmask1 == segmask2
+    segmask2 = json.loads(segmask1.encode(), cls=bbox.BoxDecoder)
+    assert segmask1.allclose(segmask2)

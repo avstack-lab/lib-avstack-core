@@ -7,21 +7,22 @@
 """
 
 """
+import json
 from typing import List
 
 import numpy as np
 from scipy.interpolate import interp1d
 
-from avstack.datastructs import DataContainer
+from avstack.datastructs import DataContainerDecoder
 from avstack.geometry import (
     Box2D,
     Box3D,
     Position,
+    ReferenceDecoder,
     ReferenceFrame,
     SegMask2D,
     Vector,
     bbox,
-    get_reference_from_line,
 )
 from avstack.geometry.transformations import (
     cartesian_to_spherical,
@@ -29,80 +30,89 @@ from avstack.geometry.transformations import (
 )
 
 
-# detection_map = {'vehicle':'car', 'car':'car', 'pedestrian':'pedestrian', 'cyclist':'cyclist',
-#                  'bicyclist':'cyclist', 'truck':'truck', 'bus':'bus', 'train':'train',
-#                  'motorcycle':'motorcycle', 'rider':'pedestrian', 'bicycle':'cyclist',
-#                  'person':'pedestrian', 'trailer':'trailer', 'construction_vehicle':'truck'}
+class DetectionEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(
+            o, (CentroidDetection, RazDetection, RazelDetection, RazelRrtDetection)
+        ):
+            data = o.data.tolist()
+        elif isinstance(o, BoxDetection):
+            data = o.data.encode()
+        else:
+            raise NotImplementedError(type(o.data))
+        d_dict = {
+            "source_identifier": o.source_identifier,
+            "obj_type": o.obj_type,
+            "score": o.score,
+            "data": data,
+            "reference": o.reference.encode(),
+        }
+        return {type(o).__name__.lower(): d_dict}
 
 
-def get_detections_from_file(det_file_path):
-    with open(det_file_path, "r") as f:
-        lines = [l.strip() for l in f.readlines()]
-    dets = []
-    for line in lines:
-        dets.append(get_detection_from_line(line))
-    return dets
+class DetectionDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        try:
+            reference = json.loads(
+                list(json_object.values())[0]["reference"], cls=ReferenceDecoder
+            )
+        except Exception:
+            pass
+        if "centroiddetection" in json_object:
+            json_object = json_object["centroiddetection"]
+            out = CentroidDetection(
+                source_identifier=json_object["source_identifier"],
+                centroid=np.array(json_object["data"]),
+                obj_type=json_object["obj_type"],
+                score=json_object["score"],
+                reference=reference,
+            )
+        elif "razdetection" in json_object:
+            json_object = json_object["razdetection"]
+            out = RazDetection(
+                source_identifier=json_object["source_identifier"],
+                raz=np.array(json_object["data"]),
+                obj_type=json_object["obj_type"],
+                score=json_object["score"],
+            )
+        elif "razeldetection" in json_object:
+            json_object = json_object["razeldetection"]
+            out = RazelDetection(
+                source_identifier=json_object["source_identifier"],
+                razel=np.array(json_object["data"]),
+                obj_type=json_object["obj_type"],
+                score=json_object["score"],
+                reference=reference,
+            )
+        elif "razelrrtdetection" in json_object:
+            json_object = json_object["razelrrtdetection"]
+            out = RazelRrtDetection(
+                source_identifier=json_object["source_identifier"],
+                razelrrt=np.array(json_object["data"]),
+                obj_type=json_object["obj_type"],
+                score=json_object["score"],
+                reference=reference,
+            )
+        elif "boxdetection" in json_object:
+            json_object = json_object["boxdetection"]
+            out = BoxDetection(
+                source_identifier=json_object["source_identifier"],
+                box=json.loads(json_object["box"], cls=bbox.BoxDecoder),
+                obj_type=json_object["obj_type"],
+                score=json_object["score"],
+                reference=reference,
+            )
+        else:
+            return json_object
+        return out
 
 
-def get_detection_from_line(line):
-    items = line.split()
-    det_type = items[0]
-    sID, obj_type, score = items[1:4]
-    if det_type == "box-detection":
-        idx = 4
-        box = bbox.get_box_from_line(" ".join(items[4:]))
-        det = BoxDetection(sID, box, box.reference, obj_type, score)
-    elif det_type == "mask-detection":
-        idx = 4
-        box = bbox.get_box_from_line(" ".join(items[4:34]))
-        mask = bbox.get_segmask_from_line(" ".join(items[34:]))
-        det = MaskDetection(sID, box, mask, box.reference, obj_type, score)
-    elif det_type == "centroid-detection":
-        n_dims = int(items[4])
-        idx = 5
-        centroid = np.array([float(d) for d in items[idx : idx + n_dims]])
-        idx += n_dims
-        reference = get_reference_from_line(" ".join(items[idx::]))
-        det = CentroidDetection(sID, centroid, reference, obj_type, score)
-    elif det_type == "raz-detection":
-        idx = 4
-        raz = np.array([float(d) for d in items[idx : idx + 2]])
-        idx += 2
-        reference = get_reference_from_line(" ".join(items[idx::]))
-        det = RazDetection(sID, raz, reference, obj_type, score)
-    elif det_type == "razel-detection":
-        idx = 4
-        razel = np.array([float(d) for d in items[idx : idx + 3]])
-        idx += 3
-        reference = get_reference_from_line(" ".join(items[idx::]))
-        det = RazelDetection(sID, razel, reference, obj_type, score)
-    elif det_type == "razelrrt-detection":
-        idx = 4
-        razelrrt = np.array([float(d) for d in items[idx : idx + 4]])
-        idx += 4
-        reference = get_reference_from_line(" ".join(items[idx::]))
-        det = RazelRrtDetection(sID, razelrrt, reference, obj_type, score)
-    else:
-        raise NotImplementedError(det_type)
-    return det
-
-
-def format_data_container_as_string(DC):
-    dets_strings = " ".join(["DETECTION " + det.format_as_string() for det in DC.data])
-    return (
-        f"datacontainer {DC.frame} {DC.timestamp} {DC.source_identifier} "
-        f"{dets_strings}"
-    )
-
-
-def get_data_container_from_line(line):
-    items = line.split()
-    assert items[0] == "datacontainer"
-    frame = int(items[1])
-    timestamp = float(items[2])
-    source_identifier = items[3]
-    detections = [get_detection_from_line(det) for det in line.split("DETECTION")[1:]]
-    return DataContainer(frame, timestamp, detections, source_identifier)
+class DetectionContainerDecoder(DataContainerDecoder):
+    data_decoder = DetectionDecoder
 
 
 class Detection_:
@@ -139,6 +149,9 @@ class Detection_:
     @property
     def origin(self):
         return self.data.reference
+
+    def encode(self):
+        return json.dumps(self, cls=DetectionEncoder)
 
     def change_reference(self, reference, inplace: bool):
         """Change reference frame of a detection"""
@@ -203,13 +216,6 @@ class CentroidDetection(Detection_):
         else:
             return vec.x
 
-    def format_as_string(self):
-        """Format data elements"""
-        return (
-            f"centroid-detection {self.source_identifier} {self.obj_type} {self.score} {len(self.centroid)} "
-            f"{' '.join([str(d) for d in self.centroid])} {self.reference.format_as_string()}"
-        )
-
 
 class RazDetection(Detection_):
     def __init__(self, source_identifier, raz, reference, obj_type=None, score=None):
@@ -257,13 +263,6 @@ class RazDetection(Detection_):
             self.xy = vec.x[:2]
         else:
             return cartesian_to_spherical(np.array([vec.x[0], vec.x[1], 0]))[:2]
-
-    def format_as_string(self):
-        """Format data elements"""
-        return (
-            f"raz-detection {self.source_identifier} {self.obj_type} {self.score} "
-            f"{' '.join([str(d) for d in self.raz])} {self.reference.format_as_string()}"
-        )
 
 
 class RazelDetection(Detection_):
@@ -315,13 +314,6 @@ class RazelDetection(Detection_):
             self.xyz = vec.x
         else:
             return cartesian_to_spherical(vec.x)
-
-    def format_as_string(self):
-        """Format data elements"""
-        return (
-            f"razel-detection {self.source_identifier} {self.obj_type} {self.score} "
-            f"{' '.join([str(d) for d in self.razel])} {self.format_as_string()}"
-        )
 
 
 class RazelRrtDetection(Detection_):
@@ -398,13 +390,6 @@ class RazelRrtDetection(Detection_):
             rng, az, el = cartesian_to_spherical([x, y, z])
             return np.array([rng, az, el, rrt])
 
-    def format_as_string(self):
-        """Format data elements"""
-        return (
-            f"razelrrt-detection {self.source_identifier} {self.obj_type} {self.score} "
-            f"{' '.join([str(d) for d in self.razelrrt])} {self.reference.format_as_string()}"
-        )
-
 
 class BoxDetection(Detection_):
     def __init__(self, source_identifier, box, reference, obj_type=None, score=None):
@@ -445,10 +430,6 @@ class BoxDetection(Detection_):
 
     def _change_reference(self, reference, inplace: bool):
         return self.data.change_reference(reference, inplace=inplace)
-
-    def format_as_string(self):
-        """Convert to vehicle state and format"""
-        return f"box-detection {self.source_identifier} {self.obj_type} {self.score} {self.box.format_as_string()}"
 
 
 class JointBoxDetection(Detection_):
@@ -562,13 +543,6 @@ class MaskDetection(Detection_):
 
     def _change_reference(self, reference, inplace: bool):
         return super()._change_reference(reference, inplace)
-
-    def format_as_string(self):
-        """Convert to vehicle state and format"""
-        return (
-            f"mask-detection {self.source_identifier} {self.obj_type} {self.score} "
-            + f"{self.box.format_as_string()} {self.mask.format_as_string()}"
-        )
 
 
 class OtherDetection(Detection_):

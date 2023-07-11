@@ -8,6 +8,7 @@
 
 """
 
+import json
 import os
 import shutil
 
@@ -100,10 +101,7 @@ class _TrackingAlgorithm:
         self.iframe += 1
         tracks = self.track(t, frame, detections, platform, **kwargs)
         if self.save:
-            trk_str = "\n".join([trk.format_as_string() for trk in tracks])
-            fname = os.path.join(self.save_folder, "%06d.txt" % self.frame)
-            with open(fname, "w") as f:
-                f.write(trk_str)
+            raise NotImplementedError
         track_data = DataContainer(self.frame, self.t, tracks, "tracker")
         return track_data
 

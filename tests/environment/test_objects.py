@@ -8,17 +8,25 @@
 
 """
 
+import json
 import sys
 from copy import deepcopy
 
 import numpy as np
 
+from avstack.environment.objects import ObjectStateDecoder
 from avstack.geometry import Attitude, GlobalOrigin3D, ReferenceFrame
 from avstack.geometry import transformations as tforms
 
 
 sys.path.append("tests/")
 from utilities import get_ego
+
+
+def test_encode_decode_object():
+    obj_1 = get_ego(seed=1)
+    obj_2 = json.loads(obj_1.encode(), cls=ObjectStateDecoder)
+    assert obj_1.allclose(obj_2)
 
 
 def test_change_reference():

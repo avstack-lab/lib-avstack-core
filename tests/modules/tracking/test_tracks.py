@@ -7,6 +7,7 @@
 """
 
 """
+import json
 import sys
 
 import numpy as np
@@ -27,11 +28,10 @@ def test_raz_track():
     box3d = random_object.box
     obj_type = random_object.obj_type
     razel = cartesian_to_spherical(box3d.t.x)
-    random_track = tracks.XyFromRazTrack(t0, razel[:2], GlobalOrigin3D, obj_type)
-    trk_string = random_track.format_as_string()
-    random_track_reconstruct = tracks.get_track_from_line(trk_string)
-    assert np.allclose(random_track.x, random_track_reconstruct.x)
-    assert np.allclose(random_track.P, random_track_reconstruct.P)
+    random_track_1 = tracks.XyFromRazTrack(t0, razel[:2], GlobalOrigin3D, obj_type)
+    random_track_2 = json.loads(random_track_1.encode(), cls=tracks.TrackDecoder)
+    assert np.allclose(random_track_1.x, random_track_2.x)
+    assert np.allclose(random_track_1.P, random_track_2.P)
 
 
 def test_razel_track():
@@ -40,11 +40,10 @@ def test_razel_track():
     box3d = random_object.box
     obj_type = random_object.obj_type
     razel = cartesian_to_spherical(box3d.t.x)
-    random_track = tracks.XyzFromRazelTrack(t0, razel, GlobalOrigin3D, obj_type)
-    trk_string = random_track.format_as_string()
-    random_track_reconstruct = tracks.get_track_from_line(trk_string)
-    assert np.allclose(random_track.x, random_track_reconstruct.x)
-    assert np.allclose(random_track.P, random_track_reconstruct.P)
+    random_track_1 = tracks.XyzFromRazelTrack(t0, razel, GlobalOrigin3D, obj_type)
+    random_track_2 = json.loads(random_track_1.encode(), cls=tracks.TrackDecoder)
+    assert np.allclose(random_track_1.x, random_track_2.x)
+    assert np.allclose(random_track_1.P, random_track_2.P)
 
 
 def test_razelrrt_track():
@@ -54,39 +53,36 @@ def test_razelrrt_track():
     razelrrt = xyzvel_to_razelrrt(
         np.array([*random_object.position.x, *random_object.velocity.x])
     )
-    random_track = tracks.XyzFromRazelRrtTrack(t0, razelrrt, GlobalOrigin3D, obj_type)
-    assert np.isclose(random_track.rrt, razelrrt[3])
-    trk_string = random_track.format_as_string()
-    random_track_reconstruct = tracks.get_track_from_line(trk_string)
-    assert np.allclose(random_track.x, random_track_reconstruct.x)
-    assert np.allclose(random_track.P, random_track_reconstruct.P)
+    random_track_1 = tracks.XyzFromRazelRrtTrack(t0, razelrrt, GlobalOrigin3D, obj_type)
+    assert np.isclose(random_track_1.rrt, razelrrt[3])
+    random_track_2 = json.loads(random_track_1.encode(), cls=tracks.TrackDecoder)
+    assert np.allclose(random_track_1.x, random_track_2.x)
+    assert np.allclose(random_track_1.P, random_track_2.P)
 
 
-def test_boxtrack3d_as_string():
+def test_boxtrack3d_encode_decode():
     random_object = get_object_global(1)
     t0 = 1.25
     box3d = random_object.box
     obj_type = random_object.obj_type
-    random_track = tracks.BasicBoxTrack3D(t0, box3d, GlobalOrigin3D, obj_type)
-    trk_string = random_track.format_as_string()
-    random_track_reconstruct = tracks.get_track_from_line(trk_string)
-    assert np.allclose(random_track.x, random_track_reconstruct.x)
-    assert np.allclose(random_track.P, random_track_reconstruct.P)
+    random_track_1 = tracks.BasicBoxTrack3D(t0, box3d, GlobalOrigin3D, obj_type)
+    random_track_2 = json.loads(random_track_1.encode(), cls=tracks.TrackDecoder)
+    assert np.allclose(random_track_1.x, random_track_2.x)
+    assert np.allclose(random_track_1.P, random_track_2.P)
 
 
-def test_boxtrack2d_as_string():
+def test_boxtrack2d_encode_decode():
     random_object = get_object_global(1)
     t0 = 1.25
     box2d = random_object.box.project_to_2d_bbox(camera_calib)
     obj_type = random_object.obj_type
-    random_track = tracks.BasicBoxTrack2D(t0, box2d, GlobalOrigin3D, obj_type)
-    trk_string = random_track.format_as_string()
-    random_track_reconstruct = tracks.get_track_from_line(trk_string)
-    assert np.allclose(random_track.x, random_track_reconstruct.x)
-    assert np.allclose(random_track.P, random_track_reconstruct.P)
+    random_track_1 = tracks.BasicBoxTrack2D(t0, box2d, GlobalOrigin3D, obj_type)
+    random_track_2 = json.loads(random_track_1.encode(), cls=tracks.TrackDecoder)
+    assert np.allclose(random_track_1.x, random_track_2.x)
+    assert np.allclose(random_track_1.P, random_track_2.P)
 
 
-def test_trackcontainer_as_string():
+def test_trackcontainer_encode_decode():
     frame = 0
     timestamp = 0.0
     n_tracks = 14
@@ -96,7 +92,6 @@ def test_trackcontainer_as_string():
         )
         for i in range(n_tracks)
     ]
-    dc = DataContainer(frame, timestamp, trks, source_identifier="tracks-1")
-    dc_string = tracks.format_data_container_as_string(dc)
-    dc_reconstruct = tracks.get_data_container_from_line(dc_string)
-    assert len(dc_reconstruct) == len(dc)
+    dc_1 = DataContainer(frame, timestamp, trks, source_identifier="tracks-1")
+    dc_2 = json.loads(dc_1.encode(), cls=tracks.TrackContainerDecoder)
+    assert len(dc_1) == len(dc_2)

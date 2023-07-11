@@ -1,38 +1,80 @@
 from __future__ import annotations
 
+import json
+
 import numpy as np
-import quaternion
 
 from . import transformations as tforms
 from .base import fastround, q_mult_vec
 
 
-def get_reference_from_line(line):
-    items = line.split()
-    assert items[0] == "reference", items
-    if int(items[1]) == 0:
-        assert items[2] == "global"
-        return GlobalOrigin3D
-    else:
-        idx = 2
-        x = np.array([float(r) for r in items[idx : idx + 3]])
-        idx += 3
-        q = np.quaternion(*[float(w) for w in items[idx : idx + 4]])
-        idx += 4
-        v = np.array([float(r) for r in items[idx : idx + 3]])
-        idx += 3
-        acc = np.array([float(r) for r in items[idx : idx + 3]])
-        idx += 3
-        ang = np.quaternion(*[float(w) for w in items[idx : idx + 4]])
-        idx += 4
-        return ReferenceFrame(
-            x=x,
-            q=q,
-            v=v,
-            acc=acc,
-            ang=ang,
-            reference=get_reference_from_line(" ".join(items[idx:])),
-        )
+class VectorEncoder(json.JSONEncoder):
+    def default(self, o):
+        v_dict = {
+            "x": o.x.tolist(),
+            "reference": o.reference.encode(),
+            "n_prec": o.n_prec,
+        }
+        return {type(o).__name__.lower(): v_dict}
+
+
+class RotationEncoder(json.JSONEncoder):
+    def default(self, o):
+        q_dict = {
+            "qw": o.q.w,
+            "qv": o.q.vec.tolist(),
+            "reference": o.reference.encode(),
+            "n_prec": o.n_prec,
+        }
+        return {type(o).__name__.lower(): q_dict}
+
+
+class ReferenceEncoder(json.JSONEncoder):
+    def default(self, o):
+        if o.reference is None:
+            reference = None
+        else:
+            reference = o.reference.encode()
+        ref_dict = {
+            "x": o.x.tolist(),
+            "qw": o.q.w,
+            "qv": o.q.vec.tolist(),
+            "v": o.v.tolist(),
+            "acc": o.acc.tolist(),
+            "ang": o.ang.vec.tolist(),
+            "reference": reference,
+            "handedness": o.handedness,
+            "n_prec": o.n_prec,
+            "level": o.level,
+        }
+        return {"reference": ref_dict}
+
+
+class ReferenceDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        if "reference" in json_object:
+            if json_object["reference"] is None:
+                return GlobalOrigin3D
+            else:
+                if isinstance(json_object["reference"], ReferenceFrame):
+                    return json_object["reference"]
+                reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
+                return ReferenceFrame(
+                    x=np.array(json_object["x"]),
+                    q=np.quaternion(json_object["qw"], *json_object["qv"]),
+                    v=np.array(json_object["v"]),
+                    acc=np.array(json_object["acc"]),
+                    ang=np.quaternion(*json_object["ang"]),
+                    reference=reference,
+                    handedness=json_object["handedness"],
+                    n_prec=json_object["n_prec"],
+                )
+        else:
+            return json_object
 
 
 class ReferenceFrame:
@@ -189,6 +231,9 @@ class ReferenceFrame:
             raise NotImplementedError(
                 f"Cannot check equality between reference frame and {type(other)}"
             )
+
+    def encode(self):
+        return json.dumps(self, cls=ReferenceEncoder)
 
     def allclose(self, other):
         """Check if two are nearly the same via the differential"""
@@ -357,17 +402,6 @@ class ReferenceFrame:
             n_prec=self.n_prec,
         )
 
-    def format_as_string(self):
-        if self.reference is None:
-            return f"reference 0 global"
-        else:
-            return (
-                f"reference {self.level} {self.x[0]} {self.x[1]} {self.x[2]} "
-                f"{self.q.w} {self.q.x} {self.q.y} {self.q.z} {self.v[0]} {self.v[1]} "
-                f"{self.v[2]} {self.acc[0]} {self.acc[1]} {self.acc[2]} {self.ang.w} "
-                f"{self.ang.x} {self.ang.y} {self.ang.z} {self.reference.format_as_string()}"
-            )
-
 
 GlobalOrigin3D = ReferenceFrame(
     x=np.zeros((3,)),
@@ -492,6 +526,9 @@ class Vector:
         # Perform dot product
         return self.x @ other
 
+    def encode(self):
+        return json.dumps(self, cls=VectorEncoder)
+
     def allclose(self, other: Vector):
         if self.reference == other.reference:
             return np.allclose(self.x, other.x)
@@ -550,9 +587,6 @@ class Vector:
         else:
             return np.linalg.norm(self.x - other.x)
 
-    def format_as_string(self):
-        raise NotImplementedError
-
 
 class VectorHeadTail:
     def __init__(
@@ -584,9 +618,6 @@ class VectorHeadTail:
                 reference, inplace=inplace, angle_only=angle_only
             )
             return VectorHeadTail(head.x, tail.x, reference)
-
-    def format_as_string(self):
-        raise NotImplementedError
 
 
 class Spherical(Vector):
@@ -723,6 +754,9 @@ class Rotation:
     def __matmul__(self, other):
         raise NotImplementedError
 
+    def encode(self):
+        return json.dumps(self, cls=RotationEncoder)
+
     def allclose(self, other: Rotation):
         if self.reference == other.reference:
             return np.allclose(self.q.vec, other.q.vec)
@@ -762,6 +796,3 @@ class Rotation:
     @staticmethod
     def factory():
         return Rotation
-
-    def format_as_string(self):
-        raise NotImplementedError

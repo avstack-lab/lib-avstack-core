@@ -1,15 +1,18 @@
+import json
+
 import numpy as np
 
-from avstack.datastructs import DataContainer
+from avstack.datastructs import DataContainer, DataContainerDecoder
 from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     Attitude,
+    BoxDecoder,
     Position,
+    ReferenceDecoder,
     ReferenceFrame,
     Velocity,
-    get_reference_from_line,
 )
-from avstack.geometry.bbox import Box2D, Box3D, get_box_from_line
+from avstack.geometry.bbox import Box2D, Box3D
 from avstack.geometry.transformations import (
     cartesian_to_spherical,
     razelrrt_to_xyzvel,
@@ -22,102 +25,99 @@ from avstack.geometry.transformations import (
 zero3 = np.zeros((3, 3))
 eye3 = np.eye(3)
 
-
-def format_data_container_as_string(DC):
-    trks_strings = " ".join(["TRACK " + trk.format_as_string() for trk in DC.data])
-    return (
-        f"datacontainer {DC.frame} {DC.timestamp} {DC.source_identifier} "
-        f"{trks_strings}"
-    )
+std_tracks = ["xyfromraztrack", "xyzfromrazeltrack", "xyzfromrazelrrttrack"]
+box_tracks = ["basicboxtrack2d", "basicboxtrack3d", "basicjointboxtrack"]
 
 
-def get_track_from_line(line):
-    items = line.split()
-    trk_type = items[0]
-    n_prelim = 9
-    obj_type, t0, t, ID, coast, n_updates, age, n_dim = items[1:n_prelim]
-    n_dim = int(n_dim)
-    if "box" in trk_type:
-        if trk_type == "boxtrack3d":
-            n_add = 3
-            factory = BasicBoxTrack3D
-        elif trk_type == "boxtrack2d":
-            n_add = 2
-            factory = BasicBoxTrack2D
-        elif trk_type == "boxtrack2d3d":
-            # HACK: only doing the 3d track here
-            n_add = 3
-            factory = BasicBoxTrack3D
+class TrackEncoder(json.JSONEncoder):
+    def default(self, o):
+        t_dict = {
+            "obj_type": o.obj_type,
+            "t0": o.t0,
+            "t": o.t,
+            "ID": o.ID,
+            "coast": o.coast,
+            "n_updates": o.n_updates,
+            "age": o.age,
+            "x": o.x.tolist(),
+            "P": o.P.tolist(),
+            "reference": o.reference.encode(),
+        }
+        if isinstance(o, (BasicBoxTrack2D, BasicBoxTrack3D, BasicJointBoxTrack)):
+            t_dict["box"] = o.box.encode()
+            t_dict["v"] = o.velocity.x.tolist()
+        return {type(o).__name__.lower(): t_dict}
+
+
+class TrackDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        try:
+            reference = json.loads(
+                list(json_object.values())[0]["reference"], cls=ReferenceDecoder
+            )
+        except Exception:
+            pass
+        if any([st in json_object for st in std_tracks]):
+            if "xyfromraztrack" in json_object:
+                json_object = json_object["xyfromraztrack"]
+                factory = XyFromRazTrack
+            elif "xyzfromrazeltrack" in json_object:
+                json_object = json_object["xyzfromrazeltrack"]
+                factory = XyzFromRazelTrack
+            elif "xyzfromrazelrrttrack" in json_object:
+                json_object = json_object["xyzfromrazelrrttrack"]
+                factory = XyzFromRazelRrtTrack
+            else:
+                raise NotImplementedError(json_object)
+            out = factory(
+                json_object["t0"],
+                None,
+                reference=reference,
+                obj_type=json_object["obj_type"],
+                ID_force=json_object["ID"],
+                x=np.array(json_object["x"]),
+                P=np.array(json_object["P"]),
+                t=json_object["t"],
+                coast=json_object["coast"],
+                n_updates=json_object["n_updates"],
+                age=json_object["age"],
+            )
+        elif any([bt in json_object for bt in box_tracks]):
+            if "basicboxtrack2d" in json_object:
+                json_object = json_object["basicboxtrack2d"]
+                factory = BasicBoxTrack2D
+            elif "basicboxtrack3d" in json_object:
+                json_object = json_object["basicboxtrack3d"]
+                factory = BasicBoxTrack3D
+            elif "basicjointboxtrack" in json_object:
+                raise NotImplementedError
+            else:
+                raise NotImplementedError(json_object)
+            box = json.loads(json_object["box"], cls=BoxDecoder)
+            out = factory(
+                json_object["t0"],
+                box,
+                reference=reference,
+                obj_type=json_object["obj_type"],
+                ID_force=json_object["ID"],
+                v=np.array(json_object["v"]),
+                P=np.array(json_object["P"]),
+                t=json_object["t"],
+                coast=json_object["coast"],
+                n_updates=json_object["n_updates"],
+                age=json_object["age"],
+            )
         else:
-            raise NotImplementedError(trk_type)
-        n_dim = int(n_dim)
-        idx = n_prelim
-        v = items[idx : idx + n_add]
-        idx += n_add
-        P = items[idx : idx + n_dim**2]
-        idx += n_dim**2
-        box = items[idx::]
-        v = np.array([float(vi) for vi in v])
-        P = np.reshape(np.array([float(pi) for pi in P]), (int(n_dim), int(n_dim)))
-        box = get_box_from_line(" ".join(box))
-        reference = box.reference
-        trk = factory(
-            float(t0),
-            box,
-            reference,
-            obj_type,
-            ID_force=int(ID),
-            v=v,
-            P=P,
-            t=float(t),
-            coast=float(coast),
-            n_updates=int(n_updates),
-            age=float(age),
-        )
-    else:
-        if trk_type == "raztrack":
-            factory = XyFromRazTrack
-        elif trk_type == "razeltrack":
-            factory = XyzFromRazelTrack
-        elif trk_type == "razelrrttrack":
-            factory = XyzFromRazelRrtTrack
-        else:
-            raise NotImplementedError(trk_type)
-        idx = n_prelim
-        x = items[idx : idx + n_dim]
-        idx += n_dim
-        P = items[idx : idx + n_dim**2]
-        idx += n_dim**2
-        reference = get_reference_from_line(" ".join(items[idx::]))
-        x = np.array([float(xi) for xi in x])
-        P = np.reshape(np.array([float(pi) for pi in P]), (int(n_dim), int(n_dim)))
-        trk = factory(
-            float(t0),
-            None,
-            reference,
-            obj_type,
-            ID_force=int(ID),
-            x=x,
-            P=P,
-            t=float(t),
-            coast=float(coast),
-            n_updates=int(n_updates),
-            age=float(age),
-        )
-    return trk
+            return json_object
+        return out
 
 
-def get_data_container_from_line(line, identifier_override=None):
-    items = line.split()
-    assert items[0] == "datacontainer"
-    frame = int(items[1])
-    timestamp = float(items[2])
-    source_identifier = items[3]
-    detections = [get_track_from_line(det) for det in line.split("TRACK")[1:]]
-    source_identifier = (
-        source_identifier if identifier_override is None else identifier_override
-    )
-    return DataContainer(frame, timestamp, detections, source_identifier)
+class TrackContainerDecoder(DataContainerDecoder):
+    data_decoder = TrackDecoder
 
 
 class _TrackBase:
@@ -200,6 +200,9 @@ class _TrackBase:
     def Q(dt):
         raise NotImplementedError
 
+    def encode(self):
+        return json.dumps(self, cls=TrackEncoder)
+
     def _predict(self, t):
         dt = t - self.t_last_predict
         self.x = self.f(self.x, dt)
@@ -235,15 +238,6 @@ class _TrackBase:
 
     def change_reference(self, reference, inplace: bool):
         raise NotImplementedError
-
-    def format_as_string(self):
-        x_str = " ".join(map(str, self.x))
-        P_str = " ".join(map(str, self.P.ravel()))
-        return (
-            f"{self.NAME} {self.obj_type} {self.t0} {self.t} {self.ID} "
-            f"{self.coast} {self.n_updates} {self.age} "
-            f"{len(self.x)} {x_str} {P_str} {self.reference.format_as_string()}"
-        )
 
 
 class XyFromRazTrack(_TrackBase):
@@ -750,15 +744,6 @@ class BasicBoxTrack3D(_TrackBase):
         else:
             raise NotImplementedError("Need to implement this")
 
-    def format_as_string(self):
-        v_str = " ".join(map(str, self.x[6:9]))
-        P_str = " ".join(map(str, self.P.ravel()))
-        return (
-            f"boxtrack3d {self.obj_type} {self.t0} {self.t} {self.ID} "
-            f"{self.coast} {self.n_updates} {self.age} "
-            f"{len(self.x)} {v_str} {P_str} {self.box3d.format_as_string()}"
-        )
-
 
 class BasicBoxTrack2D(_TrackBase):
     NAME = "boxtrack2d"
@@ -793,7 +778,7 @@ class BasicBoxTrack2D(_TrackBase):
         if P is None:
             P = np.diag([10, 10, 10, 10, 10, 10]) ** 2
         self.idx_pos = [0, 1]
-        self.idx_vel = [2, 3]
+        self.idx_vel = [4, 5]
         super().__init__(
             t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
         )
@@ -867,15 +852,6 @@ class BasicBoxTrack2D(_TrackBase):
         #     raise NotImplementedError("Sensor sources must be the same for now")
         det = np.array([box2d.center[0], box2d.center[1], box2d.w, box2d.h])
         self._update(det, R)
-
-    def format_as_string(self):
-        v_str = " ".join(map(str, self.x[4:6]))
-        P_str = " ".join(map(str, self.P.ravel()))
-        return (
-            f"boxtrack2d {self.obj_type} {self.t0} {self.t} {self.ID} "
-            f"{self.coast} {self.n_updates} {self.age} "
-            f"{len(self.x)} {v_str} {P_str} {self.box2d.format_as_string()}"
-        )
 
 
 class BasicJointBoxTrack(_TrackBase):
@@ -1019,12 +995,3 @@ class BasicJointBoxTrack(_TrackBase):
                 self.track_3d.change_reference(reference, inplace=inplace)
         else:
             raise NotImplementedError
-
-    def format_as_string(self):
-        v_str = " ".join(map(str, self.x[6:9]))
-        P_str = " ".join(map(str, self.P.ravel()))
-        return (
-            f"boxtrack2d3d {self.obj_type} {self.t0} {self.t} {self.ID} "
-            f"{self.coast} {self.n_updates} {self.age} "
-            f"{len(self.x)} {v_str} {P_str} {self.box3d.format_as_string()}"
-        )

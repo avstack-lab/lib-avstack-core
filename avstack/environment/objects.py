@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 from copy import deepcopy
 from enum import IntEnum
 
@@ -25,10 +26,11 @@ from avstack.geometry import (
     Position,
     ReferenceFrame,
     Rotation,
+    RotationDecoder,
+    VectorDecoder,
     VectorHeadTail,
     Velocity,
     bbox,
-    get_reference_from_line,
 )
 from avstack.geometry import transformations as tforms
 from avstack.maskfilters import box_in_fov, filter_points_in_box
@@ -44,6 +46,56 @@ class Occlusion(IntEnum):
     MOST = 2
     COMPLETE = 3
     UNKNOWN = 99
+
+
+class ObjectStateEncoder(json.JSONEncoder):
+    def default(self, o):
+        o_dict = {
+            "obj_type": o.obj_type,
+            "ID": o.ID,
+            "occlusion": o.occlusion,
+            "t": o.t,
+            "box": o.box.encode() if o.box is not None else None,
+            "position": o.position.encode() if o.position is not None else None,
+            "velocity": o.velocity.encode() if o.velocity is not None else None,
+            "acceleration": o.acceleration.encode()
+            if o.acceleration is not None
+            else None,
+            "attitude": o.attitude.encode() if o.attitude is not None else None,
+            "angular_velocity": o.angular_velocity.encode()
+            if o.angular_velocity is not None
+            else None,
+        }
+        return {"objectstate": o_dict}
+
+
+class ObjectStateDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        if "objectstate" in json_object:
+            json_object = json_object["objectstate"]
+            obj = ObjectState(
+                obj_type=json_object["obj_type"],
+                ID=json_object["ID"],
+            )
+            obj.set(
+                t=json_object["t"],
+                box=json.loads(json_object["box"], cls=bbox.BoxDecoder),
+                position=json.loads(json_object["position"], cls=VectorDecoder),
+                velocity=json.loads(json_object["velocity"], cls=VectorDecoder),
+                acceleration=json.loads(json_object["acceleration"], cls=VectorDecoder),
+                attitude=json.loads(json_object["attitude"], cls=RotationDecoder),
+                angular_velocity=json.loads(
+                    json_object["angular_velocity"], cls=RotationDecoder
+                ),
+                occlusion=Occlusion(json_object["occlusion"]),
+            )
+        else:
+            return json_object
+        return obj
 
 
 class ObjectState:
@@ -116,8 +168,14 @@ class ObjectState:
         else:
             raise NotImplementedError(key)
 
+    def encode(self):
+        return json.dumps(self, cls=ObjectStateEncoder)
+
     def deepcopy(self):
         return deepcopy(self)
+
+    def allclose(self, other):
+        return self.as_reference().allclose(other.as_reference())  # HACK
 
     def as_reference(self):
         pos = self.position.x if self.position else np.zeros((3,))
@@ -330,114 +388,6 @@ class ObjectState:
                 else:
                     occ = Occlusion.COMPLETE
         self.occlusion = occ
-
-    def format_as(self, format_):
-        try:
-            box2d = self.box2d
-        except AttributeError as e:
-            box2d = bbox.Box2D([-1, -1, -1, -1], None)
-        try:
-            box3d = self.box3d
-        except AttributeError as e:
-            raise e
-        accel = [np.nan] * 3 if self.acceleration is None else self.acceleration
-        if format_.lower() == "kitti":
-            orientation = 0
-            str_to_write = (
-                "kitti-v2 %f %i %s %f %f %f %f %f %f %f %f %f %f %f %f %f %s"
-                % (
-                    self.t,
-                    self.ID,
-                    self.obj_type,
-                    orientation,
-                    box2d.xmin,
-                    box2d.ymin,
-                    box2d.xmax,
-                    box2d.ymax,
-                    box3d.h,
-                    box3d.w,
-                    box3d.l,
-                    box3d.t[0],
-                    box3d.t[1],
-                    box3d.t[2],
-                    box3d.yaw,
-                    self.score,
-                    self.reference.format_as_string(),
-                )
-            )
-        elif format_.lower() == "avstack":
-            str_to_write = (
-                "avstack object_3d %f %i %s %i %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %s %s"
-                % (
-                    self.t,
-                    self.ID,
-                    self.obj_type,
-                    int(self.occlusion),
-                    self.position[0],
-                    self.position[1],
-                    self.position[2],
-                    self.velocity[0],
-                    self.velocity[1],
-                    self.velocity[2],
-                    accel[0],
-                    accel[1],
-                    accel[2],
-                    box3d.h,
-                    box3d.w,
-                    box3d.l,
-                    box3d.q.w,
-                    box3d.q.x,
-                    box3d.q.y,
-                    box3d.q.z,
-                    box3d.where_is_t,
-                    self.reference.format_as_string(),
-                )
-            )
-        else:
-            raise NotImplementedError(f"Cannot format track as {format_}")
-        return str_to_write
-
-    def read_from_line(self, line):
-        idx = 2
-        timestamp = float(line[idx])
-        idx += 1
-        ID = int(line[idx])
-        idx += 1
-        obj_type = line[idx]
-        idx += 1
-        occlusion = Occlusion(int(line[idx]))
-        idx += 1
-        position = np.array([float(d) for d in line[idx : idx + 3]])
-        idx += 3
-        velocity = np.array([float(d) for d in line[idx : idx + 3]])
-        idx += 3
-        accel = np.array([float(d) for d in line[idx : idx + 3]])
-        idx += 3
-        h, w, l, yaw = [float(d) for d in line[idx : idx + 4]]
-        attitude = tforms.rotz(yaw)
-        idx += 4
-        where_is_t = line[idx]
-        idx += 1
-        reference = get_reference_from_line(line[idx])
-
-        position = Vector(position, reference)
-        velocity = Vector(velocity, reference)
-        accel = Vector(accel, reference)
-        rotation = Rotation(attitude, reference)
-        angular_velocity = None
-        box = bbox.Box3D(position, rotation, [h, w, l])
-        self.ID = ID
-
-        self.set(
-            timestamp,
-            position,
-            box,
-            velocity,
-            accel,
-            rotation,
-            angular_velocity,
-            occlusion=occlusion,
-        )
 
     def get_location(self, format_as="avstack"):
         if format_as == "avstack":
