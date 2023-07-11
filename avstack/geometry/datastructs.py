@@ -30,6 +30,8 @@ class VectorDecoder(json.JSONDecoder):
             factory = Acceleration
         else:
             return json_object
+        if json_object is None:
+            return None
         reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
         return factory(
             x=np.array(json_object["x"]),
@@ -58,6 +60,8 @@ class RotationDecoder(json.JSONDecoder):
             factory = AngularVelocity
         else:
             return json_object
+        if json_object is None:
+            return None
         reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
         return factory(
             q=np.quaternion(json_object["qw"], *json_object["qv"]),

@@ -402,7 +402,7 @@ class Box3D:
         t_glob = deepcopy(self.t)
         t_glob.change_reference(GlobalOrigin3D, inplace=True)
         if self.where_is_t == "bottom":
-            t_glob.z += self.h / 2  # to convert to center
+            t_glob.x[2] += self.h / 2  # to convert to center
         return t_glob
 
     @property

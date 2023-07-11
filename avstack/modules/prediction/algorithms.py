@@ -33,13 +33,13 @@ class _PredictionAlgorithm:
         """
         predictions = self._predict_objects(objects, *args, **kwargs)
         if self.save:
-            pred_strs = []
+            preds = []
             for obj_ID in predictions:
                 for dt in predictions[obj_ID]:
-                    pred_strs.append(predictions[obj_ID][dt].format_as("avstack"))
+                    preds.append(predictions[obj_ID][dt].encode())
             fname = os.path.join(self.save_folder, "%06i.txt" % frame)
             with open(fname, "w") as f:
-                f.write("\n".join(pred_strs))
+                f.write("\n".join(preds))
         return predictions
 
 

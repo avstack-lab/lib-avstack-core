@@ -38,7 +38,9 @@ class _PerceptionAlgorithm:
                 data, frame=frame, identifier=identifier, *args, **kwargs
             )
             if self.save:
-                raise NotImplementedError
+                fname = os.path.join(self.save_folder, "%06i" % frame)
+                with open(fname, "w") as f:
+                    f.write(detections.encode())
             return detections
 
 

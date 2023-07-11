@@ -83,14 +83,24 @@ class ObjectStateDecoder(json.JSONDecoder):
             )
             obj.set(
                 t=json_object["t"],
-                box=json.loads(json_object["box"], cls=bbox.BoxDecoder),
-                position=json.loads(json_object["position"], cls=VectorDecoder),
-                velocity=json.loads(json_object["velocity"], cls=VectorDecoder),
-                acceleration=json.loads(json_object["acceleration"], cls=VectorDecoder),
-                attitude=json.loads(json_object["attitude"], cls=RotationDecoder),
-                angular_velocity=json.loads(
-                    json_object["angular_velocity"], cls=RotationDecoder
-                ),
+                box=None
+                if json_object["box"] is None
+                else json.loads(json_object["box"], cls=bbox.BoxDecoder),
+                position=None
+                if json_object["position"] is None
+                else json.loads(json_object["position"], cls=VectorDecoder),
+                velocity=None
+                if json_object["velocity"] is None
+                else json.loads(json_object["velocity"], cls=VectorDecoder),
+                acceleration=None
+                if json_object["acceleration"] is None
+                else json.loads(json_object["acceleration"], cls=VectorDecoder),
+                attitude=None
+                if json_object["attitude"] is None
+                else json.loads(json_object["attitude"], cls=RotationDecoder),
+                angular_velocity=None
+                if json_object["angular_velocity"] is None
+                else json.loads(json_object["angular_velocity"], cls=RotationDecoder),
                 occlusion=Occlusion(json_object["occlusion"]),
             )
         else:

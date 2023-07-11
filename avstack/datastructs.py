@@ -630,9 +630,10 @@ class DataContainerEncoder(json.JSONEncoder):
 
 
 class DataContainerDecoder(json.JSONDecoder):
+    data_decoder = None
+
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
-        self.data_decoder = None
 
     def object_hook(self, json_object):
         if "datacontainer" in json_object:

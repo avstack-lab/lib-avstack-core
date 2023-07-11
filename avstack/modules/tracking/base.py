@@ -100,9 +100,11 @@ class _TrackingAlgorithm:
         self.frame = frame
         self.iframe += 1
         tracks = self.track(t, frame, detections, platform, **kwargs)
-        if self.save:
-            raise NotImplementedError
         track_data = DataContainer(self.frame, self.t, tracks, "tracker")
+        if self.save:
+            fname = os.path.join(self.save_folder, "%06i.txt" % frame)
+            with open(fname, "w") as f:
+                f.write(track_data.encode())
         return track_data
 
     def get_assignment_matrix(self, dets, tracks):
