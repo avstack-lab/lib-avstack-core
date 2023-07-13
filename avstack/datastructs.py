@@ -328,14 +328,6 @@ class BipartiteGraph:
             )
         )
 
-    def iterate_over(self, over):
-        if over.lower() in ["col", "cols"]:
-            return self._col_to_row
-        elif over.lower() in ["row", "rows"]:
-            return self._row_to_col
-        else:
-            raise NotImplementedError
-
     def __repr__(self):
         return self.__str__()
 
@@ -356,6 +348,14 @@ class BipartiteGraph:
 
     def __len__(self):
         return len(self._row_to_col)
+
+    def iterate_over(self, over):
+        if over.lower() in ["col", "cols"]:
+            return self._col_to_row
+        elif over.lower() in ["row", "rows"]:
+            return self._row_to_col
+        else:
+            raise NotImplementedError
 
     def same(self, other):
         """Check if two graphs are the same via hashing"""

@@ -16,7 +16,7 @@ from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
 from .base import _FusionAlgorithm
 
 
-def ci_fusion(x1, P1, x2, P2):
+def ci_fusion(x1, P1, x2, P2, w=0.5):
     """Covariance intersection fusion between filter states
     useful if the cross-correlation between the two data elements is not known
 
@@ -26,7 +26,6 @@ def ci_fusion(x1, P1, x2, P2):
     NOTE: only allows for full state fusion right now
     """
     assert len(x1) == len(x2) == P1.shape[0] == P2.shape[0]
-    w = 0.5
     P1_inv = np.linalg.inv(P1)
     P2_inv = np.linalg.inv(P2)
     P_f = np.linalg.inv(w * P1_inv + (1 - w) * P2_inv)
@@ -64,7 +63,7 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
 
         # -- step 1: association metrics
         if self.association == "IoU":
-            # NOTE: this step is ok to have difference oritins
+            # NOTE: this step is ok to have difference origins
             A = build_A_from_iou(
                 [trk1.box3d for trk1 in tracks3d_1], [trk2.box3d for trk2 in tracks3d_2]
             )

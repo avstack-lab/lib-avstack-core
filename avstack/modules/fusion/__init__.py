@@ -8,4 +8,4 @@
 
 """
 
-from .track_to_track import BoxTrackToBoxTrackFusion3D
+from .track_to_track import BoxTrackToBoxTrackFusion3D, ci_fusion
