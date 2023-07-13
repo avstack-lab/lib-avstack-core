@@ -104,12 +104,14 @@ class ReferenceFrame:
             self.level = 0
             self.is_global_origin = True
             self._hash = hash(self.x.tobytes() + self.q.vec.tobytes())
+            self._integrated = None  # will need to reintegrate
             if not np.all(x == 0):
                 raise ValueError("Without input reference, must be a global origin")
         else:
             self.level = self.reference.level + 1
             self.is_global_origin = False
             self._hash = None
+            self._integrated = None  # will need to reintegrate
         self.handedness = handedness
         assert self.handedness == "right"
 
@@ -138,6 +140,7 @@ class ReferenceFrame:
         y = np.empty_like(x)
         self._x = fastround(x, self.n_prec, y)
         self._hash = None  # will need to recompute hash
+        self._integrated = None  # will need to reintegrate
 
     @property
     def q(self):
@@ -152,6 +155,7 @@ class ReferenceFrame:
             np.round(q.w, self.n_prec), *fastround(q.vec, self.n_prec, y)
         )
         self._hash = None  # will need to recompute hash
+        self._integrated = None  # will need to reintegrate
 
     @property
     def v(self):
@@ -164,6 +168,7 @@ class ReferenceFrame:
         y = np.empty_like(v)
         self._v = fastround(v, self.n_prec, y)
         self._hash = None  # will need to recompute hash
+        self._integrated = None  # will need to reintegrate
 
     @property
     def acc(self):
@@ -176,6 +181,7 @@ class ReferenceFrame:
         y = np.empty_like(acc)
         self._acc = fastround(acc, self.n_prec, y)
         self._hash = None  # will need to recompute hash
+        self._integrated = None  # will need to reintegrate
 
     @property
     def ang(self):
@@ -190,6 +196,7 @@ class ReferenceFrame:
             np.round(ang.w, self.n_prec), *fastround(ang.vec, self.n_prec, y)
         )
         self._hash = None  # will need to recompute hash
+        self._integrated = None  # will need to reintegrate
 
     @property
     def ancestors(self):
@@ -284,29 +291,34 @@ class ReferenceFrame:
         x_A_to_C_in_A = q_B_to_A * x_B_to_C_in_B + x_A_to_B_in_A
         q_A_to_C      = q_B_to_C * q_A_to_B
         """
-        ancestors = self.ancestors
-        started = False
-        for anc in reversed(ancestors):
+        if self._integrated is not None:
+            return self._integrated
+        else:
+            ancestors = self.ancestors
+            started = False
+            for anc in reversed(ancestors):
+                if not started:
+                    if anc == start_at:
+                        x_tot = np.zeros((3,))
+                        q_tot = np.quaternion(1)
+                        v_tot = np.zeros((3,))
+                        acc_tot = np.zeros((3,))
+                        ang_tot = np.quaternion(1)
+                        started = True
+                else:
+                    x_tot = q_mult_vec(q_tot.conjugate(), anc.x) + x_tot
+                    if not anc.fixed:
+                        v_tot = q_mult_vec(q_tot.conjugate(), anc.v) + v_tot
+                        acc_tot = q_mult_vec(q_tot.conjugate(), anc.acc) + acc_tot
+                        ang_tot = anc.ang * ang_tot  # TODO: this is definitely wrong
+                    q_tot = anc.q * q_tot
             if not started:
-                if anc == start_at:
-                    x_tot = np.zeros((3,))
-                    q_tot = np.quaternion(1)
-                    v_tot = np.zeros((3,))
-                    acc_tot = np.zeros((3,))
-                    ang_tot = np.quaternion(1)
-                    started = True
-            else:
-                x_tot = q_mult_vec(q_tot.conjugate(), anc.x) + x_tot
-                if not anc.fixed:
-                    v_tot = q_mult_vec(q_tot.conjugate(), anc.v) + v_tot
-                    acc_tot = q_mult_vec(q_tot.conjugate(), anc.acc) + acc_tot
-                    ang_tot = anc.ang * ang_tot  # TODO: this is definitely wrong
-                q_tot = anc.q * q_tot
-        if not started:
-            raise RuntimeError("Could not find place to start integration")
-        return ReferenceFrame(
-            x=x_tot, q=q_tot, v=v_tot, acc=acc_tot, ang=ang_tot, reference=start_at
-        )
+                raise RuntimeError("Could not find place to start integration")
+            integrated = ReferenceFrame(
+                x=x_tot, q=q_tot, v=v_tot, acc=acc_tot, ang=ang_tot, reference=start_at
+            )
+            self._integrated = integrated
+            return integrated
 
     def common_ancestor(self, other: ReferenceFrame, exact=True):
         """Search back to get a common ancestor
