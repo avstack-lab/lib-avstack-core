@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-
+from copy import copy
 import numpy as np
 
 from . import transformations as tforms
@@ -91,6 +91,11 @@ class ReferenceFrame:
     ) -> None:
         self.n_prec = n_prec
 
+        # -- add double linkage
+        self._point_from = []
+        if reference is not None:
+            reference._point_from.append(self)
+
         # -- set fields
         self.x = x.astype(float)
         self.q = q
@@ -139,8 +144,7 @@ class ReferenceFrame:
             raise TypeError("x must be of type np.ndarray")
         y = np.empty_like(x)
         self._x = fastround(x, self.n_prec, y)
-        self._hash = None  # will need to recompute hash
-        self._integrated = None  # will need to reintegrate
+        self.set_reupdate()
 
     @property
     def q(self):
@@ -154,8 +158,7 @@ class ReferenceFrame:
         self._q = np.quaternion(
             np.round(q.w, self.n_prec), *fastround(q.vec, self.n_prec, y)
         )
-        self._hash = None  # will need to recompute hash
-        self._integrated = None  # will need to reintegrate
+        self.set_reupdate()
 
     @property
     def v(self):
@@ -167,8 +170,7 @@ class ReferenceFrame:
             raise TypeError("v must be of type np.ndarray")
         y = np.empty_like(v)
         self._v = fastround(v, self.n_prec, y)
-        self._hash = None  # will need to recompute hash
-        self._integrated = None  # will need to reintegrate
+        self.set_reupdate()
 
     @property
     def acc(self):
@@ -180,8 +182,7 @@ class ReferenceFrame:
             raise TypeError("acc must be of type np.ndarray")
         y = np.empty_like(acc)
         self._acc = fastround(acc, self.n_prec, y)
-        self._hash = None  # will need to recompute hash
-        self._integrated = None  # will need to reintegrate
+        self.set_reupdate()
 
     @property
     def ang(self):
@@ -238,6 +239,12 @@ class ReferenceFrame:
             raise NotImplementedError(
                 f"Cannot check equality between reference frame and {type(other)}"
             )
+        
+    def set_reupdate(self):
+        self._hash = None
+        self._integrated = None
+        for ref in self._point_from:
+            ref.set_reupdate() 
 
     def encode(self):
         return json.dumps(self, cls=ReferenceEncoder)
@@ -277,6 +284,16 @@ class ReferenceFrame:
                 ),
             )
         )
+    
+    def check_hash_trail(self):
+        target = self
+        for anc in self.ancestors:
+            if target._upstream_hash == anc._hash:
+                pass
+            else:
+                return False
+            target = anc
+        return True
 
     def integrate(self, start_at: ReferenceFrame):
         """Integrate the transformation from the global
