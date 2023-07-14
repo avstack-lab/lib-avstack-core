@@ -119,6 +119,7 @@ class ReferenceFrame:
             self._integrated = None  # will need to reintegrate
         self.handedness = handedness
         assert self.handedness == "right"
+        self._fixed = None
 
         # -- everything must trace back to the global origin
         ref_check = self
@@ -128,11 +129,11 @@ class ReferenceFrame:
 
     @property
     def fixed(self):
-        return (
-            np.allclose(self.v, np.zeros((3,)))
-            and np.allclose(self.acc, np.zeros((3,)))
-            and np.allclose(self.ang.vec, np.zeros((3,)))
-        )
+        if self._fixed is None:
+            self._fixed = np.allclose(self.v, np.zeros((3,))) \
+                      and np.allclose(self.acc, np.zeros((3,))) \
+                      and np.allclose(self.ang.vec, np.zeros((3,)))
+        return self._fixed
 
     @property
     def x(self):
@@ -171,6 +172,7 @@ class ReferenceFrame:
         y = np.empty_like(v)
         self._v = fastround(v, self.n_prec, y)
         self.set_reupdate()
+        self._fixed = None
 
     @property
     def acc(self):
@@ -183,6 +185,7 @@ class ReferenceFrame:
         y = np.empty_like(acc)
         self._acc = fastround(acc, self.n_prec, y)
         self.set_reupdate()
+        self._fixed = None
 
     @property
     def ang(self):
@@ -196,8 +199,8 @@ class ReferenceFrame:
         self._ang = np.quaternion(
             np.round(ang.w, self.n_prec), *fastround(ang.vec, self.n_prec, y)
         )
-        self._hash = None  # will need to recompute hash
-        self._integrated = None  # will need to reintegrate
+        self.set_reupdate()
+        self._fixed = None
 
     @property
     def ancestors(self):
