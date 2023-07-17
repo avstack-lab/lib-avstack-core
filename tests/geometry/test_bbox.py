@@ -159,6 +159,12 @@ def test_2d_3d_iou():
     assert np.isclose(box_1_3d.IoU(box_1_2d), 1.0)
 
 
+def test_project_to_2d_box():
+    box_1_2d = box_3d.project_to_2d_bbox(camera_calib)
+    assert box_1_2d.xmin < box_1_2d.xmax < camera_calib.img_shape[1]
+    assert box_1_2d.ymin < box_1_2d.ymax < camera_calib.img_shape[0]
+
+
 # ===========================================================
 # TRANSFORMS ON BOXES
 # ===========================================================

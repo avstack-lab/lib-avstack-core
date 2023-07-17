@@ -116,13 +116,14 @@ def test_differential_moving_frame():
         np.array([2, 0, 0]), np.quaternion(1), GlobalOrigin3D, v=np.array([1, 0, 0])
     )
     cf2 = ReferenceFrame(
-        np.array([0, 2, 0]), cf1.q, GlobalOrigin3D, v=np.array([0, 1, 0])
+        np.array([0, 2, 0]), np.quaternion(1), GlobalOrigin3D, v=np.array([0, 1, 0])
     )
     assert not cf1.allclose(cf2)
     cf_int = cf1.differential(cf2)
     assert np.allclose(cf_int.x, np.array([-2, 2, 0]))
     assert np.allclose(cf_int.v, np.array([-1, 1, 0]))
     cf_int_int = cf_int.integrate(start_at=GlobalOrigin3D)
+    import pdb; pdb.set_trace()
     assert cf_int_int.allclose(cf2)
     assert not cf_int_int.allclose(cf1)
 

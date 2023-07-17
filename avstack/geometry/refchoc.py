@@ -41,7 +41,8 @@ class ReferenceEncoder(json.JSONEncoder):
             "qv": o.q.vec.tolist(),
             "v": o.v.tolist(),
             "acc": o.acc.tolist(),
-            "ang": o.ang.vec.tolist(),
+            "angw": o.ang.w,
+            "angv": o.ang.vec.tolist(),
             "reference": reference,
             "handedness": o.handedness,
             "n_prec": o.n_prec,
@@ -68,7 +69,7 @@ class ReferenceDecoder(json.JSONDecoder):
                     q=np.quaternion(json_object["qw"], *json_object["qv"]),
                     v=np.array(json_object["v"]),
                     acc=np.array(json_object["acc"]),
-                    ang=np.quaternion(*json_object["ang"]),
+                    ang=np.quaternion(json_object["angw"], *json_object["angv"]),
                     reference=reference,
                     handedness=json_object["handedness"],
                     n_prec=json_object["n_prec"],
@@ -109,14 +110,14 @@ class ReferenceFrame:
             self.level = 0
             self.is_global_origin = True
             self._hash = hash(self.x.tobytes() + self.q.vec.tobytes())
-            self._integrated = None  # will need to reintegrate
+            self._global_integrated = None  # will need to reintegrate
             if not np.all(x == 0):
                 raise ValueError("Without input reference, must be a global origin")
         else:
             self.level = self.reference.level + 1
             self.is_global_origin = False
             self._hash = None
-            self._integrated = None  # will need to reintegrate
+            self._global_integrated = None  # will need to reintegrate
         self.handedness = handedness
         assert self.handedness == "right"
         self._fixed = None
@@ -245,14 +246,14 @@ class ReferenceFrame:
         
     def set_reupdate(self):
         self._hash = None
-        self._integrated = None
+        self._global_integrated = None
         for ref in self._point_from:
             ref.set_reupdate() 
 
     def encode(self):
         return json.dumps(self, cls=ReferenceEncoder)
 
-    def allclose(self, other):
+    def allclose(self, other: ReferenceFrame):
         """Check if two are nearly the same via the differential"""
         diff = self.differential(other)
         return (
@@ -311,8 +312,8 @@ class ReferenceFrame:
         x_A_to_C_in_A = q_B_to_A * x_B_to_C_in_B + x_A_to_B_in_A
         q_A_to_C      = q_B_to_C * q_A_to_B
         """
-        if self._integrated is not None:
-            return self._integrated
+        if (self._global_integrated is not None) and (start_at.is_global_origin):
+            return self._global_integrated
         else:
             ancestors = self.ancestors
             started = False
@@ -337,7 +338,8 @@ class ReferenceFrame:
             integrated = ReferenceFrame(
                 x=x_tot, q=q_tot, v=v_tot, acc=acc_tot, ang=ang_tot, reference=start_at
             )
-            self._integrated = integrated
+            if start_at.is_global_origin:
+                self._global_integrated = integrated
             return integrated
 
     def common_ancestor(self, other: ReferenceFrame, exact=True):
