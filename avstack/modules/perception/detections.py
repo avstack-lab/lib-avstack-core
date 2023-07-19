@@ -17,7 +17,6 @@ from avstack.datastructs import DataContainerDecoder
 from avstack.geometry import (
     Box2D,
     Box3D,
-    Position,
     ReferenceDecoder,
     ReferenceFrame,
     SegMask2D,

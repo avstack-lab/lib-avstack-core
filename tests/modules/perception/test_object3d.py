@@ -8,7 +8,6 @@
 
 """
 
-import os
 import sys
 
 import numpy as np
@@ -65,7 +64,7 @@ class LidarMeasurement:
 
 def run_mmdet(datatype, model, dataset, as_memoryview=False):
     try:
-        import mmdet3d
+        pass
     except ModuleNotFoundError as e:
         print("Cannot run mmdet test without the module")
     else:

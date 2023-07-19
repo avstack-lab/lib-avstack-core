@@ -8,10 +8,9 @@
 
 """
 
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import numpy as np
-import quaternion
 
 from avstack import GroundTruthInformation
 from avstack.environment.objects import VehicleState

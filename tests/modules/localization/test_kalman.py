@@ -14,14 +14,7 @@ import numpy as np
 import quaternion
 
 from avstack.environment.objects import VehicleState
-from avstack.geometry import (
-    Acceleration,
-    AngularVelocity,
-    Attitude,
-    GlobalOrigin3D,
-    Position,
-    Velocity,
-)
+from avstack.geometry import Attitude, GlobalOrigin3D, Position, Velocity
 from avstack.geometry import transformations as tforms
 from avstack.modules import localization
 from avstack.sensors import GpsData, ImuData

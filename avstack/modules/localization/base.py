@@ -8,7 +8,6 @@
 
 """
 import numpy as np
-import quaternion
 
 
 class _LocalizationAlgorithm:

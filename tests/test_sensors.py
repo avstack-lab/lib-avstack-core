@@ -10,8 +10,6 @@
 
 import sys
 
-import numpy as np
-
 from avstack import sensors
 from avstack.datastructs import DataBucket, DataManager
 

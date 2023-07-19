@@ -8,17 +8,13 @@
 
 """
 
-import hashlib
 import json
 import os
 import tempfile
-import time
 
-import numpy as np
 from cv2 import imwrite
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import bbox
 from avstack.modules.perception import detections, utils
 from avstack.modules.perception.base import _MMObjectDetector, _PerceptionAlgorithm
 

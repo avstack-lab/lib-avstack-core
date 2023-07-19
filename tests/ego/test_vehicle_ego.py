@@ -38,7 +38,7 @@ def test_LidarPerceptionAndTrackingVehicle():
     t_init = 0.0
     ego_init = get_object_global(1)
     try:
-        import mmdet3d
+        pass
     except ModuleNotFoundError as e:
         print("Cannot run vehicle test without the mmdet module")
     else:
@@ -52,8 +52,7 @@ def test_LidarCameraPerceptionAndTrackingVehicle():
     t_init = 0.0
     ego_init = get_object_global(1)
     try:
-        import mmdet
-        import mmdet3d
+        pass
     except ModuleNotFoundError as e:
         print("Cannot run vehicle test without the mmdet module")
     else:

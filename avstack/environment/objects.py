@@ -25,7 +25,6 @@ from avstack.geometry import (
     GlobalOrigin3D,
     Position,
     ReferenceFrame,
-    Rotation,
     RotationDecoder,
     VectorDecoder,
     VectorHeadTail,

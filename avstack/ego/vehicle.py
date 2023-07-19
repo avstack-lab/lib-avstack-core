@@ -43,7 +43,6 @@ class VehicleEgoStack:
         )
 
         # --- post-modules
-        pass
         return control
 
     def _tick_modules(self, data_manager):

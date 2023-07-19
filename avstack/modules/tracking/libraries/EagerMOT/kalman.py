@@ -5,10 +5,9 @@
 
 
 import numpy as np
-import quaternion
 from filterpy.kalman import KalmanFilter
 
-from avstack.geometry import Attitude, Box2D, Box3D, Position
+from avstack.geometry import Attitude, Box3D, Position
 from avstack.geometry import transformations as tforms
 
 

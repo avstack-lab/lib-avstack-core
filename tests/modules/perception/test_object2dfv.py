@@ -8,7 +8,6 @@
 
 """
 
-import os
 import sys
 
 from avstack.modules import perception
@@ -33,7 +32,7 @@ from utilities import get_test_sensor_data
 def test_mmdet_2d_perception():
     frame = 0
     try:
-        import mmdet
+        pass
     except ModuleNotFoundError as e:
         print("Cannot run mmdet test without the module")
     else:

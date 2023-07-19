@@ -12,7 +12,6 @@ from itertools import combinations
 
 import numpy as np
 import scipy.spatial.distance
-from scipy import stats
 
 from avstack import maskfilters
 

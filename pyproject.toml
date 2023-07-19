@@ -48,6 +48,7 @@ black = "~22.12.0"
 mypy = "^0"
 isort = "^5.11"
 flake8 = "^5.0"
+autoflake = "^1"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

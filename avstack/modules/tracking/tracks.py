@@ -2,7 +2,7 @@ import json
 
 import numpy as np
 
-from avstack.datastructs import DataContainer, DataContainerDecoder
+from avstack.datastructs import DataContainerDecoder
 from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     Attitude,

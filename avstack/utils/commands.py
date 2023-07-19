@@ -8,10 +8,9 @@
 
 """
 
-import glob
 import os
 import subprocess
-from shutil import copyfile, rmtree
+from shutil import copyfile
 
 import psutil
 

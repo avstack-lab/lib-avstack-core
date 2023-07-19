@@ -8,16 +8,10 @@
 
 """
 
-import os
-import pickle
 import sys
-
-import avstack
-from avstack.geometry import GlobalOrigin3D
 
 
 sys.path.append("tests/")
-from utilities import get_ego, get_object_global
 
 
 # def test_carla_map_based_planner():

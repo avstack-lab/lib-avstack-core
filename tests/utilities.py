@@ -11,7 +11,6 @@ import os
 import sys
 
 import numpy as np
-import quaternion
 from cv2 import imread
 
 from avstack.calibration import Calibration, CameraCalibration

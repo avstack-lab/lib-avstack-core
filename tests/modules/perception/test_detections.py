@@ -11,7 +11,7 @@ import json
 
 import numpy as np
 
-from avstack.datastructs import DataContainer, DataContainerDecoder
+from avstack.datastructs import DataContainer
 from avstack.geometry import Attitude, Box3D, GlobalOrigin3D, Position, Vector
 from avstack.modules.perception import detections
 

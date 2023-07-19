@@ -10,8 +10,6 @@
 
 import sys
 
-import numpy as np
-
 from avstack import GroundTruthInformation
 from avstack.modules import perception, prediction, tracking
 

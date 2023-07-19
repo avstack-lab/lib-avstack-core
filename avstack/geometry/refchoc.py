@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from copy import copy
+
 import numpy as np
 
 from . import transformations as tforms
@@ -131,9 +131,11 @@ class ReferenceFrame:
     @property
     def fixed(self):
         if self._fixed is None:
-            self._fixed = np.allclose(self.v, np.zeros((3,))) \
-                      and np.allclose(self.acc, np.zeros((3,))) \
-                      and np.allclose(self.ang.vec, np.zeros((3,)))
+            self._fixed = (
+                np.allclose(self.v, np.zeros((3,)))
+                and np.allclose(self.acc, np.zeros((3,)))
+                and np.allclose(self.ang.vec, np.zeros((3,)))
+            )
         return self._fixed
 
     @property
@@ -243,12 +245,12 @@ class ReferenceFrame:
             raise NotImplementedError(
                 f"Cannot check equality between reference frame and {type(other)}"
             )
-        
+
     def set_reupdate(self):
         self._hash = None
         self._global_integrated = None
         for ref in self._point_from:
-            ref.set_reupdate() 
+            ref.set_reupdate()
 
     def encode(self):
         return json.dumps(self, cls=ReferenceEncoder)
@@ -288,7 +290,7 @@ class ReferenceFrame:
                 ),
             )
         )
-    
+
     def check_hash_trail(self):
         target = self
         for anc in self.ancestors:

@@ -7,10 +7,9 @@
 """
 
 """
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import numpy as np
-import quaternion
 
 from avstack.geometry import Attitude, GlobalOrigin3D, Position, bbox
 from avstack.modules import fusion, tracking

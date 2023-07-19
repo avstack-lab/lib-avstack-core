@@ -7,9 +7,7 @@
 """
 
 """
-import os
 
-from avstack.modules.perception import detections
 from avstack.modules.perception.base import _PerceptionAlgorithm
 
 

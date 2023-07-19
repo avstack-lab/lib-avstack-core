@@ -6,7 +6,6 @@ from avstack.geometry import (
     AngularVelocity,
     Attitude,
     GlobalOrigin3D,
-    PointMatrix2D,
     PointMatrix3D,
     Position,
     ReferenceFrame,

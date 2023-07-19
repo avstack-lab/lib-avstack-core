@@ -5,16 +5,15 @@
 # @Last Modified time: 2022-06-16
 
 import sys
-from copy import copy, deepcopy
 
 import numpy as np
 
 from avstack.environment.objects import VehicleState
-from avstack.modules import localization, safety
+from avstack.modules import safety
 
 
 sys.path.append("tests/")
-from utilities import get_ego, get_object_global, get_test_sensor_data
+from utilities import get_ego, get_object_global
 
 
 # obj, box_calib, lidar_calib, pc, camera_calib, img, box_2d, box_3d = get_test_sensor_data()
