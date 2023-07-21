@@ -10,3 +10,6 @@
 [submodule "third_party/ad-rss-lib"]
 	path = third_party/ad-rss-lib
 	url = https://github.com/avstack-lab/ad-rss-lib.git
+[submodule "third_party/mmsegmentation"]
+	path = third_party/mmsegmentation
+	url = https://github.com/cpsl-research/mmsegmentation.git
