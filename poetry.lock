@@ -2415,6 +2415,7 @@ tests = ["PyTurboJPEG", "coverage", "lmdb", "onnx", "onnxoptimizer", "onnxruntim
 [package.source]
 type = "url"
 url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/mmcv-2.0.0-cp38-cp38-manylinux1_x86_64.whl"
+
 [[package]]
 name = "mmdet"
 version = "3.0.0"
@@ -2428,14 +2429,13 @@ develop = true
 [package.dependencies]
 matplotlib = "*"
 numpy = "*"
-pycocotools = "*"
 scipy = "*"
 shapely = "*"
 six = "*"
 terminaltables = "*"
 
 [package.extras]
-all = ["cityscapesscripts", "cython", "imagecorruptions", "matplotlib", "numpy", "pycocotools", "scikit-learn", "scipy", "shapely", "six", "terminaltables"]
+all = ["cython", "matplotlib", "numpy", "scipy", "shapely", "six", "terminaltables"]
 build = ["cython", "numpy"]
 mim = ["mmcv (>=2.0.0rc4,<2.1.0)", "mmengine (>=0.7.1,<1.0.0)"]
 optional = ["cityscapesscripts", "imagecorruptions", "scikit-learn"]
@@ -4749,6 +4749,7 @@ typing-extensions = "*"
 [package.source]
 type = "url"
 url = "https://download.pytorch.org/whl/cu113/torch-1.10.0%2Bcu113-cp38-cp38-linux_x86_64.whl"
+
 [[package]]
 name = "torchvision"
 version = "0.11.0+cu113"
@@ -4771,6 +4772,7 @@ scipy = ["scipy"]
 [package.source]
 type = "url"
 url = "https://download.pytorch.org/whl/cu113/torchvision-0.11.0%2Bcu113-cp38-cp38-linux_x86_64.whl"
+
 [[package]]
 name = "tornado"
 version = "6.3.2"
@@ -5084,4 +5086,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.8"
-content-hash = "0f49317c6b15c59d76c7f1cc80873a14ed2a0701cfcd3165fba5403a6604ada3"
+content-hash = "dfaee22d3488afd9f4911fd510f10712439790c22e9c1a11237574f359f96a57"
