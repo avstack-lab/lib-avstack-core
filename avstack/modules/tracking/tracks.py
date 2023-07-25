@@ -120,6 +120,13 @@ class TrackContainerDecoder(DataContainerDecoder):
     data_decoder = TrackDecoder
 
 
+def KF_update(x, P, hx, H, z, R):
+    y = z - hx
+    Sinv = np.linalg.inv(H @ P @ H.T + R)
+    K = P @ H.T @ Sinv
+    return x+K@y, (np.eye(P.shape[0])-K@H ) @ P
+
+
 class _TrackBase:
     ID_counter = 0
 
