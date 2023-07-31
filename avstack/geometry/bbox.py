@@ -5,6 +5,8 @@
 # @Last modified time: 2021-08-11
 
 
+from __future__ import annotations
+from typing import Union
 import json
 import logging
 from copy import copy, deepcopy
@@ -16,7 +18,7 @@ from scipy import sparse
 from scipy.spatial import ConvexHull, QhullError
 
 from avstack import exceptions
-from avstack.geometry import transformations as tforms
+from avstack.geometry import transformations as tforms, Rotation
 
 from ..calibration import CalibrationDecoder
 from .base import _q_mult_vec, q_mult_vec
@@ -553,14 +555,19 @@ class Box3D:
             raise NotImplementedError(type(other))
         return iou
 
-    def rotate(self, q, inplace=True):
+    def rotate(self, q: Union[Attitude, Rotation, np.quaternion], inplace=True):
         """Rotates the attitude AND the translation of the box"""
+        if isinstance(q, (Attitude, Rotation)):
+            if not self.reference == q.reference:
+                raise NotImplementedError("To apply rotation, must have identical references")
+            else:
+                q = q.q
         if inplace:
             self.position = q_mult_vec(q, self.position)
             self.attitude = q * self.q
         else:
             pos = q_mult_vec(q, self.position)
-            rot = q * self.q
+            rot = Attitude(q * self.q, self.reference)
             return Box3D(pos, rot, self.size)
 
     def rotate_attitude(self, q, inplace=True):
