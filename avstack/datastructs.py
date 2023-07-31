@@ -672,10 +672,10 @@ class DataContainer:
     TYPE = "DataContainer"
 
     def __init__(self, frame: int, timestamp: float, data: Any, source_identifier: str):
-        self.frame = frame
-        self.timestamp = timestamp
+        self.frame = int(frame)
+        self.timestamp = float(timestamp)
         self.data = data
-        self.source_identifier = source_identifier
+        self.source_identifier = str(source_identifier)
 
     def __str__(self):
         return f"{len(self.data)} elements at frame {self.frame}, time {self.timestamp}, ID: {self.source_identifier}\n{self.data}"

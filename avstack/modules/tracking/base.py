@@ -95,10 +95,10 @@ class _TrackingAlgorithm:
     def __call__(
         self, t: float, frame: int, detections, platform: ReferenceFrame, **kwargs
     ):
-        self.t = t
-        self.frame = frame
+        self.t = float(t)
+        self.frame = int(frame)
         self.iframe += 1
-        tracks = self.track(t, frame, detections, platform, **kwargs)
+        tracks = self.track(self.t, self.frame, detections, platform, **kwargs)
         track_data = DataContainer(self.frame, self.t, tracks, "tracker")
         if self.save:
             fname = os.path.join(self.save_folder, "%06i.txt" % frame)

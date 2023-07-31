@@ -38,7 +38,7 @@ class _PerceptionAlgorithm:
                 data, frame=frame, identifier=identifier, *args, **kwargs
             )
             if self.save:
-                fname = os.path.join(self.save_folder, "%06i" % frame)
+                fname = os.path.join(self.save_folder, "%06i.txt" % frame)
                 with open(fname, "w") as f:
                     f.write(detections.encode())
             return detections

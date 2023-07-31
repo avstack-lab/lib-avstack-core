@@ -54,6 +54,18 @@ def test_groundtruth_perception():
     assert np.allclose(detections[0].box.t.x, obj_local.position.x)
 
 
+def test_groundtruth_perception_save():
+    ego_init = get_ego(seed=3)
+    obj1 = get_object_global(seed=4)
+    obj_local = obj1.change_reference(ego_init, inplace=False)
+    frame = timestamp = 0
+    ground_truth = GroundTruthInformation(
+        frame, timestamp, ego_state=ego_init, objects=[obj1]
+    )
+    percep = perception.object3d.GroundTruth3DObjectDetector(save_output=True, save_folder='/tmp/test')
+    _ = percep(ground_truth, frame=frame, identifier="percep-1")
+
+
 class LidarMeasurement:
     """To emulate the carla measurements"""
 

@@ -18,7 +18,7 @@ from scipy import sparse
 from scipy.spatial import ConvexHull, QhullError
 
 from avstack import exceptions
-from avstack.geometry import transformations as tforms, Rotation
+from avstack.geometry import transformations as tforms
 
 from ..calibration import CalibrationDecoder
 from .base import _q_mult_vec, q_mult_vec
@@ -30,7 +30,7 @@ from .datastructs import (
     RotationDecoder,
     VectorDecoder,
 )
-from .refchoc import GlobalOrigin3D
+from .refchoc import GlobalOrigin3D, Rotation, Vector
 
 
 R_stan_to_cam = StandardCoordinates.get_conversion_matrix(CameraCoordinates)
@@ -75,7 +75,7 @@ class BoxEncoder(json.JSONEncoder):
             }
             return {"segmask2d": seg_dict}
         else:
-            raise NotImplementedError(type(o))
+            raise NotImplementedError(f'{type(0)}, {o}')
 
 
 class BoxDecoder(json.JSONDecoder):
@@ -555,7 +555,7 @@ class Box3D:
             raise NotImplementedError(type(other))
         return iou
 
-    def rotate(self, q: Union[Attitude, Rotation, np.quaternion], inplace=True):
+    def rotate(self, q: Union[Attitude, Rotation, np.quaternion], inplace):
         """Rotates the attitude AND the translation of the box"""
         if isinstance(q, (Attitude, Rotation)):
             if not self.reference == q.reference:
@@ -564,13 +564,13 @@ class Box3D:
                 q = q.q
         if inplace:
             self.position = q_mult_vec(q, self.position)
-            self.attitude = q * self.q
+            self.attitude.q = q * self.q.q
         else:
             pos = q_mult_vec(q, self.position)
-            rot = Attitude(q * self.q, self.reference)
+            rot = Attitude(q * self.q.q, self.reference)
             return Box3D(pos, rot, self.size)
 
-    def rotate_attitude(self, q, inplace=True):
+    def rotate_attitude(self, q, inplace):
         """Rotates the attitude of the box only"""
         if inplace:
             self.attitude = q * self.q
@@ -578,8 +578,11 @@ class Box3D:
             rot = q * self.q
             return Box3D(deepcopy(self.position), rot, self.size)
 
-    def translate(self, L, inplace=True):
+    def translate(self, L, inplace):
         """Translates the position of the box"""
+        if isinstance(L, (Position, Vector)):
+            if not self.reference == L.reference:
+                raise NotImplementedError("To apply translation, must have identical references")
         if inplace:
             self.position += L
         else:

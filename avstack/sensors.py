@@ -30,11 +30,11 @@ class SensorData:
     def __init__(
         self, timestamp, frame, data, calibration, source_ID, source_name, **kwargs
     ):
-        self.timestamp = timestamp
-        self.frame = frame
-        self.source_ID = source_ID
-        self.source_name = source_name
-        self.source_identifier = source_name + "-" + str(source_ID)
+        self.timestamp = float(timestamp)
+        self.frame = int(frame)
+        self.source_ID = str(source_ID)
+        self.source_name = str(source_name)
+        self.source_identifier = self.source_name + "-" + self.source_ID
         self.data = data
         self.calibration = calibration
         allowed_keys = {"depth", "in_front"}

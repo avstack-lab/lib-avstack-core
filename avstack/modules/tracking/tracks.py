@@ -31,18 +31,21 @@ box_tracks = ["basicboxtrack2d", "basicboxtrack3d", "basicjointboxtrack"]
 
 class TrackEncoder(json.JSONEncoder):
     def default(self, o):
-        t_dict = {
-            "obj_type": o.obj_type,
-            "t0": o.t0,
-            "t": o.t,
-            "ID": o.ID,
-            "coast": o.coast,
-            "n_updates": o.n_updates,
-            "age": o.age,
-            "x": o.x.tolist(),
-            "P": o.P.tolist(),
-            "reference": o.reference.encode(),
-        }
+        if isinstance(o, _TrackBase):
+            t_dict = {
+                "obj_type": o.obj_type,
+                "t0": o.t0,
+                "t": o.t,
+                "ID": o.ID,
+                "coast": o.coast,
+                "n_updates": o.n_updates,
+                "age": o.age,
+                "x": o.x.tolist(),
+                "P": o.P.tolist(),
+                "reference": o.reference.encode(),
+            }
+        else:
+            raise NotImplementedError(f'{type(o)}, {o}')
         if isinstance(o, (BasicBoxTrack2D, BasicBoxTrack3D, BasicJointBoxTrack)):
             t_dict["box"] = o.box.encode()
             t_dict["v"] = o.velocity.x.tolist()
@@ -153,7 +156,7 @@ class _TrackBase:
         self.active = True
         self.n_updates = n_updates
         self.age = age
-        self.ID = ID
+        self.ID = int(ID)
         self.t0 = t0
         self.t = t0 if t is None else t
         self.t_last_predict = self.t

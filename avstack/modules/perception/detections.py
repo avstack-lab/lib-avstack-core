@@ -13,6 +13,7 @@ from typing import List
 import numpy as np
 from scipy.interpolate import interp1d
 
+import avstack
 from avstack.datastructs import DataContainerDecoder
 from avstack.geometry import (
     Box2D,
@@ -36,13 +37,13 @@ class DetectionEncoder(json.JSONEncoder):
         ):
             data = o.data.tolist()
         elif isinstance(o, BoxDetection):
-            data = o.data.encode()
+            data = o.box.encode()
         else:
-            raise NotImplementedError(type(o.data))
+            raise NotImplementedError(f'{type(o)}, {o}')
         d_dict = {
-            "source_identifier": o.source_identifier,
-            "obj_type": o.obj_type,
-            "score": o.score,
+            "source_identifier": str(o.source_identifier),
+            "obj_type": str(o.obj_type),
+            "score": float(o.score),
             "data": data,
             "reference": o.reference.encode(),
         }
@@ -100,7 +101,7 @@ class DetectionDecoder(json.JSONDecoder):
             json_object = json_object["boxdetection"]
             out = BoxDetection(
                 source_identifier=json_object["source_identifier"],
-                box=json.loads(json_object["box"], cls=bbox.BoxDecoder),
+                box=json.loads(json_object["data"], cls=bbox.BoxDecoder),
                 obj_type=json_object["obj_type"],
                 score=json_object["score"],
                 reference=reference,

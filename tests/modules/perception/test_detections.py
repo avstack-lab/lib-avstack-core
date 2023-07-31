@@ -20,16 +20,34 @@ alg_ID = 0
 alg_name = "detector-1"
 
 
-def make_data_container(n_datas):
+def make_box(seed):
+    np.random.seed(seed)
+    pos = Position(np.random.randn(3), GlobalOrigin3D)
+    rot = Attitude(np.quaternion(1), GlobalOrigin3D)
+    size = (1, 2, 3)
+    return Box3D(pos, rot, size)
+
+
+def make_data_container(n_datas, dtype='centroid'):
     frame = 0
     timestamp = 0
     alg_name = "detector-1"
-    dets = [
-        detections.CentroidDetection(
-            alg_name, np.random.randn(3), GlobalOrigin3D, obj_type="Car"
-        )
-        for _ in range(n_datas)
-    ]
+    if dtype == 'centroid':
+        dets = [
+            detections.CentroidDetection(
+                alg_name, np.random.randn(3), GlobalOrigin3D, obj_type="Car"
+            )
+            for _ in range(n_datas)
+        ]
+    elif dtype == 'box':
+        dets = [
+            detections.BoxDetection(
+                alg_name, make_box(i), GlobalOrigin3D, obj_type="Car"
+            )
+            for i in range(n_datas)
+        ]
+    else:
+        raise NotImplementedError
     dc = DataContainer(frame, timestamp, dets, source_identifier=alg_name)
     return dc
 
@@ -40,9 +58,16 @@ def test_detection_container():
     assert len(dc) == n_datas
 
 
-def test_detection_container_encode_decode():
+def test_detection_container_encode_decode_centroid():
     n_datas = 4
     dc_1 = make_data_container(n_datas=n_datas)
+    dc_2 = json.loads(dc_1.encode(), cls=detections.DetectionContainerDecoder)
+    assert len(dc_1) == len(dc_2)
+
+
+def test_detection_container_encode_decode_box():
+    n_datas = 4
+    dc_1 = make_data_container(n_datas=n_datas, dtype='box')
     dc_2 = json.loads(dc_1.encode(), cls=detections.DetectionContainerDecoder)
     assert len(dc_1) == len(dc_2)
 

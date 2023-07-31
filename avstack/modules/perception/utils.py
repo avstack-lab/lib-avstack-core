@@ -87,8 +87,8 @@ def convert_mm2d_to_avstack(
         bbox_result, segm_result = result_, None
         segms = None
     bboxes = bbox_result.pred_instances.bboxes.cpu().numpy()
-    labels = bbox_result.pred_instances.labels.cpu().numpy()
-    scores = bbox_result.pred_instances.scores.cpu().numpy()
+    labels = bbox_result.pred_instances.labels.cpu().numpy().astype(int)
+    scores = bbox_result.pred_instances.scores.cpu().numpy().astype(float)
 
     if score_thresh > 0:
         assert bboxes is not None and bboxes.shape[1] == 4
