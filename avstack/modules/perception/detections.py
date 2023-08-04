@@ -42,8 +42,8 @@ class DetectionEncoder(json.JSONEncoder):
             raise NotImplementedError(f'{type(o)}, {o}')
         d_dict = {
             "source_identifier": str(o.source_identifier),
-            "obj_type": str(o.obj_type),
-            "score": float(o.score),
+            "obj_type": str(o.obj_type) if o.obj_type is not None else None,
+            "score": float(o.score) if o.score is not None else None,
             "data": data,
             "reference": o.reference.encode(),
         }
