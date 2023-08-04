@@ -49,6 +49,8 @@ class TrackEncoder(json.JSONEncoder):
         if isinstance(o, (BasicBoxTrack2D, BasicBoxTrack3D, BasicJointBoxTrack)):
             t_dict["box"] = o.box.encode()
             t_dict["v"] = o.velocity.x.tolist()
+        if isinstance(o, (BasicJointBoxTrack)):
+            t_dict["track2d"] = o.track_2d.encode() if o.track_2d is not None else None
         return {type(o).__name__.lower(): t_dict}
 
 
@@ -97,7 +99,8 @@ class TrackDecoder(json.JSONDecoder):
                 json_object = json_object["basicboxtrack3d"]
                 factory = BasicBoxTrack3D
             elif "basicjointboxtrack" in json_object:
-                raise NotImplementedError
+                json_object = json_object["basicjointboxtrack"]
+                factory = BasicBoxTrack3D
             else:
                 raise NotImplementedError(json_object)
             box = json.loads(json_object["box"], cls=BoxDecoder)
@@ -900,6 +903,15 @@ class BasicJointBoxTrack(_TrackBase):
         return self.track_3d.obj_type
 
     @property
+    def idx_pos(self):
+        return self.track_3d.idx_posok
+# avapi.visualize.replay.replay_track_results(track_res_frames, fig_width=8)
+    
+    @property
+    def idx_vel(self):
+        return self.track_3d.idx_vel
+
+    @property
     def t0(self):
         return self.track_3d.t0
 
@@ -950,6 +962,10 @@ class BasicJointBoxTrack(_TrackBase):
     def coast_3d(self):
         return self.track_3d.coast if self.track_3d is not None else 0
 
+    @property
+    def reference(self):
+        return self.track_3d.reference if self.track_3d is not None else None
+
     def __repr__(self):
         return self.__str__()
 
@@ -972,7 +988,7 @@ class BasicJointBoxTrack(_TrackBase):
         # -- update 2d
         if self.track_2d is None and b2 is not None:
             self.track_2d = BasicBoxTrack2D(
-                self.track_3d.t, b2, objtype=obj_type, reference=reference
+                self.track_3d.t, b2, obj_type=obj_type, reference=reference
             )
         elif b2 is not None:
             self.track_2d.update(b2)
@@ -980,7 +996,7 @@ class BasicJointBoxTrack(_TrackBase):
         # -- update 3d
         if self.track_3d is None and b3 is not None:
             self.track_3d = BasicBoxTrack3D(
-                self.track_2d.t, b3, objtype=obj_type, reference=reference
+                self.track_2d.t, b3, obj_type=obj_type, reference=reference
             )
         elif b3 is not None:
             self.track_3d.update(b3)

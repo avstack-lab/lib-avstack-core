@@ -401,8 +401,7 @@ class Box3D:
 
     @property
     def center_global(self):
-        t_glob = deepcopy(self.t)
-        t_glob.change_reference(GlobalOrigin3D, inplace=True)
+        t_glob = self.t.change_reference(GlobalOrigin3D, inplace=False)
         if self.where_is_t == "bottom":
             t_glob.x[2] += self.h / 2  # to convert to center
         return t_glob
@@ -461,10 +460,9 @@ class Box3D:
         if self.where_is_t == "center":
             pass
         else:
-            O1 = deepcopy(self.reference)
             self.t.change_reference(GlobalOrigin3D, inplace=True)
             self.t += np.array([0, 0, self.h / 2])
-            self.t.change_reference(O1, inplace=True)
+            self.t.change_reference(self.reference, inplace=True)
             self.where_is_t = "center"
 
     def change_reference(self, reference_new, inplace=True):

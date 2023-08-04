@@ -210,27 +210,27 @@ class ObjectState:
         self.occlusion = occlusion
 
         # -- position
-        assert isinstance(position, (Position, NoneType))
+        assert isinstance(position, (Position, NoneType)), type(position)
         self.position = position
 
         # -- bbox
-        assert isinstance(box, (Box2D, Box3D, NoneType))
+        assert isinstance(box, (Box2D, Box3D, NoneType)), type(box)
         self.box = box
 
         # -- velocity
-        assert isinstance(velocity, (Velocity, NoneType))
+        assert isinstance(velocity, (Velocity, NoneType)), type(velocity)
         self.velocity = velocity
 
         # -- accel
-        assert isinstance(acceleration, (Acceleration, NoneType))
+        assert isinstance(acceleration, (Acceleration, NoneType)), type(acceleration)
         self.acceleration = acceleration
 
         # -- attitude
-        assert isinstance(attitude, (Attitude, NoneType))
+        assert isinstance(attitude, (Attitude, NoneType)), type(attitude)
         self.attitude = attitude  # world 2 body
 
         # -- angular vel
-        assert isinstance(angular_velocity, (AngularVelocity, NoneType))
+        assert isinstance(angular_velocity, (AngularVelocity, NoneType)), type(angular_velocity)
         self.angular_velocity = angular_velocity
 
     def predict(self, dt):
