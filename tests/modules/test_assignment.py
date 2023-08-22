@@ -43,9 +43,10 @@ def test_n_best_assignment():
     # n-best solutions
     assign_sol = assignment.gnn_single_frame_assign(A_blackman)
     assign_n_best = assignment.n_best_solutions(A_blackman, n=5, verbose=False)
-    assert assign_n_best[0] == assign_sol
     cost_true = [47, 51, 52, 53, 54]
-    for c, a in zip(cost_true, assign_n_best):
+    for i, (c, a) in enumerate(zip(cost_true, assign_n_best)):
+        if i == 0:
+            assert a == assign_sol
         assert a.cost == c
 
     # n-best solutions with lone trk

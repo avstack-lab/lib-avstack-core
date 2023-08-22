@@ -175,26 +175,26 @@ def greedy_assignment(A, threshold):
     return OneEdgeBipartiteGraph(assigns, nrows, ncols, cost)
 
 
-def n_best_solutions(A, n: int, algorithm="JVC", verbose=False):
-    """Return N-Best solution to assignment using Murty's algorithm
-
-    NOTE: this is not an optimized version
+def approx_n_best_solutions(A: np.ndarray, n: int, algorithm: str="JVC", verbose: bool=False):
+    """Implementation of Murty's algorithm with a generator
+    
+    Only the first two returns are guaranteed to be in the correct order
     """
-    # -- get single best
+    m = A.shape[1]
     assign_sol_best = gnn_single_frame_assign(
         A, algorithm=algorithm, all_assigned=False
     )
     n_required_feasible = len(assign_sol_best)  # must not lose assignments
     best_sols = PrioritySet(
-        max_size=n, max_heap=True
+        max_size=np.inf, max_heap=True
     )  # making max removes highest first
     best_sols.push(assign_sol_best.cost, assign_sol_best)
     sol_to_constraint_map = {assign_sol_best: ([], [])}
+    yield assign_sol_best
 
-    # -- perform additional sweeps
-    m = A.shape[1]
     for i_sweep in range(n - 1):
         # -- get the next best as a starting point
+        # cost_start, sol_start = best_sols.top()
         cost_start, sol_start = best_sols.n_smallest(n)[i_sweep]
         cons_yes_start, cons_no_start = sol_to_constraint_map[sol_start]
         sol = sol_start.copy()
@@ -205,7 +205,10 @@ def n_best_solutions(A, n: int, algorithm="JVC", verbose=False):
         for i_subsweep in range(0, m - len(cons_yes_start)):
             # swap constraints
             if i_subsweep > 0:
-                cons_yes.append(cons_no.pop())
+                try:
+                    cons_yes.append(cons_no.pop())
+                except IndexError:
+                    break
 
             for cand_assign in sol.assignment_tuples:
                 if (cand_assign not in cons_no) and (cand_assign not in cons_yes):
@@ -230,10 +233,6 @@ def n_best_solutions(A, n: int, algorithm="JVC", verbose=False):
             A_new = np.delete(A_new, del_rows, axis=0)  # remove "yes" rows
             A_new = np.delete(A_new, del_cols, axis=1)  # remove "yes" cols
 
-            # if i_sweep == 1:
-            # if i_subsweep == 0:
-            #     raise
-
             # run assignment, check feasible
             assign_next = gnn_single_frame_assign(
                 A_new, algorithm=algorithm, all_assigned=False
@@ -255,18 +254,22 @@ def n_best_solutions(A, n: int, algorithm="JVC", verbose=False):
                 # store in set
                 best_sols.push(assign_next.cost, assign_next)
                 sol_to_constraint_map[assign_next] = (cons_yes.copy(), cons_no.copy())
-            if verbose:
-                pr_str = (
-                    f"\nSweep {i_sweep} and Subsweep {i_subsweep}:\n"
-                    + f"--yes: {cons_yes}\n--no:  {cons_no}\n"
-                )
-                if feasible:
-                    pr_str += f"Yield the assignment: {assignments} with cost {cost}"
-                else:
-                    pr_str += f"Did not yield a feasible assignment"
-                print(pr_str)
+                yield assign_next
+    else:
+        pass
 
-    # -- return in regular order
+
+def n_best_solutions(A: np.ndarray, n: int, algorithm: str="JVC", verbose: bool=False):
+    """Implementation of Murty's algorithm
+    
+    Guaranteed to be in the correct order
+    """
+    best_sols = PrioritySet(
+        max_size=n, max_heap=True,
+    )  # making max removes highest first
+    approx_best_gen = approx_n_best_solutions(A, n, algorithm, verbose)
+    for sol in approx_best_gen:
+        best_sols.push(sol.cost, sol)
     return [s[1] for s in best_sols.n_smallest(n)]
 
 
