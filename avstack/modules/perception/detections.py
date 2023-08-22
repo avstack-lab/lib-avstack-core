@@ -423,6 +423,10 @@ class BoxDetection(Detection_):
     @property
     def z(self):
         return self.box
+    
+    @property
+    def position(self):
+        return self.box.position
 
     @staticmethod
     def factory():

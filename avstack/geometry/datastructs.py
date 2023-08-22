@@ -74,6 +74,10 @@ class Position(Vector):
     def _pull_from_reference(self, reference: ReferenceFrame):
         return reference.x
 
+    @property
+    def position(self):
+        return self
+
     @staticmethod
     def factory():
         return Position
