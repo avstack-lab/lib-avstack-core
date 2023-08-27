@@ -142,7 +142,8 @@ class AutopilotWithCameraPerception(VehicleEgoStack):
                 frame=frame,
                 identifier="camera_objects_2d",
             )
-            print("Detected {} objects with our camera     ".format(len(dets_2d)))
+            if self.verbose:
+                print("Detected {} objects with our camera     ".format(len(dets_2d)))
         return None
 
 
