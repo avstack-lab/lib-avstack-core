@@ -34,16 +34,31 @@ class VehicleEgoStack:
         self.timestamp = timestamp
 
         # -- modules
-        control = self._tick_modules(
+        control, (
+            localization,
+            objects_2d,
+            objects_3d,
+            tracks_2d,
+            tracks_3d,
+        ) = self._tick_modules(
             frame=frame,
             timestamp=timestamp,
             data_manager=data_manager,
             ground_truth=ground_truth,
             **kwargs
         )
+        debug = {
+            "localization": localization,
+            "objects": {
+                "objects_2d": objects_2d,
+                "objects_3d": objects_3d,
+                "tracks_2d": tracks_2d,
+                "tracks_3d": tracks_3d,
+            },
+        }
 
         # --- post-modules
-        return control
+        return control, debug
 
     def _tick_modules(self, data_manager):
         raise NotImplementedError
@@ -64,7 +79,7 @@ class PassthroughAutopilotVehicle(VehicleEgoStack):
         raise RuntimeError("Cannot set destination with autopilot AV")
 
     def _tick_modules(self, *args, **kwargs):
-        return None
+        return None, (None, None, None, None, None)
 
 
 class GroundTruthBehaviorAgent(VehicleEgoStack):
@@ -87,7 +102,7 @@ class GroundTruthBehaviorAgent(VehicleEgoStack):
         objects_3d = ground_truth.objects
         objects_2d = []
         ctrl = self.planning(ego_state, environment, objects_3d, objects_2d)
-        return ctrl
+        return ctrl, (ego_state, objects_2d, objects_3d, None, None)
 
 
 # ==========================================================
@@ -114,7 +129,7 @@ class GoStraightEgo(VehicleEgoStack):
         ego_state = ground_truth.ego_state
         self.plan = self.planning(self.plan, ego_state)
         ctrl = self.control(ego_state, self.plan)
-        return ctrl
+        return ctrl, (None, None, None, None, None)
 
 
 class AutopilotWithCameraPerception(VehicleEgoStack):
@@ -144,7 +159,9 @@ class AutopilotWithCameraPerception(VehicleEgoStack):
             )
             if self.verbose:
                 print("Detected {} objects with our camera     ".format(len(dets_2d)))
-        return None
+        else:
+            dets_2d = []
+        return None, (None, dets_2d, None, None, None)
 
 
 # ==========================================================
@@ -183,7 +200,7 @@ class Level2GtPerceptionGtLocalization(VehicleEgoStack):
         objects_3d = [
             obj for obj in objects_3d if ego_state.position.distance(obj.box.t) < 30
         ]
-        objects_3d = self.tracking(
+        tracks_3d = self.tracking(
             t=timestamp,
             frame=frame,
             detections=objects_3d,
@@ -195,10 +212,10 @@ class Level2GtPerceptionGtLocalization(VehicleEgoStack):
         )
         # preds_3d = self.prediction(objects_3d, frame=frame)
         self.plan = self.planning(
-            self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
+            self.plan, ego_state, self.environment, tracks_3d, objects_2d, lanes
         )
         ctrl = self.control(ego_state, self.plan)
-        return ctrl
+        return ctrl, (ego_state, None, objects_3d, None, tracks_3d)
 
     def set_destination(self, *args, **kwargs):
         print("Ignoring destination...this type of vehicle does not take a destination")
@@ -235,7 +252,7 @@ class Level2LidarBasedVehicle(VehicleEgoStack):
             data_manager.pop("lidar-0"), frame=frame, identifier="objects_3d"
         )
         objects_2d = []
-        objects_3d = self.tracking(
+        tracks_3d = self.tracking(
             t=timestamp,
             frame=frame,
             detections=objects_3d,
@@ -247,10 +264,10 @@ class Level2LidarBasedVehicle(VehicleEgoStack):
         )
         # preds_3d = self.prediction(objects_3d, frame=frame)
         self.plan = self.planning(
-            self.plan, ego_state, self.environment, objects_3d, objects_2d, lanes
+            self.plan, ego_state, self.environment, tracks_3d, objects_2d, lanes
         )
         ctrl = self.control(ego_state, self.plan)
-        return ctrl
+        return ctrl, (ego_state, None, objects_3d, None, tracks_3d)
 
     def set_destination(self, *args, **kwargs):
         print("Ignoring destination...this type of vehicle does not take a destination")
