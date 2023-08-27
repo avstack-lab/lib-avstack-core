@@ -13,7 +13,6 @@ from typing import List
 import numpy as np
 from scipy.interpolate import interp1d
 
-import avstack
 from avstack.datastructs import DataContainerDecoder
 from avstack.geometry import (
     Box2D,
@@ -39,7 +38,7 @@ class DetectionEncoder(json.JSONEncoder):
         elif isinstance(o, BoxDetection):
             data = o.box.encode()
         else:
-            raise NotImplementedError(f'{type(o)}, {o}')
+            raise NotImplementedError(f"{type(o)}, {o}")
         d_dict = {
             "source_identifier": str(o.source_identifier),
             "obj_type": str(o.obj_type) if o.obj_type is not None else None,
@@ -423,7 +422,7 @@ class BoxDetection(Detection_):
     @property
     def z(self):
         return self.box
-    
+
     @property
     def position(self):
         return self.box.position

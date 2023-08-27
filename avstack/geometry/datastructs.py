@@ -144,6 +144,12 @@ class Pose:
             raise TypeError(f"Input position type {type(attitude)} not allowed")
         self._attitude = attitude
 
+    @property
+    def matrix(self):
+        return np.block(
+            [[self.attitude.R, self.position.x], [np.zeros((1, 3)), np.ones((1, 1))]]
+        )
+
 
 class Twist:
     def __init__(self, linear: Velocity, angular: AngularVelocity) -> None:

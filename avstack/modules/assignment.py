@@ -175,9 +175,11 @@ def greedy_assignment(A, threshold):
     return OneEdgeBipartiteGraph(assigns, nrows, ncols, cost)
 
 
-def approx_n_best_solutions(A: np.ndarray, n: int, algorithm: str="JVC", verbose: bool=False):
+def approx_n_best_solutions(
+    A: np.ndarray, n: int, algorithm: str = "JVC", verbose: bool = False
+):
     """Implementation of Murty's algorithm with a generator
-    
+
     Only the first two returns are guaranteed to be in the correct order
     """
     m = A.shape[1]
@@ -259,13 +261,16 @@ def approx_n_best_solutions(A: np.ndarray, n: int, algorithm: str="JVC", verbose
         pass
 
 
-def n_best_solutions(A: np.ndarray, n: int, algorithm: str="JVC", verbose: bool=False):
+def n_best_solutions(
+    A: np.ndarray, n: int, algorithm: str = "JVC", verbose: bool = False
+):
     """Implementation of Murty's algorithm
-    
+
     Guaranteed to be in the correct order
     """
     best_sols = PrioritySet(
-        max_size=n, max_heap=True,
+        max_size=n,
+        max_heap=True,
     )  # making max removes highest first
     approx_best_gen = approx_n_best_solutions(A, n, algorithm, verbose)
     for sol in approx_best_gen:

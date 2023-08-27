@@ -230,7 +230,9 @@ class ObjectState:
         self.attitude = attitude  # world 2 body
 
         # -- angular vel
-        assert isinstance(angular_velocity, (AngularVelocity, NoneType)), type(angular_velocity)
+        assert isinstance(angular_velocity, (AngularVelocity, NoneType)), type(
+            angular_velocity
+        )
         self.angular_velocity = angular_velocity
 
     def predict(self, dt):

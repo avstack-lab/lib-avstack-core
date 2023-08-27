@@ -62,7 +62,9 @@ def test_groundtruth_perception_save():
     ground_truth = GroundTruthInformation(
         frame, timestamp, ego_state=ego_init, objects=[obj1]
     )
-    percep = perception.object3d.GroundTruth3DObjectDetector(save_output=True, save_folder='/tmp/test')
+    percep = perception.object3d.GroundTruth3DObjectDetector(
+        save_output=True, save_folder="/tmp/test"
+    )
     _ = percep(ground_truth, frame=frame, identifier="percep-1")
 
 

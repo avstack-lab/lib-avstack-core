@@ -28,18 +28,18 @@ def make_box(seed):
     return Box3D(pos, rot, size)
 
 
-def make_data_container(n_datas, dtype='centroid'):
+def make_data_container(n_datas, dtype="centroid"):
     frame = 0
     timestamp = 0
     alg_name = "detector-1"
-    if dtype == 'centroid':
+    if dtype == "centroid":
         dets = [
             detections.CentroidDetection(
                 alg_name, np.random.randn(3), GlobalOrigin3D, obj_type="Car"
             )
             for _ in range(n_datas)
         ]
-    elif dtype == 'box':
+    elif dtype == "box":
         dets = [
             detections.BoxDetection(
                 alg_name, make_box(i), GlobalOrigin3D, obj_type="Car"
@@ -67,7 +67,7 @@ def test_detection_container_encode_decode_centroid():
 
 def test_detection_container_encode_decode_box():
     n_datas = 4
-    dc_1 = make_data_container(n_datas=n_datas, dtype='box')
+    dc_1 = make_data_container(n_datas=n_datas, dtype="box")
     dc_2 = json.loads(dc_1.encode(), cls=detections.DetectionContainerDecoder)
     assert len(dc_1) == len(dc_2)
 

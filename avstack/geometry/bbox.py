@@ -6,10 +6,11 @@
 
 
 from __future__ import annotations
-from typing import Union
+
 import json
 import logging
 from copy import copy, deepcopy
+from typing import Union
 
 import numpy as np
 import quaternion
@@ -75,7 +76,7 @@ class BoxEncoder(json.JSONEncoder):
             }
             return {"segmask2d": seg_dict}
         else:
-            raise NotImplementedError(f'{type(0)}, {o}')
+            raise NotImplementedError(f"{type(0)}, {o}")
 
 
 class BoxDecoder(json.JSONDecoder):
@@ -557,7 +558,9 @@ class Box3D:
         """Rotates the attitude AND the translation of the box"""
         if isinstance(q, (Attitude, Rotation)):
             if not self.reference == q.reference:
-                raise NotImplementedError("To apply rotation, must have identical references")
+                raise NotImplementedError(
+                    "To apply rotation, must have identical references"
+                )
             else:
                 q = q.q
         if inplace:
@@ -580,7 +583,9 @@ class Box3D:
         """Translates the position of the box"""
         if isinstance(L, (Position, Vector)):
             if not self.reference == L.reference:
-                raise NotImplementedError("To apply translation, must have identical references")
+                raise NotImplementedError(
+                    "To apply translation, must have identical references"
+                )
         if inplace:
             self.position += L
         else:

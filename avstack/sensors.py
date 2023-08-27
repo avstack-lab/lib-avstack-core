@@ -165,7 +165,7 @@ class ImageData(SensorData):
     def save_to_file(self, filepath):
         save_image_file(self.data, filepath, self.source_name)
 
-    def view(self, axis=False, extent=None, objects=None, view='box2d'):
+    def view(self, axis=False, extent=None, objects=None, view="box2d"):
         img_data = (
             self.data
             if self.calibration.channel_order == "rgb"

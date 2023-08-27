@@ -45,7 +45,7 @@ class TrackEncoder(json.JSONEncoder):
                 "reference": o.reference.encode(),
             }
         else:
-            raise NotImplementedError(f'{type(o)}, {o}')
+            raise NotImplementedError(f"{type(o)}, {o}")
         if isinstance(o, (BasicBoxTrack2D, BasicBoxTrack3D, BasicJointBoxTrack)):
             t_dict["box"] = o.box.encode()
             t_dict["v"] = o.velocity.x.tolist()
@@ -130,7 +130,7 @@ def KF_update(x, P, hx, H, z, R):
     y = z - hx
     Sinv = np.linalg.inv(H @ P @ H.T + R)
     K = P @ H.T @ Sinv
-    return x+K@y, (np.eye(P.shape[0])-K@H ) @ P
+    return x + K @ y, (np.eye(P.shape[0]) - K @ H) @ P
 
 
 class _TrackBase:
@@ -905,8 +905,9 @@ class BasicJointBoxTrack(_TrackBase):
     @property
     def idx_pos(self):
         return self.track_3d.idx_posok
-# avapi.visualize.replay.replay_track_results(track_res_frames, fig_width=8)
-    
+
+    # avapi.visualize.replay.replay_track_results(track_res_frames, fig_width=8)
+
     @property
     def idx_vel(self):
         return self.track_3d.idx_vel
