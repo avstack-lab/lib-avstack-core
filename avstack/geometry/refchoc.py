@@ -618,10 +618,14 @@ class Vector:
         return self.factory()(self.x / np.linalg.norm(self.x), self.reference)
 
     def distance(self, other, check_reference=True):
-        if check_reference:
-            return (self - other).norm()
+        if isinstance(other, ReferenceFrame):
+            s2 = self.change_reference(other, inplace=False)
+            return s2.norm()
         else:
-            return np.linalg.norm(self.x - other.x)
+            if check_reference:
+                return (self - other).norm()
+            else:
+                return np.linalg.norm(self.x - other.x)
 
 
 class VectorHeadTail:

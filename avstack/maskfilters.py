@@ -317,18 +317,16 @@ def filter_points_in_image(points, P):
     return points_in_im_mask
 
 
-def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
+def box_in_fov(box_3d, camera_calib, d_thresh=None, check_reference=True):
     """Check if a 3d box is in the FOV of the camera
 
     assumption: camera points along z axis
     """
-    box_3d_2 = box_3d
-    if check_origin:
-        if box_3d_2.reference != camera_calib.reference:
-            box_3d_2 = deepcopy(box_3d)
-            box_3d_2.change_reference(camera_calib.reference, inplace=True)
+    if check_reference:
+        if box_3d.reference != camera_calib.reference:
+            box_3d = box_3d.change_reference(camera_calib.reference, inplace=False)
     if d_thresh is not None:
-        if box_3d_2.t.norm() > d_thresh:
+        if box_3d.t.norm() > d_thresh:
             return False
 
     # calculate min dot product based on half-angle
@@ -338,13 +336,13 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
     )  # in radians
 
     # -- front edge, center, back edge
-    center = box_3d_2.t
-    fv = box_3d_2.q.forward_vector
-    lv = box_3d_2.q.left_vector
-    front_edge = center + box_3d_2.l / 2 * fv
-    left_edge = center + box_3d_2.w / 2 * lv
-    back_edge = center - box_3d_2.l / 2 * fv
-    right_edge = center - box_3d_2.w / 2 * lv
+    center = box_3d.t
+    fv = box_3d.q.forward_vector
+    lv = box_3d.q.left_vector
+    front_edge = center + box_3d.l / 2 * fv
+    left_edge = center + box_3d.w / 2 * lv
+    back_edge = center - box_3d.l / 2 * fv
+    right_edge = center - box_3d.w / 2 * lv
 
     c1 = (
         np.dot(front_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
@@ -357,9 +355,9 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_origin=True):
     )
 
     if any([c1, c2, c3, c4, c5]):
-        box_3d_2_2d = box_3d_2.project_to_2d_bbox(calib=camera_calib)
+        box_3d = box_3d.project_to_2d_bbox(calib=camera_calib)
         box2d_image = [0, 0, camera_calib.img_shape[1], camera_calib.img_shape[0]]
-        if bbox.box_intersection(box_3d_2_2d.box2d, box2d_image) > 0:
+        if bbox.box_intersection(box_3d.box2d, box2d_image) > 0:
             return True
     return False
 

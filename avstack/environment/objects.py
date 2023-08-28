@@ -235,6 +235,9 @@ class ObjectState:
         )
         self.angular_velocity = angular_velocity
 
+    def distance(self, other):
+        return self.position.distance(other)
+
     def predict(self, dt):
         assert dt >= 0
         pos = self.position + self.velocity * dt

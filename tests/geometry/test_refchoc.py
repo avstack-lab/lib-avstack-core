@@ -181,6 +181,17 @@ def test_vector_known_frame():
     assert np.allclose(v2.x, q_mult_vec(q_stan_to_cam, v1.x))
 
 
+def test_vector_reference_distance():
+    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf2 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    v1 = Vector(x_rand(), cf1)
+    d1 = v1.distance(cf1)
+    assert d1 == v1.norm()
+    d2 = v1.distance(cf2)
+    v2 = v1.change_reference(cf2, inplace=False)
+    assert d2 == v2.norm()
+
+
 # --------------------------------
 # ROTATION
 # --------------------------------
