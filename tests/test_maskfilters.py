@@ -11,6 +11,15 @@ from copy import deepcopy
 import numpy as np
 
 import avstack.maskfilters as maskfilters
+from avstack.calibration import CameraCalibration
+from avstack.geometry import (
+    Attitude,
+    Box3D,
+    GlobalOrigin3D,
+    Position,
+    ReferenceFrame,
+    q_stan_to_cam,
+)
 
 
 sys.path.append("tests/")
@@ -107,3 +116,18 @@ def test_object_in_fov():
     box_3d_2 = deepcopy(box_3d)
     box_3d_2.t[2] -= 30
     assert not maskfilters.box_in_fov(box_3d_2, camera_calib)
+
+
+def test_object_in_fov_long():
+    rf_ego = ReferenceFrame(
+        x=np.array([22, -10, 2]), q=np.quaternion(1), reference=GlobalOrigin3D
+    )
+    rf_cam = ReferenceFrame(x=np.array([2, 0, 0]), q=q_stan_to_cam, reference=rf_ego)
+    pos = Position(x=np.array([20, 0, 0]), reference=rf_ego)
+    att = Attitude(q=np.quaternion(1), reference=rf_ego)
+    h, w, l = 2, 2, 4
+    box_3d = Box3D(pos, att, [h, w, l])
+    P = np.array([[500, 0, 500, 0], [0, 500, 300, 0], [0, 0, 1, 0]])
+    img_shape = (1000, 600)
+    cam_calib = CameraCalibration(reference=rf_cam, P=P, img_shape=img_shape)
+    assert maskfilters.box_in_fov(box_3d, cam_calib)

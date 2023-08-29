@@ -9,7 +9,6 @@ A collection of slicers, masks, and filtering operations for perception data
 The code is independent of data source so long as format is standard
 """
 
-from copy import deepcopy
 
 import numpy as np
 from numba import jit
@@ -353,7 +352,6 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_reference=True):
     c5 = (
         np.dot(right_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * right_edge.norm()
     )
-
     if any([c1, c2, c3, c4, c5]):
         box_3d = box_3d.project_to_2d_bbox(calib=camera_calib)
         box2d_image = [0, 0, camera_calib.img_shape[1], camera_calib.img_shape[0]]
