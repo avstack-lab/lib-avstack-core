@@ -155,6 +155,7 @@ class SortTracker2D(_TrackingAlgorithm):
                 coast=tracker.time_since_update,
                 n_updates=tracker.hits,
                 age=tracker.age,
+                reference=tracker.calibration.reference,
             )
             tracks_avstack.append(trk)
         return tracks_avstack
