@@ -328,36 +328,37 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_reference=True):
         if box_3d.t.norm() > d_thresh:
             return False
 
-    # calculate min dot product based on half-angle
-    delta = 1.5 * np.pi / 180  # add some small delta for errors...
-    fov_half = delta + np.arctan(
-        2 * (camera_calib.P[0, 0]) / camera_calib.img_shape[1]
-    )  # in radians
-
-    # -- front edge, center, back edge
-    center = box_3d.t
+    center = box_3d.t.x
     fv = box_3d.q.forward_vector
     lv = box_3d.q.left_vector
-    front_edge = center + box_3d.l / 2 * fv
-    left_edge = center + box_3d.w / 2 * lv
-    back_edge = center - box_3d.l / 2 * fv
-    right_edge = center - box_3d.w / 2 * lv
-
-    c1 = (
-        np.dot(front_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
-    )
-    c2 = np.dot(center.x, np.array([0, 0, 1])) > np.cos(fov_half) * center.norm()
-    c3 = np.dot(back_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * front_edge.norm()
-    c4 = np.dot(left_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * left_edge.norm()
-    c5 = (
-        np.dot(right_edge.x, np.array([0, 0, 1])) > np.cos(fov_half) * right_edge.norm()
-    )
-    if any([c1, c2, c3, c4, c5]):
+    if _check_box_in_fov(center, fv,lv, box_3d.l, box_3d.w, camera_calib.P, camera_calib.img_shape):
         box_3d = box_3d.project_to_2d_bbox(calib=camera_calib)
         box2d_image = [0, 0, camera_calib.img_shape[1], camera_calib.img_shape[0]]
         if bbox.box_intersection(box_3d.box2d, box2d_image) > 0:
             return True
     return False
+
+
+@jit(nopython=True)
+def _check_box_in_fov(center, fv, lv, l, w, P, img_shape):
+    # calculate min dot product based on half-angle
+    delta = 1.5 * np.pi / 180  # add some small delta for errors...
+    fov_half = delta + np.arctan(
+        2 * (P[0, 0]) / img_shape[1]
+    )  # in radians
+
+    # -- front edge, center, back edge
+    front_edge = center + l / 2 * fv
+    left_edge = center + w / 2 * lv
+    back_edge = center - l / 2 * fv
+    right_edge = center - w / 2 * lv
+    cos_half = np.cos(fov_half)
+
+    return front_edge[2] > cos_half * np.linalg.norm(front_edge) or \
+           center[2]     > cos_half * np.linalg.norm(center) or \
+           back_edge[2]  > cos_half * np.linalg.norm(front_edge) or \
+           left_edge[2]  > cos_half * np.linalg.norm(left_edge) or \
+           right_edge[2] > cos_half * np.linalg.norm(right_edge)
 
 
 def filter_objects_in_frustum(objs_1, objs_2, camera_calib):
