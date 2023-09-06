@@ -59,6 +59,7 @@ class SensorData:
 
     def __getitem__(self, index):
         """Indexes into sensor data list/array"""
+        raise RuntimeError("Reconsider deepcopy operation")
         s = deepcopy(self)
         s.data = s.data[index]
         return s

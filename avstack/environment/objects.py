@@ -268,6 +268,9 @@ class ObjectState:
         If other is a reference frame, assume it is static.
         If other is another object state, it may not be static.
         """
+        if not inplace:
+            raise RuntimeError('Not doing this inplace is broken right now due to computation')
+        
         # wrapping reference frame
         if isinstance(other, ReferenceFrame):
             reference = other
@@ -332,9 +335,7 @@ class ObjectState:
         """Sets occlusion level using lidar captures"""
         box_self = self.box
         if check_reference:
-            if not self.box.reference.allclose(pc.calibration.reference):
-                box_self = deepcopy(self.box)
-                box_self.change_reference(pc.calibration.reference, inplace=True)
+            box_self = box_self.change_reference(pc.calibration.reference, inplace=False)
 
         # then check the point cloud
         filter_pts_in_box = filter_points_in_box(pc.data, box_self.corners)

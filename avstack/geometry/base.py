@@ -21,9 +21,7 @@ def q_mult_vec(q, v):
     m = q.w**2 + q.x**2 + q.y**2 + q.z**2
     try:
         v2x = _q_mult_vec(s, r, m, v.x)
-        v2 = deepcopy(v)
-        v2.x = v2x
-        return v2
+        return v.factory()(v2x, v.reference)
     except AttributeError:
         return _q_mult_vec(s, r, m, v)
 
