@@ -172,20 +172,50 @@ class ImageData(SensorData):
         super().__init__(*args, **kwargs, source_name=source_name)
 
     def save_to_file(self, filepath):
-        save_image_file(self.data, filepath, self.source_name)
+        save_image_file(self.rgb_image, filepath, self.source_name)
 
-    def view(self, axis=False, extent=None, objects=None, view="box2d"):
-        img_data = (
+    @property
+    def rgb_image(self):
+        return (
             self.data
             if self.calibration.channel_order == "rgb"
             else self.data[:, :, ::-1]
         )
-        pil_im = Image.fromarray(img_data)
+
+    def view(self, axis=False, extent=None, objects=None, view="box2d"):
+        pil_im = Image.fromarray(self.rgb_image)
         plt.figure(figsize=[2 * x for x in plt.rcParams["figure.figsize"]])
         plt.imshow(pil_im, extent=extent)
         if not axis:
             plt.axis("off")
         plt.show()
+
+
+class SemanticSegmentationImageData(ImageData):
+    def __init__(self, *args, source_name="semsegimage", **kwargs):
+        super().__init__(*args, source_name=source_name, **kwargs)
+        self._rgb_image = None
+
+    def save_to_file(self, filepath):
+        save_image_file(self.data, filepath, self.source_name)
+
+    @property
+    def rgb_image(self):
+        """Defer this calculation to save cost at runtime"""
+        if self._rgb_image is None:
+            # each tag gets its own color
+            colors = self.calibration.colors
+            self._rgb_image = np.zeros(
+                (self.data.shape[0], self.data.shape[1], 3), dtype=np.uint8
+            )
+            for i in range(self.data.shape[0]):
+                for j in range(self.data.shape[1]):
+                    self._rgb_image[i, j, :] = colors[self.data[i, j, 2]]
+        return self._rgb_image
+
+    @rgb_image.setter
+    def rgb_image(self, image):
+        self._rgb_image = image
 
 
 class DepthImageData(SensorData):
@@ -223,7 +253,6 @@ class DepthImageData(SensorData):
         return self.depth_in_meters
 
     def save_to_file(self, filepath):
-        """Save image to file with opencv"""
         save_image_file(self.data, filepath, self.source_name)
 
     def view(self, axis=False, extent=None):
@@ -234,11 +263,6 @@ class DepthImageData(SensorData):
         if not axis:
             plt.axis("off")
         plt.show()
-
-
-class SemanticSegmentationImageData(ImageData):
-    def __init__(self, *args, source_name="semsegimage", **kwargs):
-        super().__init__(*args, source_name=source_name, **kwargs)
 
 
 class LidarData(SensorData):
@@ -315,21 +339,21 @@ class LidarData(SensorData):
                 self.timestamp, self.frame, data, calib_other, self.source_ID
             )
 
-    def transform_to_ground(self):
-        x_old = self.reference.x
-        x_new = np.array([x_old[0], x_old[1], 0])  # flat to the ground
-        eul_old = self.reference.euler
-        q_new = tforms.transform_orientation(
-            [0, 0, eul_old[2]], "euler", "quat"
-        )  # only yaw still applied
-        O_new = Origin(x_new, q_new)
-        self.change_origin(O_new)
+    # def transform_to_ground(self):
+    #     x_old = self.reference.x
+    #     x_new = np.array([x_old[0], x_old[1], 0])  # flat to the ground
+    #     eul_old = self.reference.euler
+    #     q_new = tforms.transform_orientation(
+    #         [0, 0, eul_old[2]], "euler", "quat"
+    #     )  # only yaw still applied
+    #     O_new = Origin(x_new, q_new)
+    #     self.change_origin(O_new)
 
-    def change_origin(self, origin_new):
-        self.data[:, :3] = self.reference.change_points_origin(
-            self.data[:, :3], origin_new
-        )
-        self.calibration.change_origin(origin_new)
+    # def change_origin(self, origin_new):
+    #     self.data[:, :3] = self.reference.change_points_origin(
+    #         self.data[:, :3], origin_new
+    #     )
+    #     self.calibration.change_origin(origin_new)
 
     def save_to_file(self, filepath: str, flipy: bool = False, as_ply: bool = False):
         if isinstance(self.data, (PointMatrix3D, np.ndarray)):
@@ -514,7 +538,7 @@ class ProjectedLidarData(SensorData):
             raise NotImplementedError(key)
 
 
-class RadarDataRazelRRT(SensorData):
+class _RadarData(SensorData):
     """Classic RADAR datastructure
 
     Attributes:
@@ -539,7 +563,47 @@ class RadarDataRazelRRT(SensorData):
     def __init__(self, *args, source_name="radar", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
+    def save_to_file(self, filepath: str):
+        """Saves radar detection information in a numpy array"""
+        if isinstance(self.data, np.ndarray):
+            if not filepath.endswith(".txt"):
+                filepath = filepath + ".txt"
+            np.savetxt(filepath, self.data, fmt="%.18e", delimiter=", ")
+        else:
+            if not filepath.endswith(".bin"):
+                filepath = filepath + ".bin"
+            data = np.frombuffer(self.data.raw_data, dtype=np.float32).reshape([-1, 4])
+            data = data[:, [3, 1, 2, 0]]
+            with open(filepath, "wb") as f:
+                data.tofile(filepath)
+
+    def filter(self, mask, inplace: bool = True):
+        if inplace:
+            self.data = self.data.filter(mask)
+        else:
+            data = self.data.filter(mask)
+            return self.__class__(
+                self.timestamp, self.frame, data, self.calibration, self.source_ID
+            )
+
+
+class ProjectedRadarData(ProjectedLidarData):
+    pass
+
+
+class RadarDataRazelRRT(_RadarData):
+    def convert_to_cartesian(self):
+        data = self.data.copy()
+        data.x[:, :3] = tforms.matrix_spherical_to_cartesian(data.x[:, :3])
+        return RadarDataXYZRRT(
+            self.timestamp, self.frame, data, self.calibration, self.source_ID
+        )
+
+    def project(self, calib_other):
+        return self.convert_to_cartesian().project(calib_other)
+
     def filter_by_range(self, min_range: float, max_range: float, inplace=True):
+        raise NotImplementedError
         if (min_range is not None) or (max_range is not None):
             min_range = 0 if min_range is None else min_range
             max_range = np.inf if max_range is None else max_range
@@ -549,24 +613,43 @@ class RadarDataRazelRRT(SensorData):
             if not inplace:
                 return self.duplicate()
 
-    def filter(self, mask, inplace: bool = True):
-        if inplace:
-            self.data = self.data[mask, :]
+
+class RadarDataXYZRRT(_RadarData):
+    def convert_to_spherical(self):
+        data = self.data.copy()
+        data.x[:, :3] = tforms.matrix_cartesian_to_spherical(data.x[:, :3])
+        return RadarDataRazelRRT(
+            self.timestamp, self.frame, data, self.calibration, self.source_ID
+        )
+
+    def project(self, calib_other):
+        if isinstance(calib_other, CameraCalibration):
+            depth = np.linalg.norm(self.data[:, :3], axis=1)
+            data = self.data.project_to_2d(calib_other)
+            return ProjectedRadarData(
+                self.timestamp,
+                self.frame,
+                data,
+                calib_other,
+                self.source_ID,
+                depth=depth,
+            )
         else:
-            data = self.data[mask, :]
-            return RadarDataRazelRRT(
-                self.timestamp, self.frame, data, self.calibration, self.source_ID
+            data = self.data.change_calibration(calib_other)
+            return RadarDataXYZRRT(
+                self.timestamp, self.frame, data, calib_other, self.source_ID
             )
 
-    def save_to_file(self, filepath: str):
-        """Saves radar detection information in a numpy array"""
-        if isinstance(self.data, np.ndarray):
-            if filepath.endswith(".txt"):
-                np.savetxt(filepath, self.data, fmt="%.18e", delimiter=", ")
-            else:
-                raise NotImplementedError(filepath)
+    def filter_by_range(self, min_range: float, max_range: float, inplace=True):
+        raise NotImplementedError
+        if (min_range is not None) or (max_range is not None):
+            min_range = 0 if min_range is None else min_range
+            max_range = np.inf if max_range is None else max_range
+            mask = maskfilters.filter_points_range(self, min_range, max_range)
+            return self.filter(mask, inplace=inplace)
         else:
-            raise NotImplementedError(type(self.data))
+            if not inplace:
+                return self.duplicate()
 
 
 def save_image_file(

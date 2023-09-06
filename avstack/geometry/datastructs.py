@@ -208,6 +208,9 @@ class _PointMatrix:
     def __getitem__(self, indices):
         return self.x[indices]
 
+    def copy(self):
+        return self.__class__(self.x.copy(), self.calibration)
+
 
 class PointMatrix3D(_PointMatrix):
     def change_calibration(self, calibration, inplace: bool = False):

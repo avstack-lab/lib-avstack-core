@@ -14,6 +14,7 @@ import numpy as np
 from numba import jit
 
 import avstack.geometry.bbox as bbox
+from avstack import calibration
 from avstack.geometry import transformations as tforms
 
 
@@ -316,23 +317,48 @@ def filter_points_in_image(points, P):
     return points_in_im_mask
 
 
-def box_in_fov(box_3d, camera_calib, d_thresh=None, check_reference=True):
-    """Check if a 3d box is in the FOV of the camera
-
-    assumption: camera points along z axis
-    """
+def box_in_fov(box_3d, calib, d_thresh=None, check_reference=True):
+    """Check if a 3d box is in the FOV of a sensor"""
     if check_reference:
-        if box_3d.reference != camera_calib.reference:
-            box_3d = box_3d.change_reference(camera_calib.reference, inplace=False)
+        if box_3d.reference != calib.reference:
+            box_3d = box_3d.change_reference(calib.reference, inplace=False)
     if d_thresh is not None:
         if box_3d.t.norm() > d_thresh:
             return False
+    # run the fov check
+    if isinstance(
+        calib,
+        (
+            calibration.CameraCalibration,
+            calibration.SemanticSegmentationCalibration,
+            calibration.DepthCameraCalibration,
+        ),
+    ):
+        return _box_in_fov_camera(box_3d=box_3d, camera_calib=calib)
+    elif isinstance(calib, (calibration.RadarCalibration)):
+        return _check_box_in_fov(
+            fov_half=calib.min_fov / 2,
+            center=box_3d.t.x,
+            fv=box_3d.q.forward_vector,
+            lv=box_3d.q.left_vector,
+            l=box_3d.l,
+            w=box_3d.w,
+            f_dim=0,
+        )
+    else:
+        raise NotImplementedError(type(calib))
 
-    center = box_3d.t.x
-    fv = box_3d.q.forward_vector
-    lv = box_3d.q.left_vector
+
+def _box_in_fov_camera(box_3d, camera_calib):
+    """assumption: camera points along z axis"""
     if _check_box_in_fov(
-        center, fv, lv, box_3d.l, box_3d.w, camera_calib.P, camera_calib.img_shape
+        fov_half=np.arctan(2 * (camera_calib.P[0, 0]) / camera_calib.img_shape[1]),
+        center=box_3d.t.x,
+        fv=box_3d.q.forward_vector,
+        lv=box_3d.q.left_vector,
+        l=box_3d.l,
+        w=box_3d.w,
+        f_dim=2,
     ):
         box_3d = box_3d.project_to_2d_bbox(calib=camera_calib)
         box2d_image = [0, 0, camera_calib.img_shape[1], camera_calib.img_shape[0]]
@@ -342,10 +368,8 @@ def box_in_fov(box_3d, camera_calib, d_thresh=None, check_reference=True):
 
 
 @jit(nopython=True)
-def _check_box_in_fov(center, fv, lv, l, w, P, img_shape):
-    # calculate min dot product based on half-angle
-    delta = 1.5 * np.pi / 180  # add some small delta for errors...
-    fov_half = delta + np.arctan(2 * (P[0, 0]) / img_shape[1])  # in radians
+def _check_box_in_fov(fov_half, center, fv, lv, l, w, f_dim):
+    fov_half += 1.5 * np.pi / 180  # add some small delta for errors...
 
     # -- front edge, center, back edge
     front_edge = center + l / 2 * fv
@@ -355,11 +379,11 @@ def _check_box_in_fov(center, fv, lv, l, w, P, img_shape):
     cos_half = np.cos(fov_half)
 
     return (
-        front_edge[2] > cos_half * np.linalg.norm(front_edge)
-        or center[2] > cos_half * np.linalg.norm(center)
-        or back_edge[2] > cos_half * np.linalg.norm(front_edge)
-        or left_edge[2] > cos_half * np.linalg.norm(left_edge)
-        or right_edge[2] > cos_half * np.linalg.norm(right_edge)
+        front_edge[f_dim] > cos_half * np.linalg.norm(front_edge)
+        or center[f_dim] > cos_half * np.linalg.norm(center)
+        or back_edge[f_dim] > cos_half * np.linalg.norm(front_edge)
+        or left_edge[f_dim] > cos_half * np.linalg.norm(left_edge)
+        or right_edge[f_dim] > cos_half * np.linalg.norm(right_edge)
     )
 
 

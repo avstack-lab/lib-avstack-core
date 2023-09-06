@@ -57,7 +57,7 @@ img_shape = (375, 1242, 3)
 camera_calib = CameraCalibration(ref_camera, P_cam, img_shape)
 box_calib = Calibration(ref_camera)
 lidar_calib = LidarCalibration(ref_lidar)
-radar_calib = RadarCalibration(ref_lidar)
+radar_calib = RadarCalibration(ref_lidar, fov_horizontal=np.pi, fov_vertical=np.pi / 2)
 
 KITTI_data_dir = os.path.join(os.getcwd(), "data/test_data/object/training")
 

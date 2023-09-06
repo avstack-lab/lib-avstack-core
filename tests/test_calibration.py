@@ -56,7 +56,9 @@ def test_encode_decode_radar_calibration():
     ref = ReferenceFrame(
         x=np.random.rand(3), q=np.quaternion(1), reference=GlobalOrigin3D
     )
-    calib_1 = calibration.RadarCalibration(ref)
+    calib_1 = calibration.RadarCalibration(
+        ref, fov_horizontal=np.pi, fov_vertical=np.pi / 2
+    )
     calib_2 = json.loads(calib_1.encode(), cls=calibration.CalibrationDecoder)
     assert isinstance(calib_2, type(calib_1))
     assert calib_1.allclose(calib_2)
