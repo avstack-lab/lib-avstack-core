@@ -9,3 +9,4 @@
 """
 
 from .base import EnvironmentState
+from .objects import ObjectStateDecoder, ObjectStateEncoder

@@ -294,19 +294,19 @@ class ObjectState:
         if not inplace:
             return obj
 
-    def set_occlusion_by_depth(self, depth_image, check_origin=True):
+    def set_occlusion_by_depth(self, depth_image, check_reference=True):
         """sets occlusion level using depth image
 
         Note that the depth image will capture the front-edge of the object
         Also take into account that an object doesn't take 100% of the bbox
         """
-        if not box_in_fov(self.box, depth_image.calibration):
+        if not box_in_fov(self.box, depth_image.calibration, check_reference=check_reference):
             occ = Occlusion.INVALID
         else:
             # box 2d is in x=along width, y=along height
             box_2d = self.box.project_to_2d_bbox(
-                depth_image.calibration, check_origin=check_origin
-            ).squeeze(depth_image.calibration.height, depth_image.calibration.width)
+                depth_image.calibration, check_reference=check_reference
+            ).squeeze(depth_image.calibration.height, depth_image.calibration.width, inplace=False)
             depths = depth_image.depths[
                 int(box_2d.ymin) : int(box_2d.ymax), int(box_2d.xmin) : int(box_2d.xmax)
             ]
@@ -328,10 +328,10 @@ class ObjectState:
                 occ = Occlusion.UNKNOWN
         self.occlusion = occ
 
-    def set_occlusion_by_lidar(self, pc, check_origin=True):
+    def set_occlusion_by_lidar(self, pc, check_reference=True):
         """Sets occlusion level using lidar captures"""
         box_self = self.box
-        if check_origin:
+        if check_reference:
             if not self.box.reference.allclose(pc.calibration.reference):
                 box_self = deepcopy(self.box)
                 box_self.change_reference(pc.calibration.reference, inplace=True)
@@ -347,7 +347,7 @@ class ObjectState:
             # -- find a rotation matrix to go from v_sensor to v_object
             R = np.eye(3)
             vs = np.array([1, 0, 0])
-            vo = box_self.t.vector / np.linalg.norm(box_self.t.vector)
+            vo = box_self.t.x / np.linalg.norm(box_self.t.x)
             if not np.allclose(vs, vo):
                 w = np.cross(vs, vo)
                 s = np.linalg.norm(w)
@@ -361,7 +361,8 @@ class ObjectState:
                     R += wx + np.dot(wx, wx) * 1 / (1 + c)
 
             # -- rotate the object by this amount to put it forward
-            box_self.rotate(R.T)
+            q_rot = tforms.transform_orientation(R.T, 'dcm', 'quat')
+            box_self = box_self.rotate(q_rot, inplace=False)
 
             # -- get corners and compute the viewable area straight-on
             corners_box = box_self.corners
@@ -405,7 +406,7 @@ class ObjectState:
 
     def get_location(self, format_as="avstack"):
         if format_as == "avstack":
-            return self.position.vector
+            return self.position.x
         elif format_as == "carla":
             return np.array([self.position.x, -self.position.y, self.position.z])
         else:

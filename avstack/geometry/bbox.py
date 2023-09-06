@@ -259,7 +259,7 @@ class Box2D:
             raise NotImplementedError(type(other))
         return iou
 
-    def squeeze(self, im_h, im_w, inplace=True):
+    def squeeze(self, im_h, im_w, inplace):
         x_min_s = int(max(0, min(self.xmin, im_w - 1)))
         y_min_s = int(max(0, min(self.ymin, im_h - 1)))
         x_max_s = int(max(0, min(self.xmax, im_w - 1)))

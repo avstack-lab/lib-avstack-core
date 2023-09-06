@@ -74,6 +74,12 @@ class Calibration:
 
     def allclose(self, other: Calibration):
         return self.reference.allclose(other.reference)
+    
+    def save_to_file(self, file):
+        if not file.endswith(".txt"):
+            file += ".txt"
+        with open(file, 'w') as f:
+            f.write(self.encode())
 
 
 class CameraCalibration(Calibration):
