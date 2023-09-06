@@ -29,8 +29,8 @@ def run_analysis_vehicle_test(player, n_frames=3):
         img.frame = i
         data_manager.push(pc)
         data_manager.push(img)
-        tracks, objects = player.tick(frame=i, timestamp=t, data_manager=data_manager)
-    return tracks, objects
+        ctrl, debug = player.tick(frame=i, timestamp=t, data_manager=data_manager)
+    return ctrl, debug
 
 
 def test_LidarPerceptionAndTrackingVehicle():
@@ -43,8 +43,8 @@ def test_LidarPerceptionAndTrackingVehicle():
         print("Cannot run vehicle test without the mmdet module")
     else:
         player = ego.vehicle.LidarPerceptionAndTrackingVehicle(t_init, ego_init)
-        tracks, objects = run_analysis_vehicle_test(player, n_frames=4)
-        assert len(tracks) > 0
+        ctrl, debug = run_analysis_vehicle_test(player, n_frames=4)
+        assert len(debug["objects"]["tracks_3d"]) > 0
 
 
 def test_LidarCameraPerceptionAndTrackingVehicle():
@@ -57,4 +57,4 @@ def test_LidarCameraPerceptionAndTrackingVehicle():
         print("Cannot run vehicle test without the mmdet module")
     else:
         player = ego.vehicle.LidarCameraPerceptionAndTrackingVehicle(t_init, ego_init)
-        tracks, objects = run_analysis_vehicle_test(player, n_frames=4)
+        ctrl, debug = run_analysis_vehicle_test(player, n_frames=4)

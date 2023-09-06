@@ -8,7 +8,9 @@
 
 """
 
+import os
 import sys
+import tempfile
 
 from avstack import sensors
 from avstack.datastructs import DataBucket, DataManager
@@ -25,6 +27,8 @@ from utilities import get_test_sensor_data
     pc,
     camera_calib,
     img,
+    radar_calib,
+    rad,
     box_2d,
     box_3d,
 ) = get_test_sensor_data()
@@ -125,6 +129,22 @@ def test_lidar_spherical_matrix():
     AE_M = pc.as_spherical_matrix(rate=10, sensor="kitti")
 
 
-# def test_lidar_data_pseudo_packets():
-#     # -- pc is KITTI data
-#     PP = pc.as_pseudo_packets(rate=10, sensor='kitti')
+# -- test saving and loading data
+
+
+def test_save_lidar():
+    with tempfile.TemporaryDirectory() as tmp:
+        filepath = os.path.join(tmp, "temp_lidar.bin")
+        pc.save_to_file(filepath, flipy=False, as_ply=False)
+
+
+def test_save_image():
+    with tempfile.TemporaryDirectory() as tmp:
+        filepath = os.path.join(tmp, "temp_image.jpg")
+        img.save_to_file(filepath)
+
+
+def test_save_radar():
+    with tempfile.TemporaryDirectory() as tmp:
+        filepath = os.path.join(tmp, "temp_radar.txt")
+        rad.save_to_file(filepath)

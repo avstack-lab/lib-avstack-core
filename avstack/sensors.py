@@ -11,7 +11,6 @@ and provide maximal forward, backward compatibility.
 from __future__ import annotations
 
 import os
-from copy import deepcopy
 
 import cv2
 import matplotlib.pyplot as plt
@@ -59,16 +58,25 @@ class SensorData:
 
     def __getitem__(self, index):
         """Indexes into sensor data list/array"""
-        raise RuntimeError("Reconsider deepcopy operation")
-        s = deepcopy(self)
-        s.data = s.data[index]
-        return s
+        s2 = self.duplicate()
+        s2.data = self.data[index]
+        return s2
 
     def __matmul__(self, other):
         """Called when doing self @ other
         creates a transformation object that transforms
         """
         raise NotImplementedError
+
+    def duplicate(self):
+        return self.__class__(
+            timestamp=self.timestamp,
+            frame=self.frame,
+            data=self.data,
+            calibration=self.calibration,
+            source_ID=self.source_ID,
+            source_name=self.source_name,
+        )
 
     def view(self):
         raise NotImplementedError
@@ -228,6 +236,11 @@ class DepthImageData(SensorData):
         plt.show()
 
 
+class SemanticSegmentationImageData(ImageData):
+    def __init__(self, *args, source_name="semsegimage", **kwargs):
+        super().__init__(*args, source_name=source_name, **kwargs)
+
+
 class LidarData(SensorData):
     """LiDAR point cloud datastructure
 
@@ -273,7 +286,7 @@ class LidarData(SensorData):
             return self.filter(mask, inplace=inplace)
         else:
             if not inplace:
-                return deepcopy(self)
+                return self.duplicate()
 
     def filter(self, mask, inplace: bool = True):
         if inplace:
@@ -534,7 +547,7 @@ class RadarDataRazelRRT(SensorData):
             return self.filter(mask, inplace=inplace)
         else:
             if not inplace:
-                return deepcopy(self)
+                return self.duplicate()
 
     def filter(self, mask, inplace: bool = True):
         if inplace:
@@ -544,6 +557,16 @@ class RadarDataRazelRRT(SensorData):
             return RadarDataRazelRRT(
                 self.timestamp, self.frame, data, self.calibration, self.source_ID
             )
+
+    def save_to_file(self, filepath: str):
+        """Saves radar detection information in a numpy array"""
+        if isinstance(self.data, np.ndarray):
+            if filepath.endswith(".txt"):
+                np.savetxt(filepath, self.data, fmt="%.18e", delimiter=", ")
+            else:
+                raise NotImplementedError(filepath)
+        else:
+            raise NotImplementedError(type(self.data))
 
 
 def save_image_file(

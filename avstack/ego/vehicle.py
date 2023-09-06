@@ -40,6 +40,9 @@ class VehicleEgoStack:
             objects_3d,
             tracks_2d,
             tracks_3d,
+            prediction_2d,
+            prediction_3d,
+            plan,
         ) = self._tick_modules(
             frame=frame,
             timestamp=timestamp,
@@ -54,7 +57,10 @@ class VehicleEgoStack:
                 "objects_3d": objects_3d,
                 "tracks_2d": tracks_2d,
                 "tracks_3d": tracks_3d,
+                "predictions_2d": prediction_2d,
+                "predictions_3d": prediction_3d,
             },
+            "plan": plan,
         }
 
         # --- post-modules
@@ -79,7 +85,7 @@ class PassthroughAutopilotVehicle(VehicleEgoStack):
         raise RuntimeError("Cannot set destination with autopilot AV")
 
     def _tick_modules(self, *args, **kwargs):
-        return None, (None, None, None, None, None)
+        return None, (None, None, None, None, None, None, None, None)
 
 
 class GroundTruthBehaviorAgent(VehicleEgoStack):
@@ -102,7 +108,7 @@ class GroundTruthBehaviorAgent(VehicleEgoStack):
         objects_3d = ground_truth.objects
         objects_2d = []
         ctrl = self.planning(ego_state, environment, objects_3d, objects_2d)
-        return ctrl, (ego_state, objects_2d, objects_3d, None, None)
+        return ctrl, (ego_state, objects_2d, objects_3d, None, None, None, None, None)
 
 
 # ==========================================================
@@ -129,7 +135,7 @@ class GoStraightEgo(VehicleEgoStack):
         ego_state = ground_truth.ego_state
         self.plan = self.planning(self.plan, ego_state)
         ctrl = self.control(ego_state, self.plan)
-        return ctrl, (None, None, None, None, None)
+        return ctrl, (None, None, None, None, None, None, None, self.plan)
 
 
 class AutopilotWithCameraPerception(VehicleEgoStack):
@@ -161,7 +167,7 @@ class AutopilotWithCameraPerception(VehicleEgoStack):
                 print("Detected {} objects with our camera     ".format(len(dets_2d)))
         else:
             dets_2d = []
-        return None, (None, dets_2d, None, None, None)
+        return None, (None, dets_2d, None, None, None, None, None, None)
 
 
 # ==========================================================
@@ -215,7 +221,16 @@ class Level2GtPerceptionGtLocalization(VehicleEgoStack):
             self.plan, ego_state, self.environment, tracks_3d, objects_2d, lanes
         )
         ctrl = self.control(ego_state, self.plan)
-        return ctrl, (ego_state, None, objects_3d, None, tracks_3d)
+        return ctrl, (
+            ego_state,
+            None,
+            objects_3d,
+            None,
+            tracks_3d,
+            None,
+            None,
+            self.plan,
+        )
 
     def set_destination(self, *args, **kwargs):
         print("Ignoring destination...this type of vehicle does not take a destination")
@@ -267,7 +282,16 @@ class Level2LidarBasedVehicle(VehicleEgoStack):
             self.plan, ego_state, self.environment, tracks_3d, objects_2d, lanes
         )
         ctrl = self.control(ego_state, self.plan)
-        return ctrl, (ego_state, None, objects_3d, None, tracks_3d)
+        return ctrl, (
+            ego_state,
+            None,
+            objects_3d,
+            None,
+            tracks_3d,
+            None,
+            None,
+            self.plan,
+        )
 
     def set_destination(self, *args, **kwargs):
         print("Ignoring destination...this type of vehicle does not take a destination")
@@ -311,7 +335,7 @@ class LidarPerceptionAndTrackingVehicle(VehicleEgoStack):
             identifier="tracker-0",
         )  # TODO: check platform
         predictions = self.prediction(tracks_3d, frame=frame)
-        return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
+        return None, (None, None, dets_3d, None, tracks_3d, None, predictions, None)
 
 
 class LidarCollabPerceptionAndTrackingVehicle(VehicleEgoStack):
@@ -366,7 +390,7 @@ class LidarCollabPerceptionAndTrackingVehicle(VehicleEgoStack):
             identifier="tracker-0",
         )  # TODO: check platform
         predictions = self.prediction(tracks_3d, frame=frame)
-        return tracks_3d, {"object_3d": dets_3d, "predictions": predictions}
+        return None, (None, None, dets_3d, None, tracks_3d, None, predictions, None)
 
 
 class LidarCameraPerceptionAndTrackingVehicle(VehicleEgoStack):
@@ -413,11 +437,7 @@ class LidarCameraPerceptionAndTrackingVehicle(VehicleEgoStack):
             identifier="tracker-0",
         )
         predictions = self.prediction(tracks_3d, frame=frame)
-        return tracks_3d, {
-            "object_3d": dets_3d,
-            "object_2d": dets_2d,
-            "predictions": predictions,
-        }
+        return None, (None, dets_2d, dets_3d, None, tracks_3d, None, predictions, None)
 
 
 class LidarCamera3DFusionVehicle(VehicleEgoStack):
@@ -484,11 +504,16 @@ class LidarCamera3DFusionVehicle(VehicleEgoStack):
         tracks_fused = self.fusion(tracks_camera, tracks_lidar, frame=frame)
         predictions = self.prediction(tracks_fused, frame=frame)
 
-        return tracks_fused, {
-            "object_3d": {"lidar": dets_3d_lid, "camera": dets_3d_cam},
-            "tracks": {"lidar": tracks_lidar, "camera": tracks_camera},
-            "predictions": predictions,
-        }
+        return None, (
+            None,
+            None,
+            {"lidar": dets_3d_lid, "camera": dets_3d_cam},
+            None,
+            {"lidar": tracks_lidar, "camera": tracks_camera, "fused": tracks_fused},
+            None,
+            predictions,
+            None,
+        )
 
 
 # ==========================================================

@@ -32,11 +32,10 @@ def get_lanes():
 
 def get_tracks(ego, seed):
     trk_0 = get_object_global(seed)
+    trk_0.change_reference(ego, inplace=True)
     trk_1 = get_object_global(seed + 1)
-    return [
-        trk_0.change_reference(ego, inplace=False),
-        trk_1.change_reference(ego, inplace=False),
-    ]
+    trk_1.change_reference(ego, inplace=True)
+    return [trk_0, trk_1]
 
 
 def test_random_planner():

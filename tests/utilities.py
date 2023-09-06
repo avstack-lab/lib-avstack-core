@@ -13,7 +13,12 @@ import sys
 import numpy as np
 from cv2 import imread
 
-from avstack.calibration import Calibration, CameraCalibration
+from avstack.calibration import (
+    Calibration,
+    CameraCalibration,
+    LidarCalibration,
+    RadarCalibration,
+)
 from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     Acceleration,
@@ -30,7 +35,7 @@ from avstack.geometry import (
 )
 from avstack.geometry import transformations as tforms
 from avstack.modules.perception import detections
-from avstack.sensors import ImageData, LidarData
+from avstack.sensors import ImageData, LidarData, RadarDataRazelRRT
 
 
 # -- calibration data
@@ -51,7 +56,8 @@ P_cam = np.array(
 img_shape = (375, 1242, 3)
 camera_calib = CameraCalibration(ref_camera, P_cam, img_shape)
 box_calib = Calibration(ref_camera)
-lidar_calib = Calibration(ref_lidar)
+lidar_calib = LidarCalibration(ref_lidar)
+radar_calib = RadarCalibration(ref_lidar)
 
 KITTI_data_dir = os.path.join(os.getcwd(), "data/test_data/object/training")
 
@@ -115,6 +121,18 @@ def get_image_data(t, frame, camera_ID=0):
     return img
 
 
+def get_radar_data(t, frame, radar_ID=0):
+    pc = get_lidar_data(t=t, frame=frame)
+    nrows = 50
+    rad = pc.data[np.random.randint(pc.data.shape[0], size=nrows), :]
+    rad[:, :3] = tforms.matrix_cartesian_to_spherical(
+        rad[:, :3]
+    )  # change to spherical coordinates
+    rad[:, 3] = 0  # range rate set to zero artificially...
+    rad = RadarDataRazelRRT(t, frame, rad, radar_calib, radar_ID)
+    return rad
+
+
 def get_test_sensor_data(frame=1000, reference=ref_camera):
     sys.path.append(KITTI_data_dir)
     obj = VehicleState("car", ID=1)
@@ -146,5 +164,17 @@ def get_test_sensor_data(frame=1000, reference=ref_camera):
     box_2d = box_3d.project_to_2d_bbox(camera_calib)
     pc = get_lidar_data(t, frame)
     img = get_image_data(t, frame)
+    rad = get_radar_data(t, frame)
 
-    return obj, box_calib, lidar_calib, pc, camera_calib, img, box_2d, box_3d
+    return (
+        obj,
+        box_calib,
+        lidar_calib,
+        pc,
+        camera_calib,
+        img,
+        radar_calib,
+        rad,
+        box_2d,
+        box_3d,
+    )

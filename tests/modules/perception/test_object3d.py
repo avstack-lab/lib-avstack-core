@@ -9,6 +9,7 @@
 """
 
 import sys
+from copy import deepcopy
 
 import numpy as np
 
@@ -27,6 +28,8 @@ from utilities import get_ego, get_object_global, get_test_sensor_data
     pc,
     camera_calib,
     img,
+    radar_calib,
+    rad,
     box_2d,
     box_3d,
 ) = get_test_sensor_data()
@@ -37,7 +40,8 @@ def test_groundtruth_perception():
     # -- set up ego and objects
     ego_init = get_ego(seed=3)
     obj1 = get_object_global(seed=4)
-    obj_local = obj1.change_reference(ego_init, inplace=False)
+    obj_local = deepcopy(obj1)
+    obj_local.change_reference(ego_init, inplace=True)
     assert ego_init.reference == obj1.reference
     assert obj1.reference != obj_local.reference
     assert not np.allclose(obj1.position.x, obj_local.position.x)
@@ -57,7 +61,6 @@ def test_groundtruth_perception():
 def test_groundtruth_perception_save():
     ego_init = get_ego(seed=3)
     obj1 = get_object_global(seed=4)
-    obj_local = obj1.change_reference(ego_init, inplace=False)
     frame = timestamp = 0
     ground_truth = GroundTruthInformation(
         frame, timestamp, ego_state=ego_init, objects=[obj1]

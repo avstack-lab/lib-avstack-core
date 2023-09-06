@@ -39,6 +39,8 @@ from utilities import get_ego, get_object_local, get_test_sensor_data
     pc,
     camera_calib,
     img,
+    radar_calib,
+    rad,
     box_2d,
     box_3d,
 ) = get_test_sensor_data()

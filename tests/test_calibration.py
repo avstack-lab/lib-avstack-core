@@ -21,6 +21,7 @@ def test_encode_decode_calibation():
     )
     calib_1 = calibration.Calibration(ref)
     calib_2 = json.loads(calib_1.encode(), cls=calibration.CalibrationDecoder)
+    assert isinstance(calib_2, type(calib_1))
     assert calib_1.allclose(calib_2)
 
 
@@ -32,4 +33,30 @@ def test_encode_decode_camera_calibation():
         ref, P=np.random.rand(3, 4), img_shape=(400, 500)
     )
     calib_2 = json.loads(calib_1.encode(), cls=calibration.CalibrationDecoder)
+    assert isinstance(calib_2, type(calib_1))
+    assert calib_1.allclose(calib_2)
+
+
+def test_encode_decode_semseg_calibation():
+    ref = ReferenceFrame(
+        x=np.random.rand(3), q=np.quaternion(1), reference=GlobalOrigin3D
+    )
+    calib_1 = calibration.SemanticSegmentationCalibration(
+        ref,
+        P=np.random.rand(3, 4),
+        img_shape=(400, 500),
+        tags=calibration.carla_semseg_tags,
+    )
+    calib_2 = json.loads(calib_1.encode(), cls=calibration.CalibrationDecoder)
+    assert isinstance(calib_2, type(calib_1))
+    assert calib_1.allclose(calib_2)
+
+
+def test_encode_decode_radar_calibration():
+    ref = ReferenceFrame(
+        x=np.random.rand(3), q=np.quaternion(1), reference=GlobalOrigin3D
+    )
+    calib_1 = calibration.RadarCalibration(ref)
+    calib_2 = json.loads(calib_1.encode(), cls=calibration.CalibrationDecoder)
+    assert isinstance(calib_2, type(calib_1))
     assert calib_1.allclose(calib_2)

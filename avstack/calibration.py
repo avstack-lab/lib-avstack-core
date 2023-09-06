@@ -19,13 +19,20 @@ from avstack.geometry.refchoc import ReferenceDecoder
 class CalibrationEncoder(json.JSONEncoder):
     def default(self, o):
         calib_dict = {"reference": o.reference.encode()}
-        if isinstance(o, CameraCalibration):
+        if isinstance(o, (CameraCalibration, SemanticSegmentationCalibration)):
             calib_dict["P"] = o.P.tolist()
             calib_dict["img_shape"] = o.img_shape
             calib_dict["fov_horizontal"] = o.fov_horizontal
             calib_dict["fov_vertical"] = o.fov_vertical
             calib_dict["square_pixels"] = o.square_pixels
             calib_dict["channel_order"] = o.channel_order
+            if isinstance(o, SemanticSegmentationCalibration):
+                calib_dict["tags"] = o.tags
+        elif isinstance(o, LidarCalibration):
+            pass
+        elif isinstance(o, RadarCalibration):
+            pass
+        calib_dict["version"] = o.__class__.__name__
         return {"calibration": calib_dict}
 
 
@@ -38,7 +45,7 @@ class CalibrationDecoder(json.JSONDecoder):
         if "calibration" in json_object:
             json_object = json_object["calibration"]
             reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
-            if "P" in json_object:
+            if json_object["version"] == "CameraCalibration":
                 return CameraCalibration(
                     reference=reference,
                     P=np.array(json_object["P"]),
@@ -48,6 +55,21 @@ class CalibrationDecoder(json.JSONDecoder):
                     square_pixels=json_object["square_pixels"],
                     channel_order=json_object["channel_order"],
                 )
+            elif json_object["version"] == "SemanticSegmentationCalibration":
+                return SemanticSegmentationCalibration(
+                    reference=reference,
+                    P=np.array(json_object["P"]),
+                    img_shape=json_object["img_shape"],
+                    tags={int(k): v for k, v in json_object["tags"].items()},
+                    fov_horizontal=json_object["fov_horizontal"],
+                    fov_vertical=json_object["fov_vertical"],
+                    square_pixels=json_object["square_pixels"],
+                    channel_order=json_object["channel_order"],
+                )
+            elif json_object["version"] == "LidarCalibration":
+                return LidarCalibration(reference=reference)
+            elif json_object["version"] == "RadarCalibration":
+                return RadarCalibration(reference=reference)
             else:
                 return Calibration(reference=reference)
         else:
@@ -74,12 +96,22 @@ class Calibration:
 
     def allclose(self, other: Calibration):
         return self.reference.allclose(other.reference)
-    
+
     def save_to_file(self, file):
         if not file.endswith(".txt"):
             file += ".txt"
-        with open(file, 'w') as f:
+        with open(file, "w") as f:
             f.write(self.encode())
+
+
+class LidarCalibration(Calibration):
+    def __init__(self, reference):
+        super().__init__(reference)
+
+
+class RadarCalibration(Calibration):
+    def __init__(self, reference):
+        super().__init__(reference)
 
 
 class CameraCalibration(Calibration):
@@ -147,3 +179,66 @@ class CameraCalibration(Calibration):
 
     def allclose(self, other: CameraCalibration):
         return self.reference.allclose(other.reference) and np.allclose(self.P, other.P)
+
+
+_carla_semseg_labels = [
+    "Unlabeled",
+    "Building",
+    "Fence",
+    "Other",
+    "Pedestrian",
+    "Pole",
+    "Roadline",
+    "Road",
+    "SideWalk",
+    "Vegetation",
+    "Vehicles",
+    "Wall",
+    "TrafficSign",
+    "Sky",
+    "Ground",
+    "Bridge",
+    "RailTrack",
+    "GuardRail",
+    "TrafficLight",
+    "Static",
+    "Dynamic",
+    "Water",
+    "Terrain",
+]
+assert len(_carla_semseg_labels) == 23
+carla_semseg_tags = {i: label for i, label in enumerate(_carla_semseg_labels)}
+
+
+class SemanticSegmentationCalibration(CameraCalibration):
+    def __init__(
+        self,
+        reference,
+        P: np.ndarray,
+        img_shape: tuple,
+        tags: dict = carla_semseg_tags,
+        fov_horizontal=None,
+        fov_vertical=None,
+        square_pixels=False,
+        channel_order="bgr",
+    ):
+        super().__init__(
+            reference,
+            P,
+            img_shape,
+            fov_horizontal,
+            fov_vertical,
+            square_pixels,
+            channel_order,
+        )
+        self.tags = tags
+
+    def __str__(self):
+        return f"Semantic Segmentation Calibration with reference: {self.reference}; P:{self.P}"
+
+    def allclose(self, other: SemanticSegmentationCalibration):
+        return (
+            self.reference.allclose(other.reference)
+            and np.allclose(self.P, other.P)
+            and (self.tags == other.tags)
+        )

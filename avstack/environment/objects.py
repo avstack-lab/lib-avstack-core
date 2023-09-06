@@ -268,9 +268,7 @@ class ObjectState:
         If other is a reference frame, assume it is static.
         If other is another object state, it may not be static.
         """
-        if not inplace:
-            raise RuntimeError('Not doing this inplace is broken right now due to computation')
-        
+
         # wrapping reference frame
         if isinstance(other, ReferenceFrame):
             reference = other
@@ -278,24 +276,38 @@ class ObjectState:
             reference = other.as_reference()
         else:
             raise NotImplementedError(type(other))
-        obj = self if inplace else deepcopy(self)
 
         # transforms
-        if obj.position is not None:
-            obj.position.change_reference(reference, inplace=True)
-        if obj.velocity is not None:
-            obj.velocity.change_reference(reference, inplace=True)
-        if obj.acceleration is not None:
-            obj.acceleration.change_reference(reference, inplace=True)
-        if obj.box is not None:
-            obj.box.change_reference(reference, inplace=True)
-        if obj.attitude is not None:
-            obj.attitude.change_reference(reference, inplace=True)
-        if obj.angular_velocity is not None:
-            obj.angular_velocity.change_reference(reference, inplace=True)
+        if self.position is not None:
+            position = self.position.change_reference(reference, inplace=inplace)
+        if self.velocity is not None:
+            velocity = self.velocity.change_reference(reference, inplace=inplace)
+        if self.acceleration is not None:
+            acceleration = self.acceleration.change_reference(
+                reference, inplace=inplace
+            )
+        if self.box is not None:
+            box = self.box.change_reference(reference, inplace=inplace)
+        if self.attitude is not None:
+            attitude = self.attitude.change_reference(reference, inplace=inplace)
+        if self.angular_velocity is not None:
+            angular_velocity = self.angular_velocity.change_reference(
+                reference, inplace=inplace
+            )
 
         if not inplace:
-            return obj
+            obj_out = ObjectState(self.obj_type, self.ID)
+            obj_out.set(
+                t=self.t,
+                position=position,
+                box=box,
+                velocity=velocity,
+                acceleration=acceleration,
+                attitude=attitude,
+                angular_velocity=angular_velocity,
+                occlusion=Occlusion.UNKNOWN,
+            )
+            return obj_out
 
     def set_occlusion_by_depth(self, depth_image, check_reference=True):
         """sets occlusion level using depth image
@@ -303,13 +315,19 @@ class ObjectState:
         Note that the depth image will capture the front-edge of the object
         Also take into account that an object doesn't take 100% of the bbox
         """
-        if not box_in_fov(self.box, depth_image.calibration, check_reference=check_reference):
+        if not box_in_fov(
+            self.box, depth_image.calibration, check_reference=check_reference
+        ):
             occ = Occlusion.INVALID
         else:
             # box 2d is in x=along width, y=along height
             box_2d = self.box.project_to_2d_bbox(
                 depth_image.calibration, check_reference=check_reference
-            ).squeeze(depth_image.calibration.height, depth_image.calibration.width, inplace=False)
+            ).squeeze(
+                depth_image.calibration.height,
+                depth_image.calibration.width,
+                inplace=False,
+            )
             depths = depth_image.depths[
                 int(box_2d.ymin) : int(box_2d.ymax), int(box_2d.xmin) : int(box_2d.xmax)
             ]
@@ -335,7 +353,9 @@ class ObjectState:
         """Sets occlusion level using lidar captures"""
         box_self = self.box
         if check_reference:
-            box_self = box_self.change_reference(pc.calibration.reference, inplace=False)
+            box_self = box_self.change_reference(
+                pc.calibration.reference, inplace=False
+            )
 
         # then check the point cloud
         filter_pts_in_box = filter_points_in_box(pc.data, box_self.corners)
@@ -362,7 +382,7 @@ class ObjectState:
                     R += wx + np.dot(wx, wx) * 1 / (1 + c)
 
             # -- rotate the object by this amount to put it forward
-            q_rot = tforms.transform_orientation(R.T, 'dcm', 'quat')
+            q_rot = tforms.transform_orientation(R.T, "dcm", "quat")
             box_self = box_self.rotate(q_rot, inplace=False)
 
             # -- get corners and compute the viewable area straight-on
