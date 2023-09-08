@@ -391,6 +391,10 @@ class Box3D:
     @property
     def size(self):
         return np.array([self.h, self.w, self.l])
+    
+    @property
+    def hwl(self):
+        return self.size
 
     @property
     def volume(self):
@@ -398,7 +402,10 @@ class Box3D:
 
     @property
     def center(self):
-        return self.t
+        if self.where_is_t == 'center':
+            return self.t
+        else:
+            raise NotImplementedError('Need to do this')
 
     @property
     def center_global(self):
@@ -422,6 +429,11 @@ class Box3D:
         q_OR1_to_obj = q_O_to_obj * q_OR1_to_O
         yaw = tforms.transform_orientation(q_OR1_to_obj, "quat", "euler")[2]
         return yaw
+    
+    @property
+    def euler(self):
+        """Returns yaw, pitch roll"""
+        return tforms.transform_orientation(self.q.q, 'quat', 'euler')
 
     @property
     def corners(self):

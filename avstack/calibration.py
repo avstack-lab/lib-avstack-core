@@ -35,7 +35,7 @@ class CalibrationEncoder(json.JSONEncoder):
             calib_dict["channel_order"] = o.channel_order
             if isinstance(o, SemanticSegmentationCalibration):
                 calib_dict["tags"] = o.tags
-        elif isinstance(o, LidarCalibration):
+        elif isinstance(o, (ImuCalibration, GpsCalibration, LidarCalibration)):
             pass
         elif isinstance(o, RadarCalibration):
             calib_dict["fov_horizontal"] = o.fov_horizontal
@@ -84,6 +84,10 @@ class CalibrationDecoder(json.JSONDecoder):
                 )
             elif json_object["version"] == "LidarCalibration":
                 return LidarCalibration(reference=reference)
+            elif json_object["version"] == "GpsCalibration":
+                return GpsCalibration(reference=reference)
+            elif json_object["version"] == "ImuCalibration":
+                return ImuCalibration(reference=reference)
             elif json_object["version"] == "RadarCalibration":
                 return RadarCalibration(
                     reference=reference,
@@ -125,6 +129,16 @@ class Calibration:
 
 
 class LidarCalibration(Calibration):
+    def __init__(self, reference):
+        super().__init__(reference)
+
+
+class GpsCalibration(Calibration):
+    def __init__(self, reference):
+        super().__init__(reference)
+
+
+class ImuCalibration(Calibration):
     def __init__(self, reference):
         super().__init__(reference)
 
