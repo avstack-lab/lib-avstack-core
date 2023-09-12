@@ -208,8 +208,8 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/nuscenes/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_nus-3d_20201021_120719-269f9dd6.pth"
             elif dataset == "carla":
                 threshold = 0.5
-                config_file = "work_dirs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-3d.py"
-                checkpoint_file = f"work_dirs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-3d.pth"
+                config_file = "work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle.py"
+                checkpoint_file = f"work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle/{epoch_str}.pth"
             elif dataset == "carla-infrastructure":
                 threshold = 0.5
                 config_file = "work_dirs/carla/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-infrastructure-3d.py"

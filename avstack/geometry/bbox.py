@@ -416,18 +416,8 @@ class Box3D:
 
     @property
     def yaw(self):
-        """Here, yaw is 0 forward which is NOT the KITTI standard
-
-        NOTE: will we ever truly want yaw in the global frame?
-
-        yaw           := q_OR1_to_obj
-        self.q        := q_O_to_obj
-        self.reference.q := q_OR1_to_O
-        """
-        q_OR1_to_O = self.reference.q
-        q_O_to_obj = self.q.q
-        q_OR1_to_obj = q_O_to_obj * q_OR1_to_O
-        yaw = tforms.transform_orientation(q_OR1_to_obj, "quat", "euler")[2]
+        """Here, yaw is 0 forward which is NOT the KITTI standard"""
+        yaw = tforms.transform_orientation(self.q.q, "quat", "euler")[2]
         return yaw
     
     @property

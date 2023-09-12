@@ -310,6 +310,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
     def parse_mm_model(model, dataset, epoch):
         input_data = "camera"
         label_dataset_override = dataset
+        epoch_str = "latest" if epoch == "latest" else "epoch_{}".format(epoch)
         if model == "yolov3":
             raise NotImplementedError("yolo not trained yet")
         elif model == "rtmdet":
@@ -334,15 +335,15 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 )
             elif dataset == "carla":
                 threshold = 0.7
-                config_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla.py"
-                checkpoint_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla.pth"
+                config_file = "work_dirs/faster_rcnn_r50_fpn_1x_carla_vehicle/faster_rcnn_r50_fpn_1x_carla_vehicle.py"
+                checkpoint_file = f"work_dirs/faster_rcnn_r50_fpn_1x_carla_vehicle/{epoch_str}.pth"
             elif dataset == "carla-infrastructure":
                 threshold = 0.7
                 config_file = (
-                    "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.py"
+                    "work_dirs/faster_rcnn_r50_fpn_1x_carla_infrastructure.py"
                 )
                 checkpoint_file = (
-                    "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_infrastructure.pth"
+                    "work_dirs/faster_rcnn_r50_fpn_1x_carla_infrastructure.pth"
                 )
             elif dataset == "cityscapes":
                 threshold = 0.5
@@ -354,6 +355,13 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                     "configs/faster_rcnn/faster-rcnn_r50-caffe_fpn_ms-1x_coco-person.py"
                 )
                 checkpoint_file = "checkpoints/coco-person/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
+            else:
+                raise NotImplementedError(f"{model}, {dataset} not compatible yet")
+        elif model == "cascadercnn":
+            if dataset == "carla":
+                threshold = 0.5
+                config_file = "work_dirs/cascade-rcnn_r50_fpn_1x_carla_vehicle/cascade-rcnn_r50_fpn_1x_carla_vehicle.py"
+                checkpoint_file = f"work_dirs/cascade-rcnn_r50_fpn_1x_carla_vehicle/{epoch_str}.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         elif model == "htc":

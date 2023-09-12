@@ -233,7 +233,7 @@ class DepthImageData(SensorData):
         source_identifier (str):
             Concatenation of the source name and ID
         data (np.ndarray):
-            Depth image in format of [N x M x 1]
+            Depth image in format of [N x M x 3] in a coding
         calibration (str):
             A calibration class describing the sensor's state
     """
@@ -243,11 +243,15 @@ class DepthImageData(SensorData):
         self.depth_in_meters = None
 
     @property
+    def grayscale_image(self):
+        return self.depths
+
+    @property
     def depths(self):
         """Defer this calculation to save cost at runtime"""
         if self.depth_in_meters is None:
             d = np.asarray(self.data).astype(np.float32)
-            R, G, B = d[:, :, 0], d[:, :, 1], d[:, :, 2]
+            R, G, B = d[:, :, 2], d[:, :, 1], d[:, :, 0]
             normalized = (R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1)
             self.depth_in_meters = 1000 * normalized
         return self.depth_in_meters

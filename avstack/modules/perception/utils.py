@@ -214,9 +214,9 @@ def convert_mm3d_to_avstack(
                         reference = calib.reference
                     elif dataset == "carla":
                         yaw = box[6]
-                        q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
+                        q_O_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
-                        x_O_2_obj_in_O[2] += h  # whoops
+                        x_O_2_obj_in_O[2] += (h - calib.reference.x[2])
                         where_is_t = "center"
                         reference = calib.reference
                     elif dataset == "carla-infrastructure":
