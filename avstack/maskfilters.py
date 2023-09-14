@@ -242,13 +242,26 @@ def filter_points_in_box(
         box_dist = np.linalg.norm(np.mean(box_corners, axis=0))
         if box_dist > max_range:
             return np.zeros((pc.shape[0],), dtype=np.bool)
-    # run test
-    box_filter = _check_pts_boundary(pc, box_corners.x, include_boundary)
+    # run tests -- first coarse, then fine
+    box_filter = _check_pts_boundary_coarse(pc, box_corners.x)
+    box_filter[box_filter] = _check_pts_boundary_fine(
+        pc[box_filter, :], box_corners.x, include_boundary
+    )
+    # box_filter = _check_pts_boundary_fine(pc, box_corners.x, include_boundary)
     return box_filter
 
 
+def _check_pts_boundary_coarse(pc, box_corners):
+    """Points inside only if inside sphere of max diagonal"""
+    box_center = np.mean(box_corners, axis=0)
+    sphere_radius = max(np.linalg.norm(box_corners - box_center, axis=1))
+    pc_centered = pc - box_center
+    return np.linalg.norm(pc_centered, axis=1) <= sphere_radius
+
+
 @jit(nopython=True)
-def _check_pts_boundary(pc, box_corners, include_boundary):
+def _check_pts_boundary_fine(pc, box_corners, include_boundary):
+    """Fine check by considering each corner"""
     # unpack box corners
     t1, t2, t3, t4, b1, b2, b3, b4 = box_corners
     # get vectors

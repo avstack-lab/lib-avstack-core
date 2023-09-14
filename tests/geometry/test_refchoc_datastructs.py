@@ -88,7 +88,7 @@ def test_point_matrix_3d():
     calib1 = Calibration(GlobalOrigin3D)
     pm = PointMatrix3D(np.random.rand(100, 3), calibration=calib1)
     cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
-    pm_cf1 = pm.change_reference(cf1)
+    pm_cf1 = pm.change_reference(cf1, inplace=False)
     assert np.allclose(pm_cf1.x, q_mult_vec(cf1.q, pm.x - cf1.x))
 
 

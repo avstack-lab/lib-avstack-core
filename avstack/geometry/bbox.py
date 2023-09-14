@@ -54,7 +54,12 @@ class BoxEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Box2D):
             box2d = o.box2d if isinstance(o.box2d, list) else o.box2d.tolist()
-            box_dict = {"box": box2d, "calibration": o.calibration.encode(), "ID": o.ID}
+            box_dict = {
+                "box": box2d,
+                "calibration": o.calibration.encode(),
+                "ID": o.ID,
+                "obj_type": o.obj_type,
+            }
             return {"box2d": box_dict}
         elif isinstance(o, Box3D):
             box_dict = {
@@ -89,7 +94,10 @@ class BoxDecoder(json.JSONDecoder):
             json_object = json_object["box2d"]
             calibration = json.loads(json_object["calibration"], cls=CalibrationDecoder)
             return Box2D(
-                box2d=json_object["box"], calibration=calibration, ID=json_object["ID"]
+                box2d=json_object["box"],
+                calibration=calibration,
+                ID=json_object["ID"],
+                obj_type=json_object["obj_type"],
             )
         elif "box3d" in json_object:
             json_object = json_object["box3d"]
@@ -150,7 +158,7 @@ class SegMask2D:
 
 
 class Box2D:
-    def __init__(self, box2d, calibration, ID=None):
+    def __init__(self, box2d, calibration, ID=None, obj_type=None):
         self.calibration = calibration
         if (box2d[2] < box2d[0]) or (box2d[3] < box2d[1]):
             raise exceptions.BoundingBoxError(box2d)
@@ -159,6 +167,7 @@ class Box2D:
         self.xmax = box2d[2]
         self.ymax = box2d[3]
         self.ID = ID
+        self.obj_type = obj_type
 
     def __repr__(self):
         return self.__str__()
@@ -270,7 +279,11 @@ class Box2D:
             self.xmax = x_max_s
             self.ymax = y_max_s
         else:
-            return Box2D([x_min_s, y_min_s, x_max_s, y_max_s], self.calibration)
+            return Box2D(
+                [x_min_s, y_min_s, x_max_s, y_max_s],
+                self.calibration,
+                obj_type=self.obj_type,
+            )
 
     def add_noise(self, noise_variance):
         """Add noise to each component
@@ -391,7 +404,7 @@ class Box3D:
     @property
     def size(self):
         return np.array([self.h, self.w, self.l])
-    
+
     @property
     def hwl(self):
         return self.size
@@ -402,10 +415,10 @@ class Box3D:
 
     @property
     def center(self):
-        if self.where_is_t == 'center':
+        if self.where_is_t == "center":
             return self.t
         else:
-            raise NotImplementedError('Need to do this')
+            raise NotImplementedError("Need to do this")
 
     @property
     def center_global(self):
@@ -419,11 +432,11 @@ class Box3D:
         """Here, yaw is 0 forward which is NOT the KITTI standard"""
         yaw = tforms.transform_orientation(self.q.q, "quat", "euler")[2]
         return yaw
-    
+
     @property
     def euler(self):
         """Returns yaw, pitch roll"""
-        return tforms.transform_orientation(self.q.q, 'quat', 'euler')
+        return tforms.transform_orientation(self.q.q, "quat", "euler")
 
     @property
     def corners(self):
@@ -1037,4 +1050,4 @@ def proj_3d_bbox_to_2d_bbox(box3d, calib_img, check_reference=True):
     xmin, xmax = np.min(corners_3d_in_image[:, 0]), np.max(corners_3d_in_image[:, 0])
     ymin, ymax = np.min(corners_3d_in_image[:, 1]), np.max(corners_3d_in_image[:, 1])
     box2d = np.array([xmin, ymin, xmax, ymax])
-    return Box2D(box2d, calib_img)
+    return Box2D(box2d, calib_img, obj_type=box3d.obj_type)

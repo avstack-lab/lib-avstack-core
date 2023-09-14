@@ -64,6 +64,7 @@ class ObjectStateEncoder(json.JSONEncoder):
             "angular_velocity": o.angular_velocity.encode()
             if o.angular_velocity is not None
             else None,
+            "visible_fraction": o.visible_fraction,
         }
         return {"objectstate": o_dict}
 
@@ -80,6 +81,15 @@ class ObjectStateDecoder(json.JSONDecoder):
                 obj_type=json_object["obj_type"],
                 ID=json_object["ID"],
             )
+            if "visible_fraction" in json_object:
+                vis_frac = (
+                    None
+                    if json_object["visible_fraction"] is None
+                    else float(json_object["visible_fraction"])
+                )
+            else:
+                vis_frac = None
+
             obj.set(
                 t=json_object["t"],
                 box=None
@@ -101,6 +111,7 @@ class ObjectStateDecoder(json.JSONDecoder):
                 if json_object["angular_velocity"] is None
                 else json.loads(json_object["angular_velocity"], cls=RotationDecoder),
                 occlusion=Occlusion(json_object["occlusion"]),
+                visible_fraction=vis_frac,
             )
         else:
             return json_object
@@ -123,6 +134,7 @@ class ObjectState:
             attitude=None,
             angular_velocity=None,
             occlusion=Occlusion.UNKNOWN,
+            visible_fraction=None,
         )
 
     def __str__(self):
@@ -205,9 +217,11 @@ class ObjectState:
         attitude: Attitude = None,
         angular_velocity: AngularVelocity = None,
         occlusion=Occlusion.UNKNOWN,
+        visible_fraction: float = None,
     ):
         self.t = t
         self.occlusion = occlusion
+        self.visible_fraction = visible_fraction
 
         # -- position
         assert isinstance(position, (Position, NoneType)), type(position)
@@ -216,6 +230,9 @@ class ObjectState:
         # -- bbox
         assert isinstance(box, (Box2D, Box3D, NoneType)), type(box)
         self.box = box
+        if self.box is not None:
+            if self.box.obj_type is None:
+                self.box.obj_type = self.obj_type
 
         # -- velocity
         assert isinstance(velocity, (Velocity, NoneType)), type(velocity)
@@ -360,10 +377,9 @@ class ObjectState:
         # then check the point cloud
         filter_pts_in_box = filter_points_in_box(pc.data, box_self.corners)
         pts_in_box = pc.data[filter_pts_in_box, :3]
-        if len(pts_in_box) <= 1:  # to account for occasional errors
+        area_ratio = None
+        if len(pts_in_box) <= 5:  # to account for occasional errors
             occ = Occlusion.COMPLETE
-        elif len(pts_in_box) <= 5:
-            occ = Occlusion.MOST
         else:
             # -- find a rotation matrix to go from v_sensor to v_object
             R = np.eye(3)
@@ -414,7 +430,7 @@ class ObjectState:
                 ]:
                     ratios = [0.3, 0.10, 0.05]
                 else:
-                    ratios = [0.5, 0.25, 0.05]
+                    ratios = [0.5, 0.25, 0.10]
                 if area_ratio > ratios[0]:
                     occ = Occlusion.NONE
                 elif area_ratio > ratios[1]:
@@ -423,6 +439,7 @@ class ObjectState:
                     occ = Occlusion.MOST
                 else:
                     occ = Occlusion.COMPLETE
+        self.visible_fraction = area_ratio
         self.occlusion = occ
 
     def get_location(self, format_as="avstack"):

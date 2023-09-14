@@ -49,8 +49,12 @@ def test_filter_frustum():
 
 
 def test_filter_bbox():
-    box_3d_2 = box_3d.change_reference(pc.reference, inplace=False)
-    bbox_filter = maskfilters.filter_points_in_object_bbox(pc, box_3d_2)
+    # make up a random box that works with the point cloud
+    position = Position(np.mean(pc.data[pc.data[:, 0] > 0, :3], axis=0), pc.reference)
+    attitude = Attitude(np.quaternion(1), pc.reference)
+    hwl = [2, 2, 4]
+    box_3d = Box3D(position, attitude, hwl)
+    bbox_filter = maskfilters.filter_points_in_object_bbox(pc, box_3d)
     assert sum(bbox_filter) > 0
     assert max(np.where(bbox_filter)[0]) < pc.shape[0]
 

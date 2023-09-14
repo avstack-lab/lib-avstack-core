@@ -1,5 +1,4 @@
 import json
-from copy import deepcopy
 
 import numpy as np
 
@@ -213,10 +212,10 @@ class _PointMatrix:
 
 
 class PointMatrix3D(_PointMatrix):
-    def change_calibration(self, calibration, inplace: bool = False):
+    def change_calibration(self, calibration, inplace: bool):
         return self.change_reference(calibration.reference, inplace)
 
-    def change_reference(self, reference, inplace: bool = False):
+    def change_reference(self, reference, inplace: bool):
         """Change of reference frame of a vector
 
         Step 1: compute the differential
@@ -232,19 +231,25 @@ class PointMatrix3D(_PointMatrix):
             reference, in_self=True
         )  # self to other
         x = q_mult_vec(diff.q, self.x[:, :3] - diff.x)
+        if self.x.shape[1] > 3:
+            x = np.hstack((x, self.x[:, 3:]))
         if inplace:
             self.x = x
             self.calibration.reference = reference
         else:
-            calib = deepcopy(self.calibration)
-            calib.reference = reference
+            try:
+                calib = self.calibration.__class__(reference)
+            except TypeError as e:
+                calib = self.calibration.__class__(
+                    reference, self.calibration.P, self.calibration.img_shape
+                )
             return PointMatrix3D(x, calib)
 
     def filter(self, mask):
         return PointMatrix3D(self.x[mask, :], self.calibration)
 
     def project_to_2d(self, calibration):
-        pts_3d_img = self.change_calibration(calibration).x[:, :3]
+        pts_3d_img = self.change_calibration(calibration, inplace=False).x[:, :3]
         pts_3d_hom = tforms.cart2hom(pts_3d_img)
         pts_2d = np.dot(pts_3d_hom, np.transpose(calibration.P))  # nx3
         pts_2d[:, 0] /= pts_2d[:, 2]

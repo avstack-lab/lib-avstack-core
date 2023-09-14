@@ -149,6 +149,9 @@ class Detection_:
     def origin(self):
         return self.data.reference
 
+    def IoU(self, *args, **kwargs):
+        return self.data.IoU(*args, **kwargs)
+
     def encode(self):
         return json.dumps(self, cls=DetectionEncoder)
 

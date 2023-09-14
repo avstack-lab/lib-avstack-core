@@ -18,8 +18,8 @@ import numpy as np
 from PIL import Image
 
 from avstack import datastructs, maskfilters, messages
-from avstack.calibration import CameraCalibration
-from avstack.geometry import PointMatrix3D
+from avstack.calibration import CameraCalibration, LidarCalibration
+from avstack.geometry import GlobalOrigin3D, PointMatrix3D, ReferenceFrame
 from avstack.geometry import transformations as tforms
 
 
@@ -338,30 +338,34 @@ class LidarData(SensorData):
                 depth=depth,
             )
         else:
-            data = self.data.change_calibration(calib_other)
+            if not isinstance(calib_other, LidarCalibration):
+                raise NotImplementedError(type(calib_other))
+            data = self.data.change_calibration(calib_other, inplace=False)
             return LidarData(
                 self.timestamp, self.frame, data, calib_other, self.source_ID
             )
 
-    # def transform_to_ground(self):
-    #     x_old = self.reference.x
-    #     x_new = np.array([x_old[0], x_old[1], 0])  # flat to the ground
-    #     eul_old = self.reference.euler
-    #     q_new = tforms.transform_orientation(
-    #         [0, 0, eul_old[2]], "euler", "quat"
-    #     )  # only yaw still applied
-    #     O_new = Origin(x_new, q_new)
-    #     self.change_origin(O_new)
-
-    # def change_origin(self, origin_new):
-    #     self.data[:, :3] = self.reference.change_points_origin(
-    #         self.data[:, :3], origin_new
-    #     )
-    #     self.calibration.change_origin(origin_new)
+    def transform_to_ground(self):
+        """Only possible with reference's reference to global origin for now"""
+        if self.reference.reference != GlobalOrigin3D:
+            raise NotImplementedError(
+                "Cannot yet project if calibration not level-1 only"
+            )
+        x_new = np.array(
+            [self.reference.x[0], self.reference.x[1], 0]
+        )  # flat on ground
+        yaw_old = tforms.transform_orientation(self.reference.q, "quat", "euler")[2]
+        q_new = tforms.transform_orientation(
+            [0, 0, yaw_old], "euler", "quat"
+        )  # keep old yaw
+        ref_new = ReferenceFrame(x_new, q_new, reference=self.reference.reference)
+        calib_new = LidarCalibration(reference=ref_new)
+        return self.project(calib_new)
 
     def save_to_file(self, filepath: str, flipy: bool = False, as_ply: bool = False):
         if isinstance(self.data, (PointMatrix3D, np.ndarray)):
             data = self.data if isinstance(self.data, np.ndarray) else self.data.x
+            data = data.astype(np.float32)
             if as_ply:
                 if not filepath.endswith(".ply"):
                     filepath = filepath + ".ply"

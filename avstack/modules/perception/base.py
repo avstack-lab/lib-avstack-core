@@ -74,20 +74,45 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         _, self.whitelist = self.parse_mm_object_classes(label_dataset_override)
         self.label_dataset_override = label_dataset_override
 
+        # Find model and checkpoint paths
         if threshold is not None:
             print(f"Overriding default threshold of {self.threshold} with {threshold}")
             self.threshold = threshold
         self.model_name = model
         mod_path = os.path.join(mm2d_root, config_file)
-        chk_path = os.path.join(mm2d_root, checkpoint_file)
+
+        # HACK: map 'latest' to the checkpoint
         if not os.path.exists(mod_path):
             mod_path = os.path.join(mm3d_root, config_file)
-            chk_path = os.path.join(mm3d_root, checkpoint_file)
+            if "latest" in checkpoint_file:
+                chk_path = map_checkpoint_to_latest(mm3d_root, checkpoint_file)
+            else:
+                chk_path = os.path.join(mm3d_root, checkpoint_file)
             if not os.path.exists(mod_path):
                 raise FileNotFoundError(f"Cannot find {config_file} config")
             if not os.path.exists(chk_path):
                 raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint")
+        else:
+            if "latest" in checkpoint_file:
+                chk_path = map_checkpoint_to_latest(mm2d_root, checkpoint_file)
+            else:
+                chk_path = os.path.join(mm2d_root, checkpoint_file)
         if not os.path.exists(chk_path):
             raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint")
         self.mod_path = mod_path
         self.chk_path = chk_path
+
+
+def map_checkpoint_to_latest(mm_root, checkpoint_file):
+    if os.path.exists(os.path.dirname(os.path.join(mm_root, checkpoint_file))):
+        with open(
+            os.path.join(
+                os.path.dirname(os.path.join(mm_root, checkpoint_file)),
+                "last_checkpoint",
+            ),
+            "r",
+        ) as f:
+            chk_path = f.readlines()[0]
+        return chk_path
+    else:
+        return None
