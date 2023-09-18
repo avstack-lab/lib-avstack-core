@@ -13,3 +13,6 @@
 [submodule "third_party/mmsegmentation"]
 	path = third_party/mmsegmentation
 	url = https://github.com/avstack-lab/mmsegmentation.git
+[submodule "third_party/MiDaS"]
+	path = third_party/MiDaS
+	url = git@github.com:cpsl-research/MiDaS.git

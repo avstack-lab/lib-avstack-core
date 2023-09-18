@@ -36,6 +36,7 @@ mmengine = "^0.7.3"
 mmsegmentation = { path = "./third_party/mmsegmentation", develop = true }
 mmdet = { path = "./third_party/mmdetection/", develop = true }
 mmdet3d = { path = "./third_party/mmdetection3d/", develop = true }
+midas = {path = "./third_party/MiDaS/", develop=true }
 # lanenet = { path = "./third_party/lanenet/", develop = true }
 
 [tool.poetry.group.docs.dependencies]

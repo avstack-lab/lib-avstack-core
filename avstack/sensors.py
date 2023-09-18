@@ -238,9 +238,10 @@ class DepthImageData(SensorData):
             A calibration class describing the sensor's state
     """
 
-    def __init__(self, *args, source_name="depthimage", **kwargs):
+    def __init__(self, *args, encoding="carla", source_name="depthimage", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
         self.depth_in_meters = None
+        self.encoding = encoding
 
     @property
     def grayscale_image(self):
@@ -250,10 +251,20 @@ class DepthImageData(SensorData):
     def depths(self):
         """Defer this calculation to save cost at runtime"""
         if self.depth_in_meters is None:
-            d = np.asarray(self.data).astype(np.float32)
-            R, G, B = d[:, :, 2], d[:, :, 1], d[:, :, 0]
-            normalized = (R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1)
-            self.depth_in_meters = 1000 * normalized
+            if self.encoding == "carla":
+                d = np.asarray(self.data).astype(np.float32)
+                R, G, B = d[:, :, 2], d[:, :, 1], d[:, :, 0]
+                normalized = (R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1)
+                self.depth_in_meters = 1000 * normalized
+            elif self.encoding == "midas":
+                bits = 1
+                depth_min = self.data.min()
+                depth_max = self.data.max()
+                max_val = (2**(8*bits))-1
+                self.depth_in_meters = max_val * (self.data - depth_min) / (depth_max - depth_min)
+                self.depth_in_meters = self.depth_in_meters.astype("uint8" if bits == 1 else "uint16")
+            else:
+                raise NotImplementedError
         return self.depth_in_meters
 
     def save_to_file(self, filepath):
@@ -263,7 +274,7 @@ class DepthImageData(SensorData):
         """View image using matplotlib"""
         pil_im = Image.fromarray(self.depths)
         plt.figure(figsize=[2 * x for x in plt.rcParams["figure.figsize"]])
-        plt.imshow(pil_im, extent=extent)
+        plt.imshow(pil_im, extent=extent, cmap='gray')
         if not axis:
             plt.axis("off")
         plt.show()
