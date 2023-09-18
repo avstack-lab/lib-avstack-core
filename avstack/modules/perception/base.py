@@ -109,14 +109,16 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             whitelist = all_objs
         elif dataset == "nuscenes":
             all_objs = [
-                "person",
-                "rider",
-                "car",
-                "truck",
-                "bus",
-                "train",
-                "motorcycle",
+                "barrier",
+                "traffic_cone",
                 "bicycle",
+                "motorcycle",
+                "pedestrian",
+                "car",
+                "bus",
+                "construction_vehicle",
+                "trailer",
+                "truck",
             ]
             whitelist = all_objs
         elif dataset == "nuimages":

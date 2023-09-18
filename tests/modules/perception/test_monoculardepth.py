@@ -1,8 +1,8 @@
-
 import sys
 
-from avstack.sensors import DepthImageData
 from avstack.modules.perception.monoculardepth import MidasDepthEstimator
+from avstack.sensors import DepthImageData
+
 
 sys.path.append("tests/")
 from utilities import get_test_sensor_data
@@ -23,6 +23,6 @@ from utilities import get_test_sensor_data
 
 
 def test_midas_inference():
-    model = MidasDepthEstimator(mdoel='dpt_beit_base_384')
+    model = MidasDepthEstimator(mdoel="dpt_beit_base_384")
     depth_out = model(img)
     assert isinstance(depth_out, DepthImageData)

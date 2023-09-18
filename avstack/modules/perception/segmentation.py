@@ -1,20 +1,26 @@
-
-
 from avstack.modules.perception.object2dfv import MMDetObjectDetector2D
 
 
 class MMInstanceSegmentation(MMDetObjectDetector2D):
     MODE = "instance_segmentation"
-    
-    def __init__(self, model="cascade-mask-rcnn", dataset="nuimages", threshold=None, gpu=0, epoch="latest", **kwargs):
+
+    def __init__(
+        self,
+        model="cascade-mask-rcnn",
+        dataset="nuimages",
+        threshold=None,
+        gpu=0,
+        epoch="latest",
+        **kwargs,
+    ):
         super().__init__(model, dataset, threshold, gpu, epoch, **kwargs)
 
     def initialize(self):
         # This is very hacky....
-        from mmdet3d.utils import register_all_modules
         from mmdet3d.apis import init_model
+        from mmdet3d.utils import register_all_modules
         from mmdet.apis import inference_detector
-        
+
         register_all_modules(init_default_scope=False)
         self.inference_detector = inference_detector
         self.model = init_model(self.mod_path, self.chk_path, device=f"cuda:{self.gpu}")

@@ -101,16 +101,20 @@ class MMDetObjectDetector2D(_MMObjectDetector):
     ):
         super().__init__(model, dataset, gpu, epoch, threshold, **kwargs)
         self.gpu = gpu
-        
+
         from mmdet.utils import register_all_modules
+
         register_all_modules(init_default_scope=True)
 
         self.initialize()
 
     def initialize(self):
         from mmdet.apis import inference_detector, init_detector
+
         self.inference_detector = inference_detector
-        self.model = init_detector(self.mod_path, self.chk_path, device=f"cuda:{self.gpu}")
+        self.model = init_detector(
+            self.mod_path, self.chk_path, device=f"cuda:{self.gpu}"
+        )
 
     def _execute(self, data, identifier, is_rgb=True, eval_method="data", **kwargs):
         from mmdet.utils import register_all_modules
@@ -194,14 +198,16 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 )
             elif dataset == "carla":
                 threshold = 0.7
-                config_file = "work_dirs/faster_rcnn_r50_fpn_1x_carla_vehicle/faster_rcnn_r50_fpn_1x_carla_vehicle.py"
+                config_file = "work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_vehicle.py"
                 checkpoint_file = (
-                    f"work_dirs/faster_rcnn_r50_fpn_1x_carla_vehicle/{epoch_str}.pth"
+                    f"work_dirs/carla/faster_rcnn_r50_fpn_1x_carla_vehicle.pth"
                 )
             elif dataset == "carla-infrastructure":
                 threshold = 0.7
-                config_file = "work_dirs/faster_rcnn_r50_fpn_1x_carla_infrastructure/faster_rcnn_r50_fpn_1x_carla_infrastructure.py"
-                checkpoint_file = f"work_dirs/faster_rcnn_r50_fpn_1x_carla_infrastructure/{epoch_str}.pth"
+                config_file = "work_dirs/faster_rcnn_r50_fpn_1x_carla_infrastructure.py"
+                checkpoint_file = (
+                    f"work_dirs/faster_rcnn_r50_fpn_1x_carla_infrastructure.pth"
+                )
             elif dataset == "cityscapes":
                 threshold = 0.5
                 config_file = "configs/cityscapes/faster-rcnn_r50_fpn_1x_cityscapes.py"
@@ -217,14 +223,18 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         elif model == "cascadercnn":
             if dataset == "carla":
                 threshold = 0.5
-                config_file = "work_dirs/cascade-rcnn_r50_fpn_1x_carla_vehicle/cascade-rcnn_r50_fpn_1x_carla_vehicle.py"
+                config_file = "work_dirs/carla/cascade-rcnn_r50_fpn_1x_carla_vehicle.py"
                 checkpoint_file = (
-                    f"work_dirs/cascade-rcnn_r50_fpn_1x_carla_vehicle/{epoch_str}.pth"
+                    f"work_dirs/carla/cascade-rcnn_r50_fpn_1x_carla_vehicle.pth"
                 )
             elif dataset == "carla-infrastructure":
                 threshold = 0.5
-                config_file = "work_dirs/cascade-rcnn_r50_fpn_1x_carla_infrastructure/cascade-rcnn_r50_fpn_1x_carla_infrastructure.py"
-                checkpoint_file = f"work_dirs/cascade-rcnn_r50_fpn_1x_carla_infrastructure/{epoch_str}.pth"
+                config_file = (
+                    "work_dirs/carla/cascade-rcnn_r50_fpn_1x_carla_infrastructure.py"
+                )
+                checkpoint_file = (
+                    f"work_dirs/carla/cascade-rcnn_r50_fpn_1x_carla_infrastructure.pth"
+                )
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         elif model == "htc":

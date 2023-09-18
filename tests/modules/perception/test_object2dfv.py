@@ -43,6 +43,8 @@ def test_mmdet_2d_perception():
             ("fasterrcnn", "kitti"),
             ("fasterrcnn", "cityscapes"),
             ("fasterrcnn", "coco-person"),
+            ("fasterrcnn", "carla"),
+            ("cascadercnn", "carla"),
             ("rtmdet", "coco"),
         ]
 

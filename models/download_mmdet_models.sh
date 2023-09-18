@@ -50,27 +50,41 @@ download_custom_models () {
 }
 
 
-# Pretrained models
+# -----------------------------------
+# for mmdetection trained models
+# -----------------------------------
+
 COCOPERSON_FRCNN="faster_rcnn_r50_fpn_1x_coco-person/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
 download_models "coco-person" "v2.0" "faster_rcnn" "$COCOPERSON_FRCNN"
+
 CITYSCAPES_FRCNN="faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
 download_models "cityscapes" "v2.0" "cityscapes" "$CITYSCAPES_FRCNN"
 CITYSCAPES_MRCNN="mask_rcnn_r50_fpn_1x_cityscapes/mask_rcnn_r50_fpn_1x_cityscapes_20201211_133733-d2858245.pth"
 download_models "cityscapes" "v2.0" "cityscapes" "$CITYSCAPES_MRCNN"
+
 RTMDET_M="rtmdet_m_8xb32-300e_coco/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth"
 download_models "rtmdet" "v3.0" "rtmdet" "$RTMDET_M"
+
 COCO_CRCNN="cascade_rcnn_r50_fpn_1x_coco/cascade_rcnn_r50_fpn_1x_coco_20200316-3dc56deb.pth"
 download_models "coco" "v2.0" "cascade_rcnn" "$COCO_CRCNN"
 COCO_YOLOX="yolox_l_8x8_300e_coco/yolox_l_8x8_300e_coco_20211126_140236-d3bd2b23.pth"
 download_models "yolox" "v2.0" "yolox" "$COCO_YOLOX"
 
-# Custom models
-# CARLA_FRCNN="faster_rcnn_r50_fpn_1x_carla"
-# download_custom_models "carla" "carla" "$CARLA_FRCNN"
-# CARLA_FRCNN_INF="faster_rcnn_r50_fpn_1x_carla_infrastructure"
-# download_custom_models "carla" "carla" "$CARLA_FRCNN_INF"
-# NUSC_FRCNN="faster_rcnn_r50_fpn_1x_nuscenes"
-# download_custom_models "nuscenes" "nuscenes" "$NUSC_FRCNN"
+
+# -----------------------------------
+# for custom trained models
+# -----------------------------------
+
+CARLA_FRCNN="faster_rcnn_r50_fpn_1x_carla_vehicle"
+download_custom_models "carla" "carla" "$CARLA_FRCNN"
+CARLA_FRCNN_INF="faster_rcnn_r50_fpn_1x_carla_infrastructure"
+download_custom_models "carla" "carla" "$CARLA_FRCNN_INF"
+
+CARLA_CRCNN="cascade-rcnn_r50_fpn_1x_carla_vehicle"
+download_custom_models "carla" "carla" "$CARLA_CRCNN"
+CARLA_CRCNN_INF="cascade-rcnn_r50_fpn_1x_carla_infrastructure"
+download_custom_models "carla" "carla" "$CARLA_CRCNN_INF"
+
 
 echo "Adding symbolic link to mmdet directory"
 ln -sfnT $(realpath "$MMDET_CKPT") "$THISDIR/../third_party/mmdetection/checkpoints"

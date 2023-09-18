@@ -54,6 +54,10 @@ download_custom_models () {
 }
 
 
+# -----------------------------------
+# for mmdetection trained models
+# -----------------------------------
+
 KITTI_PILLARS="hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class_20220301_150306-37dc2420.pth"
 download_models "kitti" "pointpillars" "$KITTI_PILLARS"
 KITTI_PGD="pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d/pgd_r101_caffe_fpn_gn-head_3x4_4x_kitti-mono3d_20211022_102608-8a97533b.pth"
@@ -71,12 +75,16 @@ download_models "nuscenes" "pgd" "$NUSC_PGD"
 NUSC_SSN="hv_ssn_secfpn_sbn-all_2x16_2x_nus-3d/hv_ssn_secfpn_sbn-all_2x16_2x_nus-3d_20210830_101351-51915986.pth"
 download_models "nuscenes" "ssn" "$NUSC_SSN"
 
-CARLA_SSN="hv_ssn_secfpn_sbn-all_2x16_2x_carla-3d"
-download_custom_models "carla" "carla" $CARLA_SSN
-CARLA_PILLARS="hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-3d"
+
+# -----------------------------------
+# for custom trained models
+# -----------------------------------
+
+CARLA_PILLARS="pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle"
 download_custom_models "carla" "carla" $CARLA_PILLARS
-CARLA_INF_PILLARS="hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_carla-infrastructure-3d"
+CARLA_INF_PILLARS="pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure"
 download_custom_models "carla" "carla" $CARLA_INF_PILLARS
+
 
 echo "Adding symbolic link to mmdet3d directory"
 ln -sfnT $(realpath "$MMDET3D_CKPT") "$THISDIR/../third_party/mmdetection3d/checkpoints"

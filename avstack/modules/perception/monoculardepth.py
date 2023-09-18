@@ -1,13 +1,12 @@
 import os
-import torch
+
 import cv2
-
-import avstack
-from avstack.sensors import DepthImageData
-from avstack.modules.perception.base import _PerceptionAlgorithm
-
+import torch
 from midas.model_loader import load_model
 
+import avstack
+from avstack.modules.perception.base import _PerceptionAlgorithm
+from avstack.sensors import DepthImageData
 
 
 midas_root = os.path.join(
@@ -18,8 +17,16 @@ midas_root = os.path.join(
 class MidasDepthEstimator(_PerceptionAlgorithm):
     MODE = "monocular_depth"
 
-    def __init__(self, model='dpt_beit_base_384', gpu=0, optimize=False, height=None,
-                 side=False, square=False, **kwargs):
+    def __init__(
+        self,
+        model="dpt_beit_base_384",
+        gpu=0,
+        optimize=False,
+        height=None,
+        side=False,
+        square=False,
+        **kwargs,
+    ):
         """Run MonoDepthNN to compute depth maps.
 
         Args:
@@ -33,16 +40,21 @@ class MidasDepthEstimator(_PerceptionAlgorithm):
         self.model_name = model
         if optimize:
             raise NotImplementedError
-        
-        self.device = torch.device(f"cuda:{gpu}" if torch.cuda.is_available() else "cpu")
+
+        self.device = torch.device(
+            f"cuda:{gpu}" if torch.cuda.is_available() else "cpu"
+        )
         print("Device: %s" % self.device)
-        model_weights = os.path.join(midas_root, 'weights', model + '.pt')
+        model_weights = os.path.join(midas_root, "weights", model + ".pt")
         if not os.path.exists(model_weights):
-            raise FileNotFoundError('{} weights not found at {}'.format(model, model_weights))
+            raise FileNotFoundError(
+                "{} weights not found at {}".format(model, model_weights)
+            )
 
         # load the model
         self.model, self.transform, net_w, net_h = load_model(
-            self.device, model_weights, self.model_name, optimize, height, square)
+            self.device, model_weights, self.model_name, optimize, height, square
+        )
         self.input_size = (net_w, net_h)
 
     def preprocessing(self, image):
@@ -65,7 +77,7 @@ class MidasDepthEstimator(_PerceptionAlgorithm):
             .cpu()
             .numpy()
         )
-        return prediction 
+        return prediction
 
     def _execute(self, data, identifier, **kwargs):
         # make sure image is RGB
@@ -75,17 +87,17 @@ class MidasDepthEstimator(_PerceptionAlgorithm):
         # compute
         with torch.no_grad():
             prediction = self.process(image, original_image_rgb.shape[1::-1])
-        
+
         # store output
         img_out = DepthImageData(
             timestamp=data.timestamp,
             frame=data.frame,
             data=prediction,
-            encoding='midas',
+            encoding="midas",
             calibration=data.calibration,
             source_ID=-1,
             source_name=identifier,
         )
         return img_out
-    
+
     # utils.write_pfm(filename + ".pfm", prediction.astype(np.float32))

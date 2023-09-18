@@ -17,7 +17,7 @@ from .detections import BoxDetection, MaskDetection
 car_classes = ["car", "Car", "vehicle"]
 ped_classes = ["pedestrian", "walker", "person", "Pedestrian", "rider"]
 bic_classes = ["bicycle", "cyclist", "Cyclist", "cycler"]
-ignore_classes = ["traffic_cone", "barrier", "trailer"]
+ignore_classes = ["traffic_cone", "barrier", "trailer", "train"]
 
 k_classes = [
     ("Car", car_classes + ["bus", "truck"]),

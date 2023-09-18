@@ -260,9 +260,13 @@ class DepthImageData(SensorData):
                 bits = 1
                 depth_min = self.data.min()
                 depth_max = self.data.max()
-                max_val = (2**(8*bits))-1
-                self.depth_in_meters = max_val * (self.data - depth_min) / (depth_max - depth_min)
-                self.depth_in_meters = self.depth_in_meters.astype("uint8" if bits == 1 else "uint16")
+                max_val = (2 ** (8 * bits)) - 1
+                self.depth_in_meters = (
+                    max_val * (self.data - depth_min) / (depth_max - depth_min)
+                )
+                self.depth_in_meters = self.depth_in_meters.astype(
+                    "uint8" if bits == 1 else "uint16"
+                )
             else:
                 raise NotImplementedError
         return self.depth_in_meters
@@ -274,7 +278,7 @@ class DepthImageData(SensorData):
         """View image using matplotlib"""
         pil_im = Image.fromarray(self.depths)
         plt.figure(figsize=[2 * x for x in plt.rcParams["figure.figsize"]])
-        plt.imshow(pil_im, extent=extent, cmap='gray')
+        plt.imshow(pil_im, extent=extent, cmap="gray")
         if not axis:
             plt.axis("off")
         plt.show()
