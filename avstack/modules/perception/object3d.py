@@ -154,33 +154,6 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         return result_
 
     @staticmethod
-    def parse_mm_object_classes(dataset):
-        dataset = dataset.lower()
-        if dataset.lower() == "kitti":
-            all_objs = ["Car", "Pedestrian", "Cyclist"]
-            whitelist = all_objs
-        elif dataset.lower() == "nuscenes":
-            all_objs = [
-                "car",
-                "truck",
-                "trailer",
-                "bus",
-                "construction_vehicle",
-                "bicycle",
-                "motorcycle",
-                "pedestrian",
-                "traffic_cone",
-                "barrier",
-            ]
-            whitelist = ["car", "truck", "bus", "bicycle", "motorcycle", "pedestrian"]
-        elif dataset.lower() in ["carla", "carla-infrastructure"]:
-            all_objs = ["car", "bicycle", "truck", "motorcycle"]
-            whitelist = all_objs
-        else:
-            raise NotImplementedError(dataset)
-        return all_objs, whitelist
-
-    @staticmethod
     def parse_mm_model(model, dataset, epoch):
         dataset = dataset.lower()
         epoch_str = "latest" if epoch == "latest" else "epoch_{}".format(epoch)
@@ -198,7 +171,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         elif model == "pointpillars":
             if dataset == "kitti":
                 threshold = 0.5
-                config_file = "configs/pointpillars/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class.py"
+                config_file = "configs/pointpillars/pointpillars_hv_secfpn_8xb6-160e_kitti-3d-3class.py"
                 checkpoint_file = "checkpoints/kitti/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class_20220301_150306-37dc2420.pth"
             elif dataset == "nuscenes":
                 threshold = 0.4

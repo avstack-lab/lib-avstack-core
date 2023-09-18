@@ -102,6 +102,152 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         self.mod_path = mod_path
         self.chk_path = chk_path
 
+    @staticmethod
+    def parse_mm_object_classes(dataset):
+        if dataset == "kitti":
+            all_objs = ["Car", "Pedestrian", "Cyclist"]
+            whitelist = all_objs
+        elif dataset == "nuscenes":
+            all_objs = [
+                "person",
+                "rider",
+                "car",
+                "truck",
+                "bus",
+                "train",
+                "motorcycle",
+                "bicycle",
+            ]
+            whitelist = all_objs
+        elif dataset == "nuimages":
+            all_objs = (
+                "car",
+                "truck",
+                "trailer",
+                "bus",
+                "construction_vehicle",
+                "bicycle",
+                "motorcycle",
+                "pedestrian",
+                "traffic_cone",
+                "barrier",
+            )
+            whitelist = (
+                "car",
+                "truck",
+                "trailer",
+                "bus",
+                "construction_vehicle",
+                "bicycle",
+                "motorcycle",
+                "pedestrian",
+            )
+        elif dataset in ["carla", "carla-infrastructure"]:
+            all_objs = ["car", "bicycle", "truck", "motorcycle"]
+            whitelist = all_objs
+        elif dataset == "cityscapes":
+            all_objs = [
+                "person",
+                "rider",
+                "car",
+                "truck",
+                "bus",
+                "train",
+                "motorcycle",
+                "bicycle",
+            ]
+            whitelist = all_objs
+        elif dataset == "coco-person":
+            all_objs = ["person"]
+            whitelist = all_objs
+        elif dataset == "coco":
+            all_objs = [
+                "person",
+                "bicycle",
+                "car",
+                "motorcycle",
+                "airplane",
+                "bus",
+                "train",
+                "truck",
+                "boat",
+                "traffic light",
+                "fire hydrant",
+                "stop sign",
+                "parking meter",
+                "bench",
+                "bird",
+                "cat",
+                "dog",
+                "horse",
+                "sheep",
+                "cow",
+                "elephant",
+                "bear",
+                "zebra",
+                "giraffe",
+                "backpack",
+                "umbrella",
+                "handbag",
+                "tie",
+                "suitcase",
+                "frisbee",
+                "skis",
+                "snowboard",
+                "sports ball",
+                "kite",
+                "baseball bat",
+                "baseball glove",
+                "skateboard",
+                "surfboard",
+                "tennis racket",
+                "bottle",
+                "wine glass",
+                "cup",
+                "fork",
+                "knife",
+                "spoon",
+                "bowl",
+                "banana",
+                "apple",
+                "sandwich",
+                "orange",
+                "broccoli",
+                "carrot",
+                "hot dog",
+                "pizza",
+                "donut",
+                "cake",
+                "chair",
+                "couch",
+                "potted plant",
+                "bed",
+                "dining table",
+                "toilet",
+                "tv",
+                "laptop",
+                "mouse",
+                "remote",
+                "keyboard",
+                "cell phone",
+                "microwave",
+                "oven",
+                "toaster",
+                "sink",
+                "refrigerator",
+                "book",
+                "clock",
+                "vase",
+                "scissors",
+                "teddy bear",
+                "hair drier",
+                "toothbrush",
+            ]
+            whitelist = ["person", "bicycle", "car"]
+        else:
+            raise NotImplementedError(dataset)
+        return all_objs, whitelist
+
 
 def map_checkpoint_to_latest(mm_root, checkpoint_file):
     if os.path.exists(os.path.dirname(os.path.join(mm_root, checkpoint_file))):

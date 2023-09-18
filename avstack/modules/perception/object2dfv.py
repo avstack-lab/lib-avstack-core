@@ -100,12 +100,17 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         **kwargs,
     ):
         super().__init__(model, dataset, gpu, epoch, threshold, **kwargs)
-        from mmdet.apis import inference_detector, init_detector
+        self.gpu = gpu
+        
         from mmdet.utils import register_all_modules
-
         register_all_modules(init_default_scope=True)
+
+        self.initialize()
+
+    def initialize(self):
+        from mmdet.apis import inference_detector, init_detector
         self.inference_detector = inference_detector
-        self.model = init_detector(self.mod_path, self.chk_path, device=f"cuda:{gpu}")
+        self.model = init_detector(self.mod_path, self.chk_path, device=f"cuda:{self.gpu}")
 
     def _execute(self, data, identifier, is_rgb=True, eval_method="data", **kwargs):
         from mmdet.utils import register_all_modules
@@ -159,152 +164,6 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         else:
             raise NotImplementedError(eval_method)
         return result_
-
-    @staticmethod
-    def parse_mm_object_classes(dataset):
-        if dataset == "kitti":
-            all_objs = ["Car", "Pedestrian", "Cyclist"]
-            whitelist = all_objs
-        elif dataset == "nuscenes":
-            all_objs = [
-                "person",
-                "rider",
-                "car",
-                "truck",
-                "bus",
-                "train",
-                "motorcycle",
-                "bicycle",
-            ]
-            whitelist = all_objs
-        elif dataset == "nuimages":
-            all_objs = (
-                "car",
-                "truck",
-                "trailer",
-                "bus",
-                "construction_vehicle",
-                "bicycle",
-                "motorcycle",
-                "pedestrian",
-                "traffic_cone",
-                "barrier",
-            )
-            whitelist = (
-                "car",
-                "truck",
-                "trailer",
-                "bus",
-                "construction_vehicle",
-                "bicycle",
-                "motorcycle",
-                "pedestrian",
-            )
-        elif dataset in ["carla", "carla-infrastructure"]:
-            all_objs = ["car", "bicycle", "truck", "motorcycle"]
-            whitelist = all_objs
-        elif dataset == "cityscapes":
-            all_objs = [
-                "person",
-                "rider",
-                "car",
-                "truck",
-                "bus",
-                "train",
-                "motorcycle",
-                "bicycle",
-            ]
-            whitelist = all_objs
-        elif dataset == "coco-person":
-            all_objs = ["person"]
-            whitelist = all_objs
-        elif dataset == "coco":
-            all_objs = [
-                "person",
-                "bicycle",
-                "car",
-                "motorcycle",
-                "airplane",
-                "bus",
-                "train",
-                "truck",
-                "boat",
-                "traffic light",
-                "fire hydrant",
-                "stop sign",
-                "parking meter",
-                "bench",
-                "bird",
-                "cat",
-                "dog",
-                "horse",
-                "sheep",
-                "cow",
-                "elephant",
-                "bear",
-                "zebra",
-                "giraffe",
-                "backpack",
-                "umbrella",
-                "handbag",
-                "tie",
-                "suitcase",
-                "frisbee",
-                "skis",
-                "snowboard",
-                "sports ball",
-                "kite",
-                "baseball bat",
-                "baseball glove",
-                "skateboard",
-                "surfboard",
-                "tennis racket",
-                "bottle",
-                "wine glass",
-                "cup",
-                "fork",
-                "knife",
-                "spoon",
-                "bowl",
-                "banana",
-                "apple",
-                "sandwich",
-                "orange",
-                "broccoli",
-                "carrot",
-                "hot dog",
-                "pizza",
-                "donut",
-                "cake",
-                "chair",
-                "couch",
-                "potted plant",
-                "bed",
-                "dining table",
-                "toilet",
-                "tv",
-                "laptop",
-                "mouse",
-                "remote",
-                "keyboard",
-                "cell phone",
-                "microwave",
-                "oven",
-                "toaster",
-                "sink",
-                "refrigerator",
-                "book",
-                "clock",
-                "vase",
-                "scissors",
-                "teddy bear",
-                "hair drier",
-                "toothbrush",
-            ]
-            whitelist = ["person", "bicycle", "car"]
-        else:
-            raise NotImplementedError(dataset)
-        return all_objs, whitelist
 
     @staticmethod
     def parse_mm_model(model, dataset, epoch):
@@ -373,21 +232,6 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 threshold = 0.7
                 config_file = "configs/nuimages/htc_x101_64x4d_fpn_dconv_c3-c5_coco-20e-1xb16_nuim.py"
                 checkpoint_file = "checkpoints/nuimages/htc_x101_64x4d_fpn_dconv_c3-c5_coco-20e_16x1_20e_nuim_20201008_211222-0b16ac4b.pth"
-            else:
-                raise NotImplementedError(f"{model}, {dataset} not compatible yet")
-        elif model == "cascade-mask-rcnn":
-            if dataset in [
-                "nuimages",
-                "carla",
-                "kitti",
-                "nuscenes",
-            ]:  # TODO eventually separate these
-                threshold = 0.7
-                config_file = (
-                    "configs/nuimages/cascade-mask-rcnn_r50_fpn_coco-20e-1x_nuim.py"
-                )
-                checkpoint_file = "checkpoints/nuimages/cascade_mask_rcnn_r50_fpn_coco-20e_1x_nuim_20201009_124158-ad0540e3.pth"
-                label_dataset_override = "nuimages"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         else:
