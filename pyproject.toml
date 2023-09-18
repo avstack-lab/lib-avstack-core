@@ -16,22 +16,23 @@ packages = [{include = "avstack"}]
 include = ["CHANGELOG.md"]
 
 [tool.poetry.dependencies]
-python = "~3.9"
+python = "~3.10"
 numpy = ">=1.20, <1.24"
 filterpy = "^1"
 scipy = "^1.9"
 cython = "^0.29"
 numpy-quaternion = "^2022.4"
-numba = "~0.53.0"
+numba = "~0.57.1"
 seaborn = "~0.12.2"
 albumentations = "~1.3.1"
 Pillow = "^9"
 opencv-python = ">=4.3, <4.7"
 tqdm = "^4"
 scikit-learn = "^1.1"
-torch = { url = "https://download.pytorch.org/whl/cu113/torch-1.10.0%2Bcu113-cp39-cp39-linux_x86_64.whl" }
-torchvision = { url = "https://download.pytorch.org/whl/cu113/torchvision-0.11.0%2Bcu113-cp39-cp39-linux_x86_64.whl" }
-mmcv = { url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/mmcv-2.0.0-cp39-cp39-manylinux1_x86_64.whl" }
+torch = { url = "https://download.pytorch.org/whl/cu117/torch-1.13.1%2Bcu117-cp310-cp310-linux_x86_64.whl" }
+torchvision = { url = "https://download.pytorch.org/whl/cu117/torchvision-0.14.1%2Bcu117-cp310-cp310-linux_x86_64.whl" }
+mmcv = { url = "https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmcv/torch1.13.1_cu11.7/mmcv-2.0.1-cp310-cp310-linux_x86_64.whl" }
+#mmcv = { url = "https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/mmcv-2.0.0-cp39-cp39-manylinux1_x86_64.whl" }
 mmengine = "^0.7.3"
 mmsegmentation = { path = "./third_party/mmsegmentation", develop = true }
 mmdet = { path = "./third_party/mmdetection/", develop = true }
