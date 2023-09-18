@@ -297,20 +297,32 @@ class ObjectState:
         # transforms
         if self.position is not None:
             position = self.position.change_reference(reference, inplace=inplace)
+        else:
+            position = None
         if self.velocity is not None:
             velocity = self.velocity.change_reference(reference, inplace=inplace)
+        else:
+            velocity = None
         if self.acceleration is not None:
             acceleration = self.acceleration.change_reference(
                 reference, inplace=inplace
             )
+        else:
+            acceleration = None
         if self.box is not None:
             box = self.box.change_reference(reference, inplace=inplace)
+        else:
+            box = None
         if self.attitude is not None:
             attitude = self.attitude.change_reference(reference, inplace=inplace)
+        else:
+            attitude = None
         if self.angular_velocity is not None:
             angular_velocity = self.angular_velocity.change_reference(
                 reference, inplace=inplace
             )
+        else:
+            angular_velocity = None
 
         if not inplace:
             obj_out = ObjectState(self.obj_type, self.ID)

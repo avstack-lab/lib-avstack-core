@@ -15,7 +15,7 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
-from avstack.geometry import ReferenceFrame
+from avstack.geometry import Box2D, Box3D, ReferenceFrame
 from avstack.modules.perception.detections import (
     BoxDetection,
     RazDetection,
@@ -112,6 +112,8 @@ class _TrackingAlgorithm:
             # -- pull off detection state
             if isinstance(det_, (VehicleState, BoxDetection)):
                 det = det_.box
+            elif isinstance(det_, (Box3D, Box2D)):
+                det = det_
             elif isinstance(det_, RazelRrtDetection):
                 det = det_.xyzrrt  # use the cartesian coordinates for gating
             elif isinstance(det_, RazelDetection):
@@ -123,7 +125,7 @@ class _TrackingAlgorithm:
 
             for j, trk in enumerate(tracks):
                 # -- pull off track state
-                if isinstance(det_, (VehicleState, BoxDetection)):
+                if isinstance(det_, (VehicleState, BoxDetection, Box3D, Box2D)):
                     try:
                         trk = trk.as_object().box
                     except AttributeError:
@@ -150,7 +152,7 @@ class _TrackingAlgorithm:
 
                 # -- gating
                 if self.assign_radius is not None:
-                    if isinstance(det_, (VehicleState, BoxDetection)):
+                    if isinstance(det_, (VehicleState, BoxDetection, Box3D)):
                         dist = det.t.distance(
                             trk.t, check_reference=self.check_reference
                         )
@@ -180,6 +182,7 @@ class _TrackingAlgorithm:
         frame: int,
         detections,
         platform: ReferenceFrame,
+        change_in_place=False,
         *args,
         **kwargs,
     ):
@@ -201,7 +204,13 @@ class _TrackingAlgorithm:
                 detections = {"sensor_1": detections}
             for sensor, dets in detections.items():
                 # -- change to platform reference
-                dets = [det.change_reference(platform, inplace=False) for det in dets]
+                if not change_in_place:
+                    dets = [
+                        det.change_reference(platform, inplace=False) for det in dets
+                    ]
+                else:
+                    for det in dets:
+                        det.change_reference(platform, inplace=True)
 
                 # -- assignment with active tracks
                 trks_active = self.tracks_active

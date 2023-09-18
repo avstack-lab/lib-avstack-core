@@ -52,7 +52,9 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
 
         self.ID_registry = {}
 
-    def fuse(self, tracks3d_1, tracks3d_2, IoU_thresh=0.2, *args, **kwargs):
+    def fuse(
+        self, tracks3d_1, tracks3d_2, keep_lones=False, IoU_thresh=0.2, *args, **kwargs
+    ):
         """
         Get association metrics...assign...fuse
 
@@ -84,11 +86,7 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
                 t1 = tracks3d_1[row]
                 t2 = tracks3d_2[col]
                 if not t1.reference == t2.reference:
-                    raise RuntimeError("Origins must be the same before this!")
-                if not (t1.box3d.where_is_t == t2.box3d.where_is_t):
-                    raise RuntimeError(
-                        "Check the process of handling different box center origins first"
-                    )
+                    t2.change_reference(t1.reference, inplace=True)
                 x_f, P_f = ci_fusion(t1.x, t1.P, t2.x, t2.P)
                 x, y, z, h, w, l, vx, vy, vz = x_f
                 v_f = [vx, vy, vz]
@@ -108,6 +106,13 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
                 )
                 self.ID_registry[t1.ID][t2.ID] = fused.ID
                 tracks3d_fused.append(fused)
+
+            # keep loners
+            if keep_lones:
+                for idx_row in assign_sol.unassigned_rows:
+                    tracks3d_fused.append(tracks3d_1[idx_row])
+                for idx_col in assign_sol.unassigned_cols:
+                    tracks3d_fused.append(tracks3d_2[idx_col])
         else:
             raise NotImplementedError(self.algorithm)
 

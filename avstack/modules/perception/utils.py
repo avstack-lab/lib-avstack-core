@@ -64,6 +64,7 @@ class_maps = {
     "nuscenes": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "nuimages": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "carla": {k: ks[0] for ks in carla_clases for k in ks[1]},
+    "carla-infrastructure": {k: ks[0] for ks in carla_clases for k in ks[1]},
     "coco-person": {k: ks[0] for ks in coco_person_classes for k in ks[1]},
     "coco": {k: ks[0] for ks in coco_classes for k in ks[1]},
 }
@@ -223,8 +224,8 @@ def convert_mm3d_to_avstack(
                         yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
-                        x_O_2_obj_in_O[2] += 1.8
-                        where_is_t = "bottom"
+                        x_O_2_obj_in_O[2] += h
+                        where_is_t = "center"
                         reference = calib.reference
                     else:
                         raise NotImplementedError(dataset)

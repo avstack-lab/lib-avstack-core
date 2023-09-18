@@ -686,6 +686,9 @@ class DataContainer:
     def __iter__(self):
         return iter(self.data)
 
+    def __setitem__(self, index, value):
+        self.data[index] = value
+
     def __getitem__(self, index):
         return self.data[index]
 

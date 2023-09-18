@@ -20,6 +20,7 @@ from avstack.geometry.transformations import (
     transform_orientation,
     xyzvel_to_razelrrt,
 )
+from avstack.modules.perception.detections import BoxDetection
 
 
 zero3 = np.zeros((3, 3))
@@ -741,6 +742,15 @@ class BasicBoxTrack3D(_TrackBase):
             angular_velocity=None,
         )
         return vs
+
+    def as_box_detection(self):
+        return BoxDetection(
+            source_identifier="tracker",
+            box=self.box3d,
+            reference=self.reference,
+            obj_type=self.obj_type,
+            score=1.0,
+        )
 
     def change_reference(self, reference, inplace: bool):
         if inplace:
