@@ -1,8 +1,9 @@
+import os
 import cProfile
 from .other import IterationMonitor
 
 
-def profileit(name):
+def profileit(name, folder=''):
     """A decorator to profile a function
 
     Use it as:
@@ -12,6 +13,16 @@ def profileit(name):
     ...
 
     """
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    name = os.path.join(folder, name)
+    # if os.path.exists(name):
+    #     if '.' in name:
+    #         name_parts = name.split('.')
+    #         name_parts[-2] = name_parts[-2] + '_1'
+    #         name = '.'.join(name_parts)
+    #     else:
+    #         name = name + '_1'
     def inner(func):
         def wrapper(*args, **kwargs):
             prof = cProfile.Profile()
