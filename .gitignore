@@ -1,3 +1,10 @@
+
+deployment/*
+!deployment/convert_to_torchserve.sh
+!deployment/start_torchserve.sh
+!deployment/model_config.yaml
+!deployment/config.properties
+
 .install.stamp
 
 models/mmdet

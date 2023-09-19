@@ -38,7 +38,12 @@ mmsegmentation = { path = "./third_party/mmsegmentation", develop = true }
 mmdet = { path = "./third_party/mmdetection/", develop = true }
 mmdet3d = { path = "./third_party/mmdetection3d/", develop = true }
 midas = {path = "./third_party/MiDaS/", develop=true }
-# lanenet = { path = "./third_party/lanenet/", develop = true }
+
+[tool.poetry.group.serve.dependencies]
+torchserve = "~0.8.2"
+torch-model-archiver = "~0.8.2"
+torch-workflow-archiver = "~0.2.10"
+nvgpu = "~0.10.0"
 
 [tool.poetry.group.docs.dependencies]
 mkdocstrings-python = "^0.8.3"

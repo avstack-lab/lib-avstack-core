@@ -1,0 +1,19 @@
+# TS frontend parameters
+# See all supported parameters: https://github.com/pytorch/serve/blob/master/frontend/archive/src/main/java/org/pytorch/serve/archive/model/ModelConfig.java#L14 
+minWorkers: 1 # default: #CPU or #GPU
+maxWorkers: 1 # default: #CPU or #GPU
+batchSize: 1 # default: 1
+maxBatchDelay: 100 # default: 100 msec
+responseTimeout: 120 # default: 120 sec
+deviceType: gpu # cpu, gpu, neuron
+deviceIds: [0,1] # gpu device ids allocated to this model. 
+parallelType: pp # pp: pipeline parallel; pptp: tensor+pipeline parallel. Default: empty
+
+# See torchrun parameters: https://pytorch.org/docs/stable/elastic/run.html
+torchrun:
+  nproc_per_node: 2
+
+# TS backend parameters
+pippy:
+  rpc_timeout: 1800
+  pp_group_size: 4 # pipeline parallel size, tp_group_size = world size / pp_group_size
