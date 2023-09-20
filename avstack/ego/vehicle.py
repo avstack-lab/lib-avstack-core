@@ -421,7 +421,7 @@ class LidarCameraPerceptionAndTrackingVehicle(VehicleEgoStack):
     def _tick_modules(self, frame, timestamp, data_manager, *args, **kwargs):
         try:
             img = data_manager.pop("image-0")
-        except KeyError as e:
+        except KeyError:
             img = data_manager.pop("image-2")
         dets_2d = self.perception["object_2d"](
             img, frame=frame, identifier="camera_objects_2d"

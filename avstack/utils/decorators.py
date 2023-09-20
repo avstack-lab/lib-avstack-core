@@ -25,6 +25,7 @@ def profileit(name, folder=""):
     #     else:
     #         name = name + '_1'
     def inner(func):
+        """Decorator wrapper that takes func as input"""
         def wrapper(*args, **kwargs):
             prof = cProfile.Profile()
             retval = prof.runcall(func, *args, **kwargs)
