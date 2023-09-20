@@ -9,7 +9,7 @@ Pioneers of autonomous vehicles (AVs) promised to revolutionize the driving expe
 
 ## Installation
 
-**NOTE:** This currently only works on a Linux distribution (tested on Ubuntu 20.04). It also only works with Python 3.8 (to be expanded in the future).
+**NOTE:** This currently only works on a Linux distribution (tested on Ubuntu 22.04). It also only works with Python 3.10 (to be expanded in the future).
 
 First, clone the repositry and submodules. If you are not running perception, then you may not have to recurse the submodules.
 ```
