@@ -1,9 +1,11 @@
 
 deployment/*
-!deployment/convert_to_torchserve.sh
-!deployment/start_torchserve.sh
-!deployment/model_config.yaml
-!deployment/config.properties
+!deployment/torchserve/convert_to_torchserve.sh
+!deployment/torchserve/start_torchserve.sh
+!deployment/torchserve/model_config.yaml
+!deployment/torchserve/config.properties
+!deployment/mmdeploy/convert_to_mmdeploy.sh
+
 
 .install.stamp
 

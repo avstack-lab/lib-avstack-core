@@ -16,3 +16,6 @@
 [submodule "third_party/MiDaS"]
 	path = third_party/MiDaS
 	url = https://github.com/avstack-lab/MiDaS.git
+[submodule "third_party/mmdeploy"]
+	path = third_party/mmdeploy
+	url = https://github.com/avstack-lab/mmdeploy.git
