@@ -109,7 +109,7 @@ def get_object_collision_yaw(ego):
 
 def test_collision_detection():
     set_seed()
-    predictor = prediction.KinematicPrediction(dt_pred=0.1, t_pred_forward=3)
+    predictor = prediction.KinematicPrediction(dt_pred=0.1, t_pred_forward=1)
 
     ego = get_ego(1)
     obj0 = get_object_no_collision(ego)

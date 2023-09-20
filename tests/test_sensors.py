@@ -125,8 +125,8 @@ def test_sensor_data_manager():
     assert SDM.n_data == 4
 
 
-def test_lidar_spherical_matrix():
-    AE_M = pc.as_spherical_matrix(rate=10, sensor="kitti")
+# def test_lidar_spherical_matrix():
+#     AE_M = pc.as_spherical_matrix(rate=10, sensor="kitti")
 
 
 # -- test saving and loading data

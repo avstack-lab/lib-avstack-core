@@ -4,7 +4,7 @@ import os
 from .other import IterationMonitor
 
 
-def profileit(name, folder=""):
+def profileit(name, folder="./"):
     """A decorator to profile a function
 
     Use it as:
@@ -26,6 +26,7 @@ def profileit(name, folder=""):
     #         name = name + '_1'
     def inner(func):
         """Decorator wrapper that takes func as input"""
+
         def wrapper(*args, **kwargs):
             prof = cProfile.Profile()
             retval = prof.runcall(func, *args, **kwargs)

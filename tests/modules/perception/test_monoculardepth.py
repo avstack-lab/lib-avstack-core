@@ -23,6 +23,14 @@ from utilities import get_test_sensor_data
 
 
 def test_midas_inference():
-    model = MidasDepthEstimator(mdoel="dpt_beit_base_384")
-    depth_out = model(img)
-    assert isinstance(depth_out, DepthImageData)
+    dataset = None
+    model = "dpt_beit_base_384"
+    try:
+        depthestim = MidasDepthEstimator(model=model)
+    except ModuleNotFoundError:
+        print("Cannot run mmdet test without the module")
+    except FileNotFoundError:
+        print(f"Cannot find ({model}, {dataset}) model file for mmdet3d test")
+    else:
+        depth_out = depthestim(img)
+        assert isinstance(depth_out, DepthImageData)
