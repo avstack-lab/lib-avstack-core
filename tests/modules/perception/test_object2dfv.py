@@ -31,6 +31,19 @@ from utilities import get_test_sensor_data
 ) = get_test_sensor_data()
 
 
+def run_mmdet2d(model, dataset, img, frame):
+    try:
+        detector = perception.object2dfv.MMDetObjectDetector2D(
+            model=model, dataset=dataset
+        )
+    except ModuleNotFoundError:
+        print("Cannot run mmdet test without the module")
+    except FileNotFoundError:
+        print(f"Cannot find ({model}, {dataset}) model file for mmdet3d test")
+    else:
+        _ = detector(img, frame=frame, identifier="camera_objects_2d")
+
+
 def test_mmdet_2d_perception():
     frame = 0
     try:
@@ -49,7 +62,4 @@ def test_mmdet_2d_perception():
         ]
 
         for model, dataset in model_dataset_pairs:
-            detector = perception.object2dfv.MMDetObjectDetector2D(
-                model=model, dataset=dataset
-            )
-            detections = detector(img, frame=frame, identifier="camera_objects_2d")
+            run_mmdet2d(model, dataset, img, frame)

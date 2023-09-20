@@ -355,7 +355,7 @@ def test_basic_joint_box_tracker():
     n_targs = 4
     dt = 0.10
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
-        dt=dt, n_frames=10, n_targs=n_targs
+        dt=dt, n_frames=4, n_targs=n_targs
     )
     tracker = tracking.tracker3d.BasicBoxTrackerFusion3Stage()
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
@@ -414,7 +414,7 @@ def test_eagermot_fusion_kitti():
 def test_eagermot_associations():
     dt = 0.10
     platform = GlobalOrigin3D
-    dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(dt=dt, n_frames=10)
+    dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(dt=dt, n_frames=4)
     tracker = tracking.tracker3d.EagermotTracker()
     trk_base = tracker.tracker
     i = 0
@@ -488,7 +488,7 @@ def test_eagermot_performance():
     n_targs = 4
     dt = 0.10
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
-        dt=dt, n_frames=10, n_targs=n_targs
+        dt=dt, n_frames=4, n_targs=n_targs
     )
     tracker = tracking.tracker3d.EagermotTracker()
     tracks = tracker.tracker

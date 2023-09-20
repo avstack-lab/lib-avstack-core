@@ -12,7 +12,7 @@ def check_xor(a, b):
 
 
 class IterationMonitor:
-    def __init__(self, print_method="real_time", print_rate=1/2) -> None:
+    def __init__(self, print_method="real_time", print_rate=1 / 2) -> None:
         self.iteration = 0
         self.print_method = print_method
         self.t0 = time.time()
