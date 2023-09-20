@@ -1,17 +1,15 @@
-
-deployment/*
-!deployment/torchserve/convert_to_torchserve.sh
-!deployment/torchserve/start_torchserve.sh
-!deployment/torchserve/model_config.yaml
-!deployment/torchserve/config.properties
-!deployment/mmdeploy/convert_to_mmdeploy.sh
-
-
 .install.stamp
+
+deployment/TensorRT-*
+deployment/mmdeploy/mmdeploy_models/*
+
 
 models/mmdet
 models/mmdet3d
 *.pth
+*.mar
+*.engine
+*.onnx
 .coverage
 __pycache__/
 *.ipynb_checkpoints
