@@ -183,7 +183,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/rtmdet/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
-        elif model == "fasterrcnn":
+        elif model in ["fasterrcnn", "faster_rcnn"]:
             if dataset == "kitti":
                 threshold = 0.5
                 config_file = "configs/cityscapes/faster-rcnn_r50_fpn_1x_cityscapes.py"
@@ -220,7 +220,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/coco-person/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
-        elif model == "cascadercnn":
+        elif model in ["cascadercnn", "cascade_rcnn"]:
             if dataset == "carla":
                 threshold = 0.5
                 config_file = "work_dirs/carla/cascade-rcnn_r50_fpn_1x_carla_vehicle.py"
@@ -235,6 +235,10 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 checkpoint_file = (
                     f"work_dirs/carla/cascade-rcnn_r50_fpn_1x_carla_infrastructure.pth"
                 )
+            elif dataset == "coco":
+                threshold = 0.5
+                config_file = "configs/cascade_rcnn/cascade-rcnn_r50_fpn_1x_coco.py"
+                checkpoint_file = "checkpoints/coco/cascade_rcnn_r50_fpn_1x_coco_20200316-3dc56deb.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         elif model == "htc":

@@ -1,6 +1,7 @@
 .install.stamp
 
 deployment/TensorRT-*
+deployment/cudnn-*
 deployment/mmdeploy/mmdeploy_models/*
 
 

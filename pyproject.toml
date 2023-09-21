@@ -46,8 +46,7 @@ nvgpu = "~0.10.0"
 mmdeploy-runtime-gpu = "^1.2.0"
 mmdeploy = "^1.2.0"
 onnxruntime-gpu = "~1.15.1"
-tensorrt = "~8.5.3.1"  # NOTE: to appropriately use, we need to download the tar package manually
-# pycuda = "~2022.2.2"
+tensorrt = "~8.5.3.1"  # NOTE: to appropriately use, we need to download the same version tar package manually
 
 [tool.poetry.group.docs.dependencies]
 mkdocstrings-python = "^0.8.3"
