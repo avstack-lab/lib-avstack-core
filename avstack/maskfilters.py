@@ -110,7 +110,7 @@ def filter_boxes_extent(boxes, extent):
 
     extent is usually defined in the lidar frame of reference
     """
-    box_centers = np.asarray([b.t.vector for b in boxes])
+    box_centers = np.reshape(np.asarray([b.position.x for b in boxes]), (-1, 3))
     box_filter = _get_extents_filter(box_centers, extent)
     return box_filter
 
