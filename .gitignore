@@ -1,7 +1,7 @@
 .install.stamp
 
-deployment/TensorRT-*
-deployment/cudnn-*
+deployment/libraries/*
+!deployment/libraries/.gitkeep 
 deployment/mmdeploy/mmdeploy_models/*
 
 

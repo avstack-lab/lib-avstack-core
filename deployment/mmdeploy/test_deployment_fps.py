@@ -52,9 +52,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default="coco", type=str, help="Name of the dataset to use")
     parser.add_argument('--model', default="cascade_rcnn", type=str, help="Name of the model to use")
+    parser.add_argument('--runtime', default='tensorrt', type=str, help="NN runtime to use for deploy")
     args = parser.parse_args()
     
-    mmdep_model_path = os.path.join('mmdeploy_models', f'{args.model}_{args.dataset}')
+    mmdep_model_path = os.path.join('mmdeploy_models', f'{args.model}_{args.dataset}_{args.runtime}')
+    if not os.path.exists(mmdep_model_path):
+        raise FileNotFoundError("Cannot find model for mmdeploy")
 
     MMDET_BASE = "../../third_party/mmdetection"
     img = cv2.imread(os.path.join(MMDET_BASE, "demo", "demo.jpg"))

@@ -56,12 +56,19 @@ and observe the output.
 We use `mmdeploy` to handle model serving. We have included some of the setup in the poetry file, but there is still some degree of manual process that needs to happen on the user's end. We outline an example of how to serve a model here.
 
 
-#### Setting up TensorRT (optional)
+#### Setting up ONNX Runtime
+
+1. Ensure that you have the poetry plugin to read `.env` files installed. If you do not, run `poetry self add poetry-dotenv-plugin` to install it.
+1. In the `deployment/libraries` folder, run `wget https://github.com/microsoft/onnxruntime/releases/download/v1.15.1/onnxruntime-linux-x64-gpu-1.15.1.tgz`
+1. Untar the file with `tar -zxvf onnxruntime-linux-x64-gpu-1.15.1.tgz`
+
+
+#### Setting up TensorRT Runtime
 Optional if you're on an x86 architecture. Not optional if you're on an ARM platform.
 
 1. Ensure that you have the poetry plugin to read `.env` files installed. If you do not, run `poetry self add poetry-dotenv-plugin` to install it.
-1. Download the [TensorRT 8.5 GA Update 2 tar file][tensorrt]  and put in the `deployment/` folder. Untar it with e.g., `tar -xvf TensorRT-8.5.3.1*`.
-1. Download the [appropriate cudnn file][cudnn] (appropriate meaning it matches the TensorRT compatibility) and put it in the `deployment/` folder. Untar it with e.g., `tar -xvf cudnn-*`. 
+1. Download the [TensorRT 8.5 GA Update 2 tar file][tensorrt]  and put in the `deployment/libraries` folder. Untar it with e.g., `tar -xvf TensorRT-8.5.3.1*`.
+1. Download the [appropriate cudnn file][cudnn] (appropriate meaning it matches the TensorRT compatibility) and put it in the `deployment/libraries` folder. Untar it with e.g., `tar -xvf cudnn-*`. 
 1. Download the [appropriate cuda version][cuda] (check the [compatibility matrix][tensorrt_compat]). Not sure yet, but you most likely want to match this to the version of cuda used by `avstack` and `mmdetection`. See the [`pyproject.toml`][toml] file for details.
 
 
