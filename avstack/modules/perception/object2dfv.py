@@ -93,7 +93,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         self,
         model="fasterrcnn",
         dataset="kitti",
-        deploy=True,
+        deploy=False,
         threshold=None,
         gpu=0,
         epoch="latest",
