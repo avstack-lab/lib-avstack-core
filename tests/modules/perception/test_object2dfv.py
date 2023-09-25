@@ -43,6 +43,8 @@ def run_mmdet2d(model, dataset, img, frame, deploy, deploy_runtime=None):
         print("Cannot run mmdet test without the module")
     except FileNotFoundError as e:
         LOGGER.warning(e)
+    except ImportError as e:
+        LOGGER.warning(e)
     else:
         dets = detector(img, frame=frame, identifier="camera_objects_2d")
         if dataset != "coco-person":
