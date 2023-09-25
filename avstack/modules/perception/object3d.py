@@ -69,27 +69,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         **kwargs,
     ):
         super().__init__(model, dataset, gpu, epoch, threshold, **kwargs)
-        from mmdet3d.utils import register_all_modules
-
-        register_all_modules(init_default_scope=False)
-
-        if self.input_data == "camera":
-            from mmdet3d.apis import inference_mono_3d_detector, init_model
-
-            self.inference_detector = inference_mono_3d_detector
-            self.inference_mode = "from_mono"
-        elif self.input_data == "lidar":
-            from mmdet3d.apis import inference_detector, init_model
-
-            self.inference_detector = inference_detector
-            self.inference_mode = "from_lidar"
-        else:
-            raise NotImplementedError(self.input_data)
         self.front_only = front_only
-
-        if model == "3dssd":
-            assert gpu == 0, "For some reason, 3dssd must be on gpu 0"
-        self.model = init_model(self.mod_path, self.chk_path, device=f"cuda:{gpu}")
 
     def _execute(self, data, identifier, eval_method="file", **kwargs):
         from mmdet3d.utils import register_all_modules

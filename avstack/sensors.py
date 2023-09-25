@@ -16,6 +16,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from torch import flip as tflip
 
 from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration, LidarCalibration
@@ -176,11 +177,23 @@ class ImageData(SensorData):
 
     @property
     def rgb_image(self):
-        return (
-            self.data
-            if self.calibration.channel_order == "rgb"
-            else self.data[:, :, ::-1]
-        )
+        if self.calibration.channel_order == "rgb":
+            return self.data
+        else:
+            if isinstance(self.data, np.ndarray):
+                return self.data[:, :, ::-1]
+            else:
+                return tflip(self.data, dims=(2,))
+            
+    @property
+    def bgr_image(self):
+        if self.calibration.channel_order == "bgr":
+            return self.data
+        else:
+            if isinstance(self.data, np.ndarray):
+                return self.data[:, :, ::-1]
+            else:
+                return tflip(self.data, dims=(2,))
 
     def view(self, axis=False, extent=None, objects=None, view="box2d"):
         pil_im = Image.fromarray(self.rgb_image)

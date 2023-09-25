@@ -114,7 +114,11 @@ class SortTracker2D(_TrackingAlgorithm):
         **kwargs,
     ):
         super().__init__(
-            assign_metric, assign_radius, save_output, save_folder, **kwargs
+            assign_metric=assign_metric,
+            assign_radius=assign_radius,
+            save_output=save_output,
+            save_folder=save_folder,
+            **kwargs
         )
         self.sort_algorithm = Sort()
 

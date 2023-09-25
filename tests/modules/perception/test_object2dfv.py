@@ -9,6 +9,7 @@
 """
 
 import sys
+import logging
 
 from avstack.modules import perception
 
@@ -16,6 +17,7 @@ from avstack.modules import perception
 sys.path.append("tests/")
 from utilities import get_test_sensor_data
 
+LOGGER = logging.getLogger(__name__)
 
 (
     obj,
@@ -31,20 +33,37 @@ from utilities import get_test_sensor_data
 ) = get_test_sensor_data()
 
 
-def run_mmdet2d(model, dataset, img, frame):
+def run_mmdet2d(model, dataset, img, frame, deploy, deploy_runtime=None):
     try:
         detector = perception.object2dfv.MMDetObjectDetector2D(
-            model=model, dataset=dataset
+            model=model, dataset=dataset, deploy=deploy, deploy_runtime=deploy_runtime
         )
     except ModuleNotFoundError:
         print("Cannot run mmdet test without the module")
-    except FileNotFoundError:
-        print(f"Cannot find ({model}, {dataset}) model file for mmdet3d test")
+    except FileNotFoundError as e:
+        LOGGER.warning(e)
     else:
-        _ = detector(img, frame=frame, identifier="camera_objects_2d")
+        dets = detector(img, frame=frame, identifier="camera_objects_2d")
+        assert len(dets) > 0
 
 
-def test_mmdet_2d_perception():
+def test_mmdet_2d_perception_from_deploy():
+    frame = 0
+    try:
+        pass
+    except ModuleNotFoundError as e:
+        print("Cannot run mmdet test without the module")
+    else:
+
+        model_dataset_pairs = [
+            ("cascade_rcnn", "coco", "tensorrt"),
+        ]
+
+        for model, dataset, runtime in model_dataset_pairs:
+            run_mmdet2d(model, dataset, img, frame, deploy=True, deploy_runtime=runtime)
+ 
+
+def test_mmdet_2d_perception_from_checkpoint():
     frame = 0
     try:
         pass
@@ -62,4 +81,4 @@ def test_mmdet_2d_perception():
         ]
 
         for model, dataset in model_dataset_pairs:
-            run_mmdet2d(model, dataset, img, frame)
+            run_mmdet2d(model, dataset, img, frame, deploy=False)
