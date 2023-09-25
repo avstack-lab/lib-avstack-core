@@ -56,4 +56,4 @@ jobs:
       #       poetry run flake8 ./avstack --count --max-line-length=127 --show-source --statistics
       - name: Run tests
         run: |
-            poetry run pytest
+            poetry run pytest tests
