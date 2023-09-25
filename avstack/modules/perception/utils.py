@@ -82,8 +82,8 @@ def convert_mm2d_to_avstack(
 ):
     if is_deploy:
         bboxes, labels, _ = result_
-        scores = bboxes[:,4]
-        bboxes = bboxes[:,:4]
+        scores = bboxes[:, 4]
+        bboxes = bboxes[:, :4]
         segms = None
     else:
         if isinstance(result_, tuple):

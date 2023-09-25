@@ -45,7 +45,10 @@ class _PerceptionAlgorithm:
 
 
 mmdep_model_root = os.path.join(
-    os.path.dirname(os.path.dirname(avstack.__file__)), "deployment", "mmdeploy", "mmdeploy_models"
+    os.path.dirname(os.path.dirname(avstack.__file__)),
+    "deployment",
+    "mmdeploy",
+    "mmdeploy_models",
 )
 mm2d_root = os.path.join(
     os.path.dirname(os.path.dirname(avstack.__file__)), "third_party", "mmdetection"
@@ -56,7 +59,17 @@ mm3d_root = os.path.join(
 
 
 class _MMObjectDetector(_PerceptionAlgorithm):
-    def __init__(self, model, dataset, deploy, gpu=0, epoch="latest", threshold=None, deploy_runtime="tensorrt", **kwargs):
+    def __init__(
+        self,
+        model,
+        dataset,
+        deploy,
+        gpu=0,
+        epoch="latest",
+        threshold=None,
+        deploy_runtime="tensorrt",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.dataset = dataset.lower()
         self.model_name = model
@@ -83,18 +96,24 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         # Load the model/paths
         self.deploy = deploy
         if self.deploy:
-            self.model = self.load_model_from_deploy(model, dataset, deploy_runtime, gpu)
+            self.model = self.load_model_from_deploy(
+                model, dataset, deploy_runtime, gpu
+            )
         else:
-            self.model = self.load_model_from_checkpoint(config_file, checkpoint_file, gpu)
+            self.model = self.load_model_from_checkpoint(
+                config_file, checkpoint_file, gpu
+            )
 
     def load_model_from_deploy(self, model, dataset, deploy_runtime, gpu):
         from mmdeploy_runtime import Detector
-        
-        model_path = os.path.join(mmdep_model_root, f"{model}_{dataset}_{deploy_runtime}")
+
+        model_path = os.path.join(
+            mmdep_model_root, f"{model}_{dataset}_{deploy_runtime}"
+        )
         if os.path.exists(model_path):
             model = Detector(
                 model_path=model_path,
-                device_name='cuda',
+                device_name="cuda",
                 device_id=gpu,
             )
         else:
@@ -123,18 +142,21 @@ class _MMObjectDetector(_PerceptionAlgorithm):
                 chk_path = os.path.join(mm2d_root, checkpoint_file)
         if not os.path.exists(chk_path):
             raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint")
-        
+
         # set up inference model settings
         if self.MODE == "object_3d":
             if self.model_name == "3dssd":
                 assert gpu == 0, "For some reason, 3dssd must be on gpu 0"
             from mmdet3d.utils import register_all_modules
+
             if self.input_data == "camera":
                 from mmdet3d.apis import inference_mono_3d_detector, init_model
+
                 self.inference_detector = inference_mono_3d_detector
                 self.inference_mode = "from_mono"
             elif self.input_data == "lidar":
                 from mmdet3d.apis import inference_detector, init_model
+
                 self.inference_detector = inference_detector
                 self.inference_mode = "from_lidar"
             else:
@@ -142,14 +164,12 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             register_all_modules(init_default_scope=False)
             model = init_model(mod_path, chk_path, device=f"cuda:{gpu}")
         elif self.MODE == "object_2d":
-            from mmdet.utils import register_all_modules
             from mmdet.apis import inference_detector, init_detector
+            from mmdet.utils import register_all_modules
+
             self.inference_detector = inference_detector
             register_all_modules(init_default_scope=False)
-            import pdb; pdb.set_trace()
-            model = init_detector(
-                mod_path, chk_path, device=f"cuda:{gpu}"
-            )
+            model = init_detector(mod_path, chk_path, device=f"cuda:{gpu}")
         else:
             raise NotImplementedError(self.MODE)
         return model

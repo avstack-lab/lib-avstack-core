@@ -184,7 +184,7 @@ class ImageData(SensorData):
                 return self.data[:, :, ::-1]
             else:
                 return tflip(self.data, dims=(2,))
-            
+
     @property
     def bgr_image(self):
         if self.calibration.channel_order == "bgr":

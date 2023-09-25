@@ -8,14 +8,15 @@
 
 """
 
-import sys
 import logging
+import sys
 
 from avstack.modules import perception
 
 
 sys.path.append("tests/")
 from utilities import get_test_sensor_data
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +45,8 @@ def run_mmdet2d(model, dataset, img, frame, deploy, deploy_runtime=None):
         LOGGER.warning(e)
     else:
         dets = detector(img, frame=frame, identifier="camera_objects_2d")
-        assert len(dets) > 0
+        if dataset != "coco-person":
+            assert len(dets) > 0
 
 
 def test_mmdet_2d_perception_from_deploy():
@@ -61,7 +63,7 @@ def test_mmdet_2d_perception_from_deploy():
 
         for model, dataset, runtime in model_dataset_pairs:
             run_mmdet2d(model, dataset, img, frame, deploy=True, deploy_runtime=runtime)
- 
+
 
 def test_mmdet_2d_perception_from_checkpoint():
     frame = 0

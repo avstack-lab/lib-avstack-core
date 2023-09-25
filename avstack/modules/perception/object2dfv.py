@@ -11,7 +11,6 @@ import os
 import tempfile
 
 import numpy as np
-import torch
 from cv2 import imwrite
 
 from avstack.datastructs import DataContainer
@@ -109,7 +108,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             threshold=threshold,
             gpu=gpu,
             epoch=epoch,
-            **kwargs
+            **kwargs,
         )
 
     def _execute(self, data, identifier, eval_method="data", **kwargs):
@@ -140,11 +139,13 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         if self.deploy:
             return self.run_mm_from_deploy(self.model, image)
         else:
-            return self.run_mm_from_checkpoint(self.inference_detector, self.model, image, eval_method)
+            return self.run_mm_from_checkpoint(
+                self.inference_detector, self.model, image, eval_method
+            )
 
     @staticmethod
     def run_mm_from_deploy(model, image):
-            return model(image)
+        return model(image)
 
     @staticmethod
     def run_mm_from_checkpoint(inference_detector, model, image, eval_method):
