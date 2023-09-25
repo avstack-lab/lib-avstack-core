@@ -37,16 +37,18 @@ mmsegmentation = { path = "./third_party/mmsegmentation", develop = true }
 mmdet = { path = "./third_party/mmdetection/", develop = true }
 mmdet3d = { path = "./third_party/mmdetection3d/", develop = true }
 midas = {path = "./third_party/MiDaS/", develop=true }
+# serve dependencies
+torchserve = {version="~0.8.2", optional=true}
+torch-model-archiver = {version="~0.8.2", optional=true}
+torch-workflow-archiver = {version="~0.2.10", optional=true}
+nvgpu = {version="~0.10.0", optional=true}
+mmdeploy-runtime-gpu = {version="^1.2.0", optional=true}
+mmdeploy = {version="^1.2.0", optional=true}
+onnxruntime-gpu = {version="~1.15.1", optional=true}
+tensorrt = {version="~8.5.3.1", optional=true}  # NOTE: to appropriately use, we need to download the same version tar package manually
 
-[tool.poetry.group.serve.dependencies]
-torchserve = "~0.8.2"
-torch-model-archiver = "~0.8.2"
-torch-workflow-archiver = "~0.2.10"
-nvgpu = "~0.10.0"
-mmdeploy-runtime-gpu = "^1.2.0"
-mmdeploy = "^1.2.0"
-onnxruntime-gpu = "~1.15.1"
-tensorrt = "~8.5.3.1"  # NOTE: to appropriately use, we need to download the same version tar package manually
+[tool.poetry.extras]
+serve = ["torchserve", "torch-model-archiver", "torch-workflow-archiver", "nvgpu", "mmdeploy-runtime-gpu", "mmdeploy", "onnxruntime-gpu", "tensorrt"]
 
 [tool.poetry.group.docs.dependencies]
 mkdocstrings-python = "^0.8.3"
