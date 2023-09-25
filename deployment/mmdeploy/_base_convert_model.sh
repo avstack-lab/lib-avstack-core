@@ -11,12 +11,25 @@ MMDET_BASE="../../third_party/mmdetection"
 MMDEP_BASE="../../third_party/mmdeploy"
 DEPCFG="${MMDEP_BASE}/configs/mmdet/detection/${DEPCFG}"
 
+
+# check if we've already converted this model
+WORK_DIR="mmdeploy_models/${MODEL}_${DATASET}_${RUNTIME}"
+if [ -d "$WORK_DIR" ]; then
+    echo "Already converted this model -- saved to $WORK_DIR!"
+    exit
+fi
+
+# Otherwise, parse the model configs/checkpoints
 if [ "$MODEL" == "faster_rcnn" ]
 then
     if [ "$DATASET" == "cityscapes" ]
     then
         DETCFG="${MMDET_BASE}/configs/${DATASET}/faster-rcnn_r50_fpn_1x_cityscapes.py"
         CHKPT="${MMDET_BASE}/checkpoints/${DATASET}/faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
+    elif [ "$DATASET" == "coco-person" ]
+    then
+        DETCFG="${MMDET_BASE}/configs/faster_rcnn/faster-rcnn_r50-caffe_fpn_ms-1x_coco-person.py"
+        CHKPT="${MMDET_BASE}/checkpoints/${DATASET}/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
     else
         echo "Cannot parse dataset combination"
         exit 1
@@ -42,6 +55,6 @@ poetry run python "${MMDEP_BASE}/tools/deploy.py" \
     $DETCFG \
     $CHKPT \
     ${MMDET_BASE}/demo/demo.jpg \
-    --work-dir "mmdeploy_models/${MODEL}_${DATASET}_${RUNTIME}" \
+    --work-dir $WORK_DIR \
     --device cuda \
     --dump-info
