@@ -1,8 +1,16 @@
 .install.stamp
 
+deployment/libraries/*
+!deployment/libraries/.gitkeep 
+deployment/mmdeploy/mmdeploy_models/*
+
+
 models/mmdet
 models/mmdet3d
 *.pth
+*.mar
+*.engine
+*.onnx
 .coverage
 __pycache__/
 *.ipynb_checkpoints
@@ -140,7 +148,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+.env/
 .venv
 env/
 venv/

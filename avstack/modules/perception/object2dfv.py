@@ -11,7 +11,6 @@ import os
 import tempfile
 
 import numpy as np
-import torch
 from cv2 import imwrite
 
 from avstack.datastructs import DataContainer
@@ -94,83 +93,80 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         self,
         model="fasterrcnn",
         dataset="kitti",
+        deploy=False,
         threshold=None,
         gpu=0,
         epoch="latest",
+        deploy_runtime="tensorrt",
         **kwargs,
     ):
-        super().__init__(model, dataset, gpu, epoch, threshold, **kwargs)
-        self.gpu = gpu
-
-        from mmdet.utils import register_all_modules
-
-        register_all_modules(init_default_scope=True)
-
-        self.initialize()
-
-    def initialize(self):
-        from mmdet.apis import inference_detector, init_detector
-
-        self.inference_detector = inference_detector
-        self.model = init_detector(
-            self.mod_path, self.chk_path, device=f"cuda:{self.gpu}"
+        super().__init__(
+            model=model,
+            dataset=dataset,
+            deploy=deploy,
+            deploy_runtime=deploy_runtime,
+            threshold=threshold,
+            gpu=gpu,
+            epoch=epoch,
+            **kwargs,
         )
 
-    def _execute(self, data, identifier, is_rgb=True, eval_method="data", **kwargs):
+    def _execute(self, data, identifier, eval_method="data", **kwargs):
         from mmdet.utils import register_all_modules
 
         register_all_modules(init_default_scope=True)
+
+        # -- flip data to bgr
+        img = data.bgr_image
 
         # -- inference
-        result_ = self.run_mm_inference(
-            self.inference_detector, self.model, data, is_rgb, eval_method
-        )
+        result_ = self.run_mm_inference(img, eval_method)
 
         # -- postprocess objects
         detections = utils.convert_mm2d_to_avstack(
             result_,
             data.calibration,
-            self.model,
             identifier,
             self.label_dataset_override,
             self.threshold,
             self.whitelist,
             self.class_names,
+            self.deploy,
         )
         return DataContainer(data.frame, data.timestamp, detections, identifier)
 
+    def run_mm_inference(self, image, eval_method):
+        if self.deploy:
+            return self.run_mm_from_deploy(self.model, image)
+        else:
+            return self.run_mm_from_checkpoint(
+                self.inference_detector, self.model, image, eval_method
+            )
+
     @staticmethod
-    def run_mm_inference(inference_detector, model, data, is_rgb, eval_method):
+    def run_mm_from_deploy(model, image):
+        return model(image)
+
+    @staticmethod
+    def run_mm_from_checkpoint(inference_detector, model, image, eval_method):
         if eval_method == "file":
             with tempfile.TemporaryDirectory() as temp_dir:
                 fd_data, data_file = tempfile.mkstemp(suffix=".png", dir=temp_dir)
                 os.close(fd_data)  # need to start with the file closed...
-                if is_rgb:
-                    img = (
-                        data.data[:, :, ::-1]
-                        if isinstance(data.data, np.ndarray)
-                        else torch.flip(data.data, dims=(2,))
-                    )
-                else:
-                    img = data.data
-                imwrite(data_file, data.data[:, :, ::-1])
+                imwrite(data_file, image)
                 result_ = inference_detector(model, data_file)
         elif eval_method == "data":
-            if is_rgb:
-                img = (
-                    data.data[:, :, ::-1]
-                    if isinstance(data.data, np.ndarray)
-                    else torch.flip(data.data, dims=(2,))
-                )
-            else:
-                img = data.data
-            result_ = inference_detector(model, img)
+            result_ = inference_detector(model, image)
         else:
             raise NotImplementedError(eval_method)
         return result_
 
     @staticmethod
-    def parse_mm_model(model, dataset, epoch):
+    def parse_mm_model_from_deploy(model, dataset):
+        raise NotImplementedError
+
+    @staticmethod
+    def parse_mm_model_from_checkpoint(model, dataset, epoch):
         input_data = "camera"
         label_dataset_override = dataset
         epoch_str = "latest" if epoch == "latest" else "epoch_{}".format(epoch)
@@ -183,7 +179,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/rtmdet/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
-        elif model == "fasterrcnn":
+        elif model in ["fasterrcnn", "faster_rcnn"]:
             if dataset == "kitti":
                 threshold = 0.5
                 config_file = "configs/cityscapes/faster-rcnn_r50_fpn_1x_cityscapes.py"
@@ -220,7 +216,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 checkpoint_file = "checkpoints/coco-person/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
-        elif model == "cascadercnn":
+        elif model in ["cascadercnn", "cascade_rcnn"]:
             if dataset == "carla":
                 threshold = 0.5
                 config_file = "work_dirs/carla/cascade-rcnn_r50_fpn_1x_carla_vehicle.py"
@@ -235,6 +231,10 @@ class MMDetObjectDetector2D(_MMObjectDetector):
                 checkpoint_file = (
                     f"work_dirs/carla/cascade-rcnn_r50_fpn_1x_carla_infrastructure.pth"
                 )
+            elif dataset == "coco":
+                threshold = 0.5
+                config_file = "configs/cascade_rcnn/cascade-rcnn_r50_fpn_1x_coco.py"
+                checkpoint_file = "checkpoints/coco/cascade_rcnn_r50_fpn_1x_coco_20200316-3dc56deb.pth"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         elif model == "htc":

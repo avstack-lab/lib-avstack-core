@@ -51,6 +51,36 @@ poetry run pytest tests/modules/safety
 and observe the output.
 
 
+### Setting up model serving
+
+We use `mmdeploy` to handle model serving. We have included some of the setup in the poetry file, but there is still some degree of manual process that needs to happen on the user's end. We outline an example of how to serve a model here.
+
+
+#### Setting up ONNX Runtime
+
+1. Ensure that you have the poetry plugin to read `.env` files installed. If you do not, run `poetry self add poetry-dotenv-plugin` to install it.
+1. In the `deployment/libraries` folder, run `wget https://github.com/microsoft/onnxruntime/releases/download/v1.15.1/onnxruntime-linux-x64-gpu-1.15.1.tgz`
+1. Untar the file with `tar -zxvf onnxruntime-linux-x64-gpu-1.15.1.tgz`
+
+
+#### Setting up TensorRT Runtime
+Optional if you're on an x86 architecture. Not optional if you're on an ARM platform.
+
+1. Ensure that you have the poetry plugin to read `.env` files installed. If you do not, run `poetry self add poetry-dotenv-plugin` to install it.
+1. Download the [TensorRT 8.5 GA Update 2 tar file][tensorrt]  and put in the `deployment/libraries` folder. Untar it with e.g., `tar -xvf TensorRT-8.5.3.1*`.
+1. Download the [appropriate cudnn file][cudnn] (appropriate meaning it matches the TensorRT compatibility) and put it in the `deployment/libraries` folder. Untar it with e.g., `tar -xvf cudnn-*`. 
+1. Download the [appropriate cuda version][cuda] (check the [compatibility matrix][tensorrt_compat]). Not sure yet, but you most likely want to match this to the version of cuda used by `avstack` and `mmdetection`. See the [`pyproject.toml`][toml] file for details.
+
+
+#### Converting a model
+
+Let's assume you have downloaded the perception models using the instructions above. In that case, we've done most of the work for you. 
+
+1. Activate a poetry shell
+1. An example conversion procedure is provided in `deployment/mmdeploy/`. Go there and run either `run_test_convert_tensorrt.sh` or `run_test_convert_onnx.sh` depending if you did TensorRT above.
+1. If all goes well, you'll be able to serve the model. Try out (in the poetry shell): `python test_model_deployment.py mmdeploy_models/cascade_rcnn_coco` (change the path to the model you converted).
+
+
 ## Running Tests
 
 Since we are using `poetry`, run:
@@ -75,5 +105,9 @@ AVstack specific code is distributed under the MIT License.
 [poetry]: https://github.com/python-poetry/poetry
 [mmdet-modelzoo]: https://mmdetection.readthedocs.io/en/stable/model_zoo.html
 [mmdet3d-modelzoo]: https://mmdetection3d.readthedocs.io/en/stable/model_zoo.html
+[tensorrt]: https://developer.nvidia.com/tensorrt-getting-started
+[cudnn]: https://developer.nvidia.com/rdp/cudnn-archive
+[cuda]: https://developer.nvidia.com/cuda-downloads
+[tensorrt_compat]: https://docs.nvidia.com/deeplearning/tensorrt/support-matrix/index.html
 [contributing]: https://github.com/avstack-lab/lib-avstack-core/blob/main/CONTRIBUTING.md
 [license]: https://github.com/avstack-lab/lib-avstack-core/blob/main/LICENSE.md

@@ -49,11 +49,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-            poetry install
+            poetry install --all-extras
       # - name: Lint with flake8
       #   run: |
       #       # stop the build if there are Python syntax errors or undefined names
       #       poetry run flake8 ./avstack --count --max-line-length=127 --show-source --statistics
       - name: Run tests
         run: |
-            poetry run pytest
+            poetry run pytest tests

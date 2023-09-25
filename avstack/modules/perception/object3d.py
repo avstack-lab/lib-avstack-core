@@ -62,34 +62,25 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         self,
         model="pointpillars",
         dataset="kitti",
+        deploy=False,
         front_only=False,
         gpu=0,
         epoch="latest",
         threshold=None,
+        deploy_runtime="tensorrt",
         **kwargs,
     ):
-        super().__init__(model, dataset, gpu, epoch, threshold, **kwargs)
-        from mmdet3d.utils import register_all_modules
-
-        register_all_modules(init_default_scope=False)
-
-        if self.input_data == "camera":
-            from mmdet3d.apis import inference_mono_3d_detector, init_model
-
-            self.inference_detector = inference_mono_3d_detector
-            self.inference_mode = "from_mono"
-        elif self.input_data == "lidar":
-            from mmdet3d.apis import inference_detector, init_model
-
-            self.inference_detector = inference_detector
-            self.inference_mode = "from_lidar"
-        else:
-            raise NotImplementedError(self.input_data)
+        super().__init__(
+            model=model,
+            dataset=dataset,
+            deploy=deploy,
+            deploy_runtime=deploy_runtime,
+            threshold=threshold,
+            gpu=gpu,
+            epoch=epoch,
+            **kwargs,
+        )
         self.front_only = front_only
-
-        if model == "3dssd":
-            assert gpu == 0, "For some reason, 3dssd must be on gpu 0"
-        self.model = init_model(self.mod_path, self.chk_path, device=f"cuda:{gpu}")
 
     def _execute(self, data, identifier, eval_method="file", **kwargs):
         from mmdet3d.utils import register_all_modules
@@ -113,8 +104,8 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             self.dataset,
             self.threshold,
             front_only=self.front_only,
-            prune_low=(self.algorithm in ["pgd"]),
-            prune_close=(self.algorithm in ["pgd"]),
+            prune_low=(self.model_name in ["pgd"]),
+            prune_close=(self.model_name in ["pgd"]),
             **kwargs,
         )
         return DataContainer(data.frame, data.timestamp, detections, identifier)
@@ -154,7 +145,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         return result_
 
     @staticmethod
-    def parse_mm_model(model, dataset, epoch):
+    def parse_mm_model_from_checkpoint(model, dataset, epoch):
         dataset = dataset.lower()
         epoch_str = "latest" if epoch == "latest" else "epoch_{}".format(epoch)
         obj_class_dataset_override = dataset

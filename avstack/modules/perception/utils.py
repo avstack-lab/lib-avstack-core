@@ -73,23 +73,29 @@ class_maps = {
 def convert_mm2d_to_avstack(
     result_,
     calib,
-    model_2d,
     source_identifier,
     dataset,
     score_thresh,
     whitelist,
     class_names,
+    is_deploy,
 ):
-    if isinstance(result_, tuple):
-        bbox_result, segms = result_
-        if isinstance(segms, tuple):
-            segms = segms[0]  # ms rcnn
-    else:
-        bbox_result, segm_result = result_, None
+    if is_deploy:
+        bboxes, labels, _ = result_
+        scores = bboxes[:, 4]
+        bboxes = bboxes[:, :4]
         segms = None
-    bboxes = bbox_result.pred_instances.bboxes.cpu().numpy()
-    labels = bbox_result.pred_instances.labels.cpu().numpy().astype(int)
-    scores = bbox_result.pred_instances.scores.cpu().numpy().astype(float)
+    else:
+        if isinstance(result_, tuple):
+            bbox_result, segms = result_
+            if isinstance(segms, tuple):
+                segms = segms[0]  # ms rcnn
+        else:
+            bbox_result, segm_result = result_, None
+            segms = None
+        bboxes = bbox_result.pred_instances.bboxes.cpu().numpy()
+        labels = bbox_result.pred_instances.labels.cpu().numpy().astype(int)
+        scores = bbox_result.pred_instances.scores.cpu().numpy().astype(float)
 
     if score_thresh > 0:
         assert bboxes is not None and bboxes.shape[1] == 4
