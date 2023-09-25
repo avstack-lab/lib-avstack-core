@@ -2595,17 +2595,17 @@ mkdocstrings = ">=0.19"
 
 [[package]]
 name = "mmcv"
-version = "2.0.1"
+version = "2.0.0"
 description = "OpenMMLab Computer Vision Foundation"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "mmcv-2.0.1-cp310-cp310-linux_x86_64.whl", hash = "sha256:cb84799218141dbd2553e7aacec744935214fb9589615a46c9586b1c86a4ded5"},
+    {file = "mmcv-2.0.0-cp310-cp310-linux_x86_64.whl", hash = "sha256:1323c18472dd26ba95c8fd044dfa1f03b6f482b60f56ee132afebbb8ea3b958c"},
 ]
 
 [package.dependencies]
 addict = "*"
-mmengine = ">=0.3.0"
+mmengine = ">=0.2.0"
 numpy = "*"
 packaging = "*"
 Pillow = "*"
@@ -2614,14 +2614,14 @@ regex = {version = "*", markers = "sys_platform == \"win32\""}
 yapf = "*"
 
 [package.extras]
-all = ["Pillow", "PyTurboJPEG", "addict", "coverage", "lmdb", "mmengine (>=0.3.0)", "ninja", "numpy", "onnx", "onnxoptimizer", "onnxruntime", "packaging", "psutil", "pytest", "pytest-runner", "pyyaml", "regex", "scipy", "tifffile", "yapf"]
+all = ["Pillow", "PyTurboJPEG", "addict", "coverage", "lmdb", "mmengine (>=0.2.0)", "ninja", "numpy", "onnx", "onnxoptimizer", "onnxruntime", "packaging", "psutil", "pytest", "pytest-runner", "pyyaml", "regex", "scipy", "tifffile", "yapf"]
 build = ["pytest-runner"]
 optional = ["ninja", "psutil"]
 tests = ["PyTurboJPEG", "coverage", "lmdb", "onnx", "onnxoptimizer", "onnxruntime", "pytest", "scipy", "tifffile"]
 
 [package.source]
 type = "url"
-url = "https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmcv/torch1.13.1_cu11.7/mmcv-2.0.1-cp310-cp310-linux_x86_64.whl"
+url = "https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmcv/torch1.13.1_cu11.7/mmcv-2.0.0-cp310-cp310-linux_x86_64.whl"
 
 [[package]]
 name = "mmdeploy"
@@ -5695,4 +5695,4 @@ serve = ["mmdeploy", "mmdeploy-runtime-gpu", "nvgpu", "onnxruntime-gpu", "tensor
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "cd3220a60bed64bc8de33478e003e3ab90d47243ce059f63344e097515e279fa"
+content-hash = "be6247912f9c06a29d5e250b3a4cb058f8d37db02df8db322e37b9fb45fad4e7"
