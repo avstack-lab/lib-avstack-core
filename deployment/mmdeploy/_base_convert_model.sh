@@ -44,6 +44,16 @@ then
         echo "Cannot parse dataset combination"
         exit 1
     fi
+elif [ "$MODEL" == "rtmdet" ]
+then
+    if [ "$DATASET" == "coco" ]
+    then
+        DETCFG="${MMDET_BASE}/configs/rtmdet/rtmdet_m_8xb32-300e_coco.py"
+        CHKPT="${MMDET_BASE}/checkpoints/rtmdet/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth"
+    else
+        echo "Cannot parse dataset combination"
+        exit 1
+    fi
 else
     echo "Cannot parse model combination"
     exit 1
