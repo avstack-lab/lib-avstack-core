@@ -80,6 +80,8 @@ def convert_mm2d_to_avstack(
     class_names,
     is_deploy,
 ):
+    import pdb; pdb.set_trace()
+
     if is_deploy:
         bboxes, labels, _ = result_
         scores = bboxes[:, 4]
@@ -96,7 +98,7 @@ def convert_mm2d_to_avstack(
         bboxes = bbox_result.pred_instances.bboxes.cpu().numpy()
         labels = bbox_result.pred_instances.labels.cpu().numpy().astype(int)
         scores = bbox_result.pred_instances.scores.cpu().numpy().astype(float)
-
+    
     if score_thresh > 0:
         assert bboxes is not None and bboxes.shape[1] == 4
         scores_pre = scores.copy()
@@ -109,12 +111,16 @@ def convert_mm2d_to_avstack(
             segms = [s for i, s in enumerate(segms) if inds[i]]
 
     # -- object types
-    obj_type_text = [
-        class_maps[dataset][class_names[label]]
-        if (class_names is not None) and (class_names[label] in class_maps[dataset])
-        else f"class {label}"
-        for label in labels
-    ]
+    obj_type_text = []
+    try:
+        for label in labels:
+            if (class_names is not None) and (class_names[label] in class_maps[dataset]):
+                obj_type_text.append(class_maps[dataset][class_names[label]])
+            else:
+                obj_type_text.append(f"class {label}")
+    except IndexError as e:
+        print(label, len(class_names), dataset)
+        raise e
 
     # -- make objects
     if segms is None:

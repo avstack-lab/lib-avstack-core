@@ -163,12 +163,12 @@ class _MMObjectDetector(_PerceptionAlgorithm):
                 raise NotImplementedError(self.input_data)
             register_all_modules(init_default_scope=False)
             model = init_model(mod_path, chk_path, device=f"cuda:{gpu}")
-        elif self.MODE == "object_2d":
+        elif self.MODE in ["object_2d", "instance_segmentation"]:
             from mmdet.apis import inference_detector, init_detector
             from mmdet.utils import register_all_modules
 
             self.inference_detector = inference_detector
-            register_all_modules(init_default_scope=False)
+            register_all_modules(init_default_scope=True)
             model = init_detector(mod_path, chk_path, device=f"cuda:{gpu}")
         else:
             raise NotImplementedError(self.MODE)

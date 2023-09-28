@@ -8,13 +8,24 @@ class MMInstanceSegmentation(MMDetObjectDetector2D):
         self,
         model="cascade-mask-rcnn",
         dataset="nuimages",
+        deploy=False,
         threshold=None,
         gpu=0,
         epoch="latest",
+        deploy_runtime="tensorrt",
         **kwargs,
     ):
-        super().__init__(model, dataset, threshold, gpu, epoch, **kwargs)
-
+        super().__init__(
+            model=model,
+            dataset=dataset,
+            deploy=deploy,
+            deploy_runtime=deploy_runtime,
+            threshold=threshold,
+            gpu=gpu,
+            epoch=epoch,
+            **kwargs,
+        )
+        
     def initialize(self):
         # This is very hacky....
         from mmdet3d.apis import init_model
@@ -26,12 +37,17 @@ class MMInstanceSegmentation(MMDetObjectDetector2D):
         self.model = init_model(self.mod_path, self.chk_path, device=f"cuda:{self.gpu}")
 
     @staticmethod
-    def parse_mm_model(model, dataset, epoch):
+    def parse_mm_model_from_checkpoint(model, dataset, epoch):
         input_data = "camera"
         label_dataset_override = dataset
         epoch_str = "latest" if epoch == "latest" else "epoch_{}".format(epoch)
         if model == "cascade-mask-rcnn":
-            if dataset in [
+            if dataset in ["coco"]:
+                threshold = 0.7
+                config_file = "configs/cascade_rcnn/cascade-mask-rcnn_r50-caffe_fpn_1x_coco.py"
+                checkpoint_file = "checkpoints/coco/cascade_mask_rcnn_r50_fpn_1x_coco_20200203-9d4dcb24.pth"
+                # label_dataset_override = "kitti"
+            elif dataset in [
                 "nuimages",
                 "carla",
                 "kitti",

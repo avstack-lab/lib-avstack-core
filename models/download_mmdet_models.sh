@@ -63,13 +63,18 @@ CITYSCAPES_MRCNN="mask_rcnn_r50_fpn_1x_cityscapes/mask_rcnn_r50_fpn_1x_cityscape
 download_models "cityscapes" "v2.0" "cityscapes" "$CITYSCAPES_MRCNN"
 
 RTMDET_M="rtmdet_m_8xb32-300e_coco/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth"
-download_models "rtmdet" "v3.0" "rtmdet" "$RTMDET_M"
+download_models "coco" "v3.0" "rtmdet" "$RTMDET_M"
 
 COCO_CRCNN="cascade_rcnn_r50_fpn_1x_coco/cascade_rcnn_r50_fpn_1x_coco_20200316-3dc56deb.pth"
 download_models "coco" "v2.0" "cascade_rcnn" "$COCO_CRCNN"
 COCO_YOLOX="yolox_l_8x8_300e_coco/yolox_l_8x8_300e_coco_20211126_140236-d3bd2b23.pth"
-download_models "yolox" "v2.0" "yolox" "$COCO_YOLOX"
+download_models "coco" "v2.0" "yolox" "$COCO_YOLOX"
 
+COCO_CMRCNN="cascade_mask_rcnn_r50_fpn_1x_coco/cascade_mask_rcnn_r50_fpn_1x_coco_20200203-9d4dcb24.pth"
+download_models "coco" "v2.0" "cascade_rcnn" "$COCO_CMRCNN"
+
+
+# https://download.openmmlab.com/mmdetection/v2.0/cascade_rcnn/cascade_mask_rcnn_r50_fpn_1x_coco/cascade_mask_rcnn_r50_fpn_1x_coco_20200203-9d4dcb24.pth
 
 # -----------------------------------
 # for custom trained models
