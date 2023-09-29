@@ -80,7 +80,6 @@ def convert_mm2d_to_avstack(
     class_names,
     is_deploy,
 ):
-    import pdb; pdb.set_trace()
 
     if is_deploy:
         bboxes, labels, _ = result_
