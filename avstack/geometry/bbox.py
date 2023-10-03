@@ -126,12 +126,13 @@ class BoxDecoder(json.JSONDecoder):
 
 
 class SegMask2D:
-    def __init__(self, mask, calibration) -> None:
+    def __init__(self, mask, calibration, ID=None) -> None:
         """Mask is a binary matrix that will be converted to a sparse matrix"""
         self.calibration = calibration
         self.mask = mask
         self.sparse_mask = sparse.coo_matrix(self.mask)
         self.img_shape = calibration.img_shape
+        self.ID = ID
 
     @property
     def data(self):
@@ -255,6 +256,11 @@ class Box2D:
     def box2d_xywh(self):
         return [self.xmin, self.ymin, self.w, self.h]
 
+    def as_seg_mask(self):
+        mask = np.zeros(self.calibration.img_shape[:2], dtype=bool)
+        mask[int(self.ymin):int(self.ymax), int(self.xmin):int(self.xmax)] = True
+        return SegMask2D(mask, self.calibration, ID=self.ID)
+
     def encode(self):
         return json.dumps(self, cls=BoxEncoder)
 
@@ -284,6 +290,7 @@ class Box2D:
                 [x_min_s, y_min_s, x_max_s, y_max_s],
                 self.calibration,
                 obj_type=self.obj_type,
+                ID=self.ID,
             )
 
     def add_noise(self, noise_variance):
@@ -490,7 +497,7 @@ class Box3D:
             newt = self.t.change_reference(reference_new, inplace=inplace)
             newr = self.q.change_reference(reference_new, inplace=inplace)
             newself = Box3D(
-                newt, newr, [self.h, self.w, self.l], where_is_t=self.where_is_t
+                newt, newr, [self.h, self.w, self.l], where_is_t=self.where_is_t, ID=self.ID
             )
             return newself
 
@@ -585,7 +592,7 @@ class Box3D:
         else:
             pos = q_mult_vec(q, self.position)
             rot = Attitude(q * self.q.q, self.reference)
-            return Box3D(pos, rot, self.size)
+            return Box3D(pos, rot, self.size, ID=self.ID)
 
     def rotate_attitude(self, q, inplace):
         """Rotates the attitude of the box only"""
@@ -593,7 +600,7 @@ class Box3D:
             self.attitude = q * self.q
         else:
             rot = q * self.q
-            return Box3D(deepcopy(self.position), rot, self.size)
+            return Box3D(deepcopy(self.position), rot, self.size, ID=self.ID)
 
     def translate(self, L, inplace):
         """Translates the position of the box"""
@@ -605,7 +612,7 @@ class Box3D:
         if inplace:
             self.position += L
         else:
-            return Box3D(self.position + L, deepcopy(self.attitude), self.size)
+            return Box3D(self.position + L, deepcopy(self.attitude), self.size, ID=self.ID)
 
     def project_to_2d_bbox(self, calib, check_reference=True):
         """Project 3D bounding box into a 2D bounding box"""
@@ -1051,4 +1058,4 @@ def proj_3d_bbox_to_2d_bbox(box3d, calib_img, check_reference=True):
     xmin, xmax = np.min(corners_3d_in_image[:, 0]), np.max(corners_3d_in_image[:, 0])
     ymin, ymax = np.min(corners_3d_in_image[:, 1]), np.max(corners_3d_in_image[:, 1])
     box2d = np.array([xmin, ymin, xmax, ymax])
-    return Box2D(box2d, calib_img, obj_type=box3d.obj_type)
+    return Box2D(box2d, calib_img, obj_type=box3d.obj_type, ID=box3d.ID)

@@ -233,6 +233,8 @@ class ObjectState:
         if self.box is not None:
             if self.box.obj_type is None:
                 self.box.obj_type = self.obj_type
+            if self.box.ID is None:
+                self.box.ID = self.ID
 
         # -- velocity
         assert isinstance(velocity, (Velocity, NoneType)), type(velocity)
