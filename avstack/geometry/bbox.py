@@ -150,6 +150,9 @@ class SegMask2D:
         else:
             return False
 
+    def __len__(self):
+        return np.sum(self.mask)
+
     def encode(self):
         return json.dumps(self, cls=BoxEncoder)
 
