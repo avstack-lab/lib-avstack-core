@@ -127,6 +127,7 @@ class BoxDecoder(json.JSONDecoder):
 
 class SegMask2D:
     def __init__(self, mask, calibration) -> None:
+        """Mask is a binary matrix that will be converted to a sparse matrix"""
         self.calibration = calibration
         self.mask = mask
         self.sparse_mask = sparse.coo_matrix(self.mask)
@@ -140,7 +141,7 @@ class SegMask2D:
         return self.__str__()
 
     def __str__(self) -> str:
-        return "SegMask"
+        return f"SegMask -- {np.sum(self.mask)} points"
 
     def __eq__(self, other: object) -> bool:
         if self.img_shape == other.img_shape:

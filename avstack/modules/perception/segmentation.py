@@ -55,10 +55,10 @@ class MMInstanceSegmentation(MMDetObjectDetector2D):
             ]:  # TODO eventually separate these
                 threshold = 0.7
                 config_file = (
-                    "configs/nuimages/cascade-mask-rcnn_r50_fpn_coco-20e-1x_nuim.py"
+                    "configs/cityscapes/mask-rcnn_r50_fpn_1x_cityscapes.py"
                 )
-                checkpoint_file = "checkpoints/nuimages/cascade_mask_rcnn_r50_fpn_coco-20e_1x_nuim_20201009_124158-ad0540e3.pth"
-                label_dataset_override = "nuimages"
+                checkpoint_file = "checkpoints/cityscapes/mask_rcnn_r50_fpn_1x_cityscapes_20201211_133733-d2858245.pth"
+                label_dataset_override = "cityscapes"
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
         else:
