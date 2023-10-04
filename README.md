@@ -6,6 +6,11 @@ This is the core library of `AVstack`. It is independent of any dataset or simul
 
 Pioneers of autonomous vehicles (AVs) promised to revolutionize the driving experience and driving safety. However, milestones in AVs have materialized slower than forecast. Two culprits are (1) the lack of verifiability of proposed state-of-the-art AV components, and (2) stagnation of pursuing next-level evaluations, e.g.,~vehicle-to-infrastructure (V2I) and multi-agent collaboration. In part, progress has been hampered by: the large volume of software in AVs, the multiple disparate conventions, the difficulty of testing across datasets and simulators, and the inflexibility of state-of-the-art AV components. To address these challenges, we present `AVstack`, an open-source, reconfigurable software platform for AV design, implementation, test, and analysis. `AVstack` solves the validation problem by enabling first-of-a-kind trade studies on datasets and physics-based simulators. `AVstack` solves the stagnation problem as a reconfigurable AV platform built on dozens of open-source AV components in a high-level programming language.
 
+## Troubleshooting
+
+If you install poetry but your systems says it is not found, you may need to add the poetry path to your path. On linux, this would be: export PATH="$HOME/.local/bin:$PATH". I recommend adding this to your .bashrc or .zshrc file.
+Through an ssh connection, poetry may have keyring issues. If this is true, you can run the following: export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
+
 
 ## Installation
 
@@ -110,4 +115,4 @@ AVstack specific code is distributed under the MIT License.
 [cuda]: https://developer.nvidia.com/cuda-downloads
 [tensorrt_compat]: https://docs.nvidia.com/deeplearning/tensorrt/support-matrix/index.html
 [contributing]: https://github.com/avstack-lab/lib-avstack-core/blob/main/CONTRIBUTING.md
-[license]: https://github.com/avstack-lab/lib-avstack-core/blob/main/LICENSE.md
+[license]: https://github.com/avstack-lab/lib-avstack-core/blob/main/LICENSE.md 
