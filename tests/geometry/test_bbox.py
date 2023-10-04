@@ -167,6 +167,11 @@ def test_project_to_2d_box():
     assert box_1_2d.ymin < box_1_2d.ymax < camera_calib.img_shape[0]
 
 
+def test_segmask_from_2d_box():
+    segmask = box_2d.as_seg_mask()
+    assert len(segmask) > 0
+
+
 # ===========================================================
 # TRANSFORMS ON BOXES
 # ===========================================================

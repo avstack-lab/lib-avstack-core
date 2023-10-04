@@ -80,34 +80,32 @@ def convert_mm2d_to_avstack(
     class_names,
     is_deploy,
 ):
-
     if is_deploy:
         bboxes, labels, _ = result_
         scores = bboxes[:, 4]
         bboxes = bboxes[:, :4]
         segms = None
     else:
-        if isinstance(result_, tuple):
-            bbox_result, segms = result_
-            if isinstance(segms, tuple):
-                segms = segms[0]  # ms rcnn
-        else:
-            bbox_result, segm_result = result_, None
+        try:
+            segms  = result_.pred_instances.masks.cpu().numpy()  # segms are N x H x W
+        except AttributeError:
             segms = None
-        bboxes = bbox_result.pred_instances.bboxes.cpu().numpy()
-        labels = bbox_result.pred_instances.labels.cpu().numpy().astype(int)
-        scores = bbox_result.pred_instances.scores.cpu().numpy().astype(float)
+        bboxes = result_.pred_instances.bboxes.cpu().numpy()
+        labels = result_.pred_instances.labels.cpu().numpy().astype(int)
+        scores = result_.pred_instances.scores.cpu().numpy().astype(float)
     
+    # -- filter by score
     if score_thresh > 0:
         assert bboxes is not None and bboxes.shape[1] == 4
         scores_pre = scores.copy()
         inds = scores > score_thresh
+        if segms is not None:
+            segms = segms[inds, :, :]
         scores = scores[inds]
         bboxes = bboxes[inds, :]
         labels = labels[inds]
-        if segms is not None:
-            segms = [s for seg in segms for s in seg]
-            segms = [s for i, s in enumerate(segms) if inds[i]]
+    if segms is None:
+        segms = [None] * len(labels)
 
     # -- object types
     obj_type_text = []
@@ -116,33 +114,21 @@ def convert_mm2d_to_avstack(
             if (class_names is not None) and (class_names[label] in class_maps[dataset]):
                 obj_type_text.append(class_maps[dataset][class_names[label]])
             else:
-                obj_type_text.append(f"class {label}")
+                obj_type_text.append(class_names[label])
     except IndexError as e:
         print(label, len(class_names), dataset)
         raise e
 
     # -- make objects
-    if segms is None:
-        dets = [
-            BoxDetection(
-                source_identifier, Box2D(bbox, calib), calib.reference, obj_type, score
-            )
-            for bbox, obj_type, score in zip(bboxes, obj_type_text, scores)
-            if obj_type in whitelist
-        ]
-    else:
-        dets = [
-            MaskDetection(
-                source_identifier,
-                Box2D(bbox, calib),
-                SegMask2D(segm, calib),
-                calib.reference,
-                obj_type,
-                score,
-            )
-            for bbox, segm, obj_type, score in zip(bboxes, segms, obj_type_text, scores)
-            if obj_type in whitelist
-        ]
+    dets = []
+    for segm, bbox, obj_type, score in zip(segms, bboxes, obj_type_text, scores):
+        if obj_type in whitelist:
+            box_2d =  Box2D(bbox, calib)
+            if segm is None:
+                det = BoxDetection(source_identifier, box_2d, calib.reference, obj_type, score)
+            else:
+                det = MaskDetection(source_identifier, box_2d, SegMask2D(segm, calib), calib.reference, obj_type, score)
+            dets.append(det)
 
     return dets
 
