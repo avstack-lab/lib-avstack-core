@@ -8,8 +8,8 @@ Pioneers of autonomous vehicles (AVs) promised to revolutionize the driving expe
 
 ## Troubleshooting
 
-If you install poetry but your systems says it is not found, you may need to add the poetry path to your path. On linux, this would be: export PATH="$HOME/.local/bin:$PATH". I recommend adding this to your .bashrc or .zshrc file.
-Through an ssh connection, poetry may have keyring issues. If this is true, you can run the following: export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
+* If you install poetry but your systems says it is not found, you may need to add the poetry path to your path. On linux, this would be: `export PATH="$HOME/.local/bin:$PATH"`. I recommend adding this to your `.bashrc` or `.zshrc` file.
+* Through an ssh connection, poetry may have keyring issues. If this is true, you can run the following: `export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`
 
 
 ## Installation
