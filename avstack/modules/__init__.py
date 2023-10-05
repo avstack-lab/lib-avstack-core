@@ -14,5 +14,4 @@ import avstack.modules.localization
 import avstack.modules.perception
 import avstack.modules.planning
 import avstack.modules.prediction
-import avstack.modules.safety
 import avstack.modules.tracking

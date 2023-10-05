@@ -7,9 +7,6 @@
 [submodule "third_party/mmdetection3d"]
 	path = third_party/mmdetection3d
 	url = https://github.com/avstack-lab/mmdetection3d.git
-[submodule "third_party/ad-rss-lib"]
-	path = third_party/ad-rss-lib
-	url = https://github.com/avstack-lab/ad-rss-lib.git
 [submodule "third_party/mmsegmentation"]
 	path = third_party/mmsegmentation
 	url = https://github.com/avstack-lab/mmsegmentation.git
