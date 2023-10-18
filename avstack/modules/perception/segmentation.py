@@ -25,7 +25,7 @@ class MMInstanceSegmentation(MMDetObjectDetector2D):
             epoch=epoch,
             **kwargs,
         )
-        
+
     def initialize(self):
         # This is very hacky....
         from mmdet3d.apis import init_model
@@ -44,7 +44,9 @@ class MMInstanceSegmentation(MMDetObjectDetector2D):
         if model == "cascade-mask-rcnn":
             if dataset in ["coco"]:
                 threshold = 0.7
-                config_file = "configs/cascade_rcnn/cascade-mask-rcnn_r50-caffe_fpn_1x_coco.py"
+                config_file = (
+                    "configs/cascade_rcnn/cascade-mask-rcnn_r50-caffe_fpn_1x_coco.py"
+                )
                 checkpoint_file = "checkpoints/coco/cascade_mask_rcnn_r50_fpn_1x_coco_20200203-9d4dcb24.pth"
                 # label_dataset_override = "kitti"
             elif dataset in [
@@ -54,9 +56,7 @@ class MMInstanceSegmentation(MMDetObjectDetector2D):
                 "nuscenes",
             ]:  # TODO eventually separate these
                 threshold = 0.7
-                config_file = (
-                    "configs/cityscapes/mask-rcnn_r50_fpn_1x_cityscapes.py"
-                )
+                config_file = "configs/cityscapes/mask-rcnn_r50_fpn_1x_cityscapes.py"
                 checkpoint_file = "checkpoints/cityscapes/mask_rcnn_r50_fpn_1x_cityscapes_20201211_133733-d2858245.pth"
                 label_dataset_override = "cityscapes"
             else:

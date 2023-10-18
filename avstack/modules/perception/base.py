@@ -12,7 +12,8 @@ import itertools
 import os
 import shutil
 
-import avstack
+
+from avstack import __file__ as avfile
 
 
 class _PerceptionAlgorithm:
@@ -45,16 +46,16 @@ class _PerceptionAlgorithm:
 
 
 mmdep_model_root = os.path.join(
-    os.path.dirname(os.path.dirname(avstack.__file__)),
+    os.path.dirname(os.path.dirname(avfile)),
     "deployment",
     "mmdeploy",
     "mmdeploy_models",
 )
 mm2d_root = os.path.join(
-    os.path.dirname(os.path.dirname(avstack.__file__)), "third_party", "mmdetection"
+    os.path.dirname(os.path.dirname(avfile)), "third_party", "mmdetection"
 )
 mm3d_root = os.path.join(
-    os.path.dirname(os.path.dirname(avstack.__file__)), "third_party", "mmdetection3d"
+    os.path.dirname(os.path.dirname(avfile)), "third_party", "mmdetection3d"
 )
 
 
@@ -317,7 +318,7 @@ class _MMObjectDetector(_PerceptionAlgorithm):
                 "hair drier",
                 "toothbrush",
             ]
-            whitelist = all_objs  #["person", "bicycle", "car"]
+            whitelist = all_objs  # ["person", "bicycle", "car"]
         else:
             raise NotImplementedError(dataset)
         return all_objs, whitelist

@@ -87,13 +87,13 @@ def convert_mm2d_to_avstack(
         segms = None
     else:
         try:
-            segms  = result_.pred_instances.masks.cpu().numpy()  # segms are N x H x W
+            segms = result_.pred_instances.masks.cpu().numpy()  # segms are N x H x W
         except AttributeError:
             segms = None
         bboxes = result_.pred_instances.bboxes.cpu().numpy()
         labels = result_.pred_instances.labels.cpu().numpy().astype(int)
         scores = result_.pred_instances.scores.cpu().numpy().astype(float)
-    
+
     # -- filter by score
     if score_thresh > 0:
         assert bboxes is not None and bboxes.shape[1] == 4
@@ -111,7 +111,9 @@ def convert_mm2d_to_avstack(
     obj_type_text = []
     try:
         for label in labels:
-            if (class_names is not None) and (class_names[label] in class_maps[dataset]):
+            if (class_names is not None) and (
+                class_names[label] in class_maps[dataset]
+            ):
                 obj_type_text.append(class_maps[dataset][class_names[label]])
             else:
                 obj_type_text.append(class_names[label])
@@ -123,11 +125,20 @@ def convert_mm2d_to_avstack(
     dets = []
     for segm, bbox, obj_type, score in zip(segms, bboxes, obj_type_text, scores):
         if obj_type in whitelist:
-            box_2d =  Box2D(bbox, calib)
+            box_2d = Box2D(bbox, calib)
             if segm is None:
-                det = BoxDetection(source_identifier, box_2d, calib.reference, obj_type, score)
+                det = BoxDetection(
+                    source_identifier, box_2d, calib.reference, obj_type, score
+                )
             else:
-                det = MaskDetection(source_identifier, box_2d, SegMask2D(segm, calib), calib.reference, obj_type, score)
+                det = MaskDetection(
+                    source_identifier,
+                    box_2d,
+                    SegMask2D(segm, calib),
+                    calib.reference,
+                    obj_type,
+                    score,
+                )
             dets.append(det)
 
     return dets

@@ -4,13 +4,13 @@ import cv2
 import torch
 from midas.model_loader import load_model
 
-import avstack
+from avstack import __file__ as avfile
 from avstack.modules.perception.base import _PerceptionAlgorithm
 from avstack.sensors import DepthImageData
 
 
 midas_root = os.path.join(
-    os.path.dirname(os.path.dirname(avstack.__file__)), "third_party", "MiDaS"
+    os.path.dirname(os.path.dirname(avfile)), "third_party", "MiDaS"
 )
 
 
@@ -99,5 +99,3 @@ class MidasDepthEstimator(_PerceptionAlgorithm):
             source_name=identifier,
         )
         return img_out
-
-    # utils.write_pfm(filename + ".pfm", prediction.astype(np.float32))

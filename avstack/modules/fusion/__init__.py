@@ -8,4 +8,7 @@
 
 """
 
-from .track_to_track import BoxTrackToBoxTrackFusion3D, ci_fusion
+from .track_to_track import AggregatorFusion, BoxTrackToBoxTrackFusion3D, ci_fusion
+
+
+__all__ = ["AggregatorFusion", "BoxTrackToBoxTrackFusion3D", "ci_fusion"]

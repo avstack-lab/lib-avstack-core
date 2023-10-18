@@ -50,6 +50,32 @@ class GroundTruth3DObjectDetector(_PerceptionAlgorithm):
         )
 
 
+class Passthrough3DObjectDetector(_PerceptionAlgorithm):
+    MODE = "object_3d"
+
+    def _execute(self, data, identifier, *args, **kwargs):
+        dets = []
+        for obj in data:
+            if isinstance(obj, detections.Detection_):
+                det = obj
+            elif hasattr(obj, "box"):
+                det = detections.BoxDetection(
+                    source_identifier=self.MODE,
+                    box=obj.box,
+                    reference=obj.reference,
+                    obj_type=obj.obj_type,
+                )
+            else:
+                det = detections.CentroidDetection(
+                    centroid=obj.x,
+                    source_identifier=self.MODE,
+                    reference=obj.reference,
+                    obj_type=obj.obj_type if hasattr(obj, "obj_type") else None,
+                )
+            dets.append(det)
+        return DataContainer(data.frame, data.timestamp, dets, identifier)
+
+
 # ===========================================================================
 # MM DETECTION OPERATIONS
 # ===========================================================================

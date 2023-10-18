@@ -261,7 +261,7 @@ class Box2D:
 
     def as_seg_mask(self):
         mask = np.zeros(self.calibration.img_shape[:2], dtype=bool)
-        mask[int(self.ymin):int(self.ymax), int(self.xmin):int(self.xmax)] = True
+        mask[int(self.ymin) : int(self.ymax), int(self.xmin) : int(self.xmax)] = True
         return SegMask2D(mask, self.calibration, ID=self.ID)
 
     def encode(self):
@@ -500,7 +500,11 @@ class Box3D:
             newt = self.t.change_reference(reference_new, inplace=inplace)
             newr = self.q.change_reference(reference_new, inplace=inplace)
             newself = Box3D(
-                newt, newr, [self.h, self.w, self.l], where_is_t=self.where_is_t, ID=self.ID
+                newt,
+                newr,
+                [self.h, self.w, self.l],
+                where_is_t=self.where_is_t,
+                ID=self.ID,
             )
             return newself
 
@@ -615,7 +619,9 @@ class Box3D:
         if inplace:
             self.position += L
         else:
-            return Box3D(self.position + L, deepcopy(self.attitude), self.size, ID=self.ID)
+            return Box3D(
+                self.position + L, deepcopy(self.attitude), self.size, ID=self.ID
+            )
 
     def project_to_2d_bbox(self, calib, check_reference=True):
         """Project 3D bounding box into a 2D bounding box"""

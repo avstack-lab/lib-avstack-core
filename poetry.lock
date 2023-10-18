@@ -5753,4 +5753,4 @@ serve = ["mmdeploy", "mmdeploy-runtime-gpu", "nvgpu", "onnxruntime-gpu", "tensor
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "cd3220a60bed64bc8de33478e003e3ab90d47243ce059f63344e097515e279fa"
+content-hash = "a1e5af0c2cbd3ee3b619ebc9b29d97b31abe6360b5f6427620c40a06e984cea2"

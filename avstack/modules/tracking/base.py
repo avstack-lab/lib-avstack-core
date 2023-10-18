@@ -38,12 +38,14 @@ class _TrackingAlgorithm:
         save_output=False,
         save_folder="",
         check_reference=True,
+        ID=None,
         **kwargs,
     ):
         """Base class for tracking algorithm
 
         Cost threshold means any cost higher than this value is rejected
         """
+        self.ID = ID
         self.tracks = []
         self.iframe = -1
         self.frame = 0

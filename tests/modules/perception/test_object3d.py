@@ -14,6 +14,7 @@ from copy import deepcopy
 import numpy as np
 
 from avstack import GroundTruthInformation
+from avstack.datastructs import DataContainer
 from avstack.modules import perception
 
 
@@ -56,6 +57,28 @@ def test_groundtruth_perception():
     percep = perception.object3d.GroundTruth3DObjectDetector()
     detections = percep(ground_truth, frame=frame, identifier="percep-1")
     assert np.allclose(detections[0].box.t.x, obj_local.position.x)
+
+
+def test_passthrough_perception_box():
+    frame = timestamp = 0
+    objs = [get_object_global(seed=i) for i in range(4)]
+    data = DataContainer(
+        frame=frame, timestamp=timestamp, data=objs, source_identifier="sensor-1"
+    )
+    percep = perception.object3d.Passthrough3DObjectDetector()
+    detections = percep(data, frame=frame, identifier="percep-1")
+    assert len(detections) == len(data)
+
+
+def test_passthrough_perception_centroid():
+    frame = timestamp = 0
+    objs = [get_object_global(seed=i).position for i in range(4)]
+    data = DataContainer(
+        frame=frame, timestamp=timestamp, data=objs, source_identifier="sensor-1"
+    )
+    percep = perception.object3d.Passthrough3DObjectDetector()
+    detections = percep(data, frame=frame, identifier="percep-1")
+    assert len(detections) == len(data)
 
 
 class LidarMeasurement:

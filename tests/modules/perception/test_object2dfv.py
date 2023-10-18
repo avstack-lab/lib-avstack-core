@@ -51,20 +51,20 @@ def run_mmdet2d(model, dataset, img, frame, deploy, deploy_runtime=None):
             assert len(dets) > 0
 
 
-def test_mmdet_2d_perception_from_deploy():
-    frame = 0
-    try:
-        pass
-    except ModuleNotFoundError as e:
-        print("Cannot run mmdet test without the module")
-    else:
+# def test_mmdet_2d_perception_from_deploy():
+#     frame = 0
+#     try:
+#         pass
+#     except ModuleNotFoundError as e:
+#         print("Cannot run mmdet test without the module")
+#     else:
 
-        model_dataset_pairs = [
-            ("cascade_rcnn", "coco", "tensorrt"),
-        ]
+#         model_dataset_pairs = [
+#             ("cascade_rcnn", "coco", "tensorrt"),
+#         ]
 
-        for model, dataset, runtime in model_dataset_pairs:
-            run_mmdet2d(model, dataset, img, frame, deploy=True, deploy_runtime=runtime)
+#         for model, dataset, runtime in model_dataset_pairs:
+#             run_mmdet2d(model, dataset, img, frame, deploy=True, deploy_runtime=runtime)
 
 
 def test_mmdet_2d_perception_from_checkpoint():

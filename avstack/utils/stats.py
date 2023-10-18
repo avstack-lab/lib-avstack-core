@@ -18,7 +18,7 @@ def mean_confidence_interval(data, confidence=0.95):
     return m, h  # m-h, m+h
 
 
-def plot_cdf(data, ax=None, xlabel=None, label=None, title='CDF', grid=True):
+def plot_cdf(data, ax=None, xlabel=None, label=None, title="CDF", grid=True):
     """
     Make a cumulative density function plot out of non-sorted data
 
@@ -29,13 +29,14 @@ def plot_cdf(data, ax=None, xlabel=None, label=None, title='CDF', grid=True):
     - data -- 1x array
     """
     import matplotlib.pyplot as plt
+
     x_cdf = np.sort(data)
     x_cdf = np.hstack([x_cdf[0], x_cdf])
-    y_cdf = np.arange(0, len(data)+1) / len(data)
+    y_cdf = np.arange(0, len(data) + 1) / len(data)
 
     if ax is None:
         plt.plot(x_cdf, y_cdf, label=label)
-        plt.ylabel('CDF Value')
+        plt.ylabel("CDF Value")
         if grid:
             plt.grid()
         if xlabel is not None:
@@ -63,9 +64,10 @@ def interp_cdf(data, x_query):
 
 def interp_pdf(data, x_query, bins=100):
     y_pdf, bin_edges = np.histogram(data, bins=bins, density=True)
-    bin_centers = [(bin_edges[i] + bin_edges[i+1])/2
-                   for i in range(len(bin_edges)-1)]
-    f = interpolate.interp1d(bin_centers, y_pdf,
-                             assume_sorted=True,
-                             fill_value='extrapolate')
+    bin_centers = [
+        (bin_edges[i] + bin_edges[i + 1]) / 2 for i in range(len(bin_edges) - 1)
+    ]
+    f = interpolate.interp1d(
+        bin_centers, y_pdf, assume_sorted=True, fill_value="extrapolate"
+    )
     return f(x_query)
