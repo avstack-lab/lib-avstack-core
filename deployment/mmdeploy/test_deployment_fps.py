@@ -14,15 +14,16 @@ from avstack.modules.perception.object2dfv import MMDetObjectDetector2D
 
 def run_with_timing(detector, img, n_inferences):
     timing = []
-    for _ in range(n_inferences):
+    for i in range(n_inferences):
         t1 = time.time()
         _ = detector(img)
         t2 = time.time()
-        timing.append((t2 - t1)*1000)
+        if i > 1:  # just in case first two times are slow...
+            timing.append((t2 - t1)*1000)
     print(f'Timing Results:\n   {np.mean(timing):4.2f} +/- {np.std(timing):4.2f} ms')
 
 
-def main_mmdeploy(model_path, img, n_inferences=10):
+def main_mmdeploy(model_path, img, n_inferences=50):
     detector = Detector(
         model_path=model_path,
         device_name='cuda',
@@ -32,7 +33,7 @@ def main_mmdeploy(model_path, img, n_inferences=10):
     run_with_timing(detector, img, n_inferences)
 
 
-def main_mmdet(dataset, model, img, n_inferences=10):
+def main_mmdet(dataset, model, img, n_inferences=50):
     detector = MMDetObjectDetector2D(
         model=model,
         dataset=dataset,

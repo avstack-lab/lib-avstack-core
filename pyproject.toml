@@ -47,9 +47,10 @@ mmdeploy-runtime-gpu = {version="^1.2.0", optional=true}
 mmdeploy = {version="^1.2.0", optional=true}
 onnxruntime-gpu = {version="~1.15.1", optional=true}
 tensorrt = {version="~8.5.3.1", optional=true}  # NOTE: to appropriately use, we need to download the same version tar package manually
+nvidia-cudnn-cu11 = {version="8.9.4.25", optional=true}
 
 [tool.poetry.extras]
-serve = ["torchserve", "torch-model-archiver", "torch-workflow-archiver", "nvgpu", "mmdeploy-runtime-gpu", "mmdeploy", "onnxruntime-gpu", "tensorrt"]
+serve = ["torchserve", "torch-model-archiver", "torch-workflow-archiver", "nvgpu", "mmdeploy-runtime-gpu", "mmdeploy", "onnxruntime-gpu", "tensorrt", "nvidia-cudnn-cu11"]
 
 [tool.poetry.group.docs.dependencies]
 mkdocstrings-python = "^0.8.3"
