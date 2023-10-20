@@ -755,6 +755,16 @@ class DataContainer:
             self.data.extend(other)
         else:
             raise NotImplementedError(type(other))
+        
+    def apply(self, method, *args, **kwargs):
+        for idx, item in enumerate(self):
+            if hasattr(item, method):
+                method_func = getattr(item, method)
+                inplace = kwargs.get("inplace", True)
+                if inplace:
+                    method_func(*args, **kwargs)
+                else:
+                    self[idx] = method_func(*args, **kwargs)
 
     def _check_fundamentals(self, other):
         if isinstance(other, DataContainer):

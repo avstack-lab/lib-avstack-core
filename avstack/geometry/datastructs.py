@@ -148,7 +148,16 @@ class Pose:
         return np.block(
             [[self.attitude.R, self.position.x], [np.zeros((1, 3)), np.ones((1, 1))]]
         )
-
+    
+    def change_reference(self, reference, inplace: bool):
+        if inplace:
+            self.position.change_reference(reference=reference, inplace=inplace)
+            self.attitude.change_reference(reference=reference, inplace=inplace)
+        else:
+            position = self.position.change_reference(reference=reference, inplace=inplace)
+            attitude = self.attitude.change_reference(reference=reference, inplace=inplace)
+            return Pose(position, attitude)
+        
 
 class Twist:
     def __init__(self, linear: Velocity, angular: AngularVelocity) -> None:
@@ -175,6 +184,15 @@ class Twist:
             raise TypeError(f"Input position type {type(angular)} not allowed")
         self._angular = angular
 
+    def change_reference(self, reference, inplace: bool):
+        if inplace:
+            self.linear.change_reference(reference=reference, inplace=inplace)
+            self.angular.change_reference(reference=reference, inplace=inplace)
+        else:
+            linear = self.linear.change_reference(reference=reference, inplace=inplace)
+            angular = self.angular.change_reference(reference=reference, inplace=inplace)
+            return Twist(linear, angular)
+        
 
 class _PointMatrix:
     def __init__(self, x: np.ndarray, calibration) -> None:

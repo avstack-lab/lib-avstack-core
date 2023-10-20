@@ -281,7 +281,7 @@ class ObjectState:
         )
         return VS
 
-    def change_reference(self, other: ReferenceFrame | ObjectState, inplace: bool):
+    def change_reference(self, reference: ReferenceFrame | ObjectState, inplace: bool):
         """Transform the reference frame of this object
 
         If other is a reference frame, assume it is static.
@@ -289,12 +289,12 @@ class ObjectState:
         """
 
         # wrapping reference frame
-        if isinstance(other, ReferenceFrame):
-            reference = other
-        elif isinstance(other, ObjectState):
-            reference = other.as_reference()
+        if isinstance(reference, ReferenceFrame):
+            pass
+        elif isinstance(reference, ObjectState):
+            reference = reference.as_reference()
         else:
-            raise NotImplementedError(type(other))
+            raise NotImplementedError(type(reference))
 
         # transforms
         if self.position is not None:

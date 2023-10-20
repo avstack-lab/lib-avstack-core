@@ -13,12 +13,51 @@ import time
 
 import numpy as np
 
+from avstack.geometry import ReferenceFrame, GlobalOrigin3D
 import avstack.datastructs as ds
 
 
 sys.path.append("tests/")
-from utilities import get_lidar_data
+from utilities import get_lidar_data, get_object_global
 
+
+def get_object_dc():
+    frame = timestamp = source_identifier = 0
+    data = [get_object_global(seed=i, reference=GlobalOrigin3D) for i in range(4)]
+    dc = ds.DataContainer(
+        frame=frame,
+        timestamp=timestamp,
+        data=data,
+        source_identifier=source_identifier
+    )
+    return dc
+
+
+def test_dataconatiner_apply():
+    dc1 = get_object_dc()
+    ref2 = ReferenceFrame(x=np.array([1,2,3]), q=np.quaternion(1), reference=GlobalOrigin3D)
+
+    # check the initial
+    ids = []
+    id_dc1 = id(dc1)
+    for item in dc1:
+        assert item.reference == GlobalOrigin3D
+        ids.append(id(item))
+
+    # use the apply version -- inplace
+    dc1.apply("change_reference", reference=ref2, inplace=True)
+    for idx, item in enumerate(dc1):
+        assert item.reference == ref2
+        assert id(item) == ids[idx]
+    assert id(dc1) == id_dc1
+
+    # use the apply version -- not inplace
+    dc1.apply("change_reference", reference=ref2, inplace=False)
+    for idx, item in enumerate(dc1):
+        assert item.reference == ref2
+        assert id(item) != ids[idx]
+    assert id(dc1) == id_dc1
+    
 
 def test_data_manager():
     data_manager = ds.DataManager()
