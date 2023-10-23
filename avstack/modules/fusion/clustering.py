@@ -14,13 +14,37 @@ class SampledAssignmentClustering:
         self.assign_radius = assign_radius
 
     def __call__(self, list_objects: List[list]) -> dict:
+        """Perform clustering
+
+        input:
+            list_objects -- list of list where list elements are each set of objects 
+                from e.g. an agent and each sublist are the objects
+                e.g., list_objects = [ objects_agent_1, objects_agent_2, ... ]
+                    objects_agent_1 = [ object_1, object_2 ]
+                    objects_agent_2 = [ object_3, object_4 ]
+        
+        returns:
+            clusters -- list of list where list elements are each cluster and 
+                sublist elements are all objects belonging to cluster
+                e.g., clusters = [ cluster_1, cluster_2, ... ]
+                      cluster_1 = [ object_1, object_3, ... ]
+                      cluster_2 = [ object_2, object_4, ... ]
+
+            object_to_cluster_map -- dict mapping agent idx and object idx to cluster idx
+                e.g., object_to_cluster_map = {1:{1:1, 2:2}, 2:{1:1, 2:2}}
+
+        """
         assert len(list_objects) > 0
-        object_clusters = [[obj] for obj in list_objects[0]]
-        for objects in list_objects[1:]:
+        clusters = [[obj] for obj in list_objects[0]]
+
+        object_to_cluster_map = {0:{i:i for i in range(len(list_objects[0]))}}
+
+        for idx_agent, objects in enumerate(list_objects[1:]):
+            idx_agent += 1  # bc zero index start
             # obtain cost matrix
-            A = np.zeros((len(objects), len(object_clusters)))
+            A = np.zeros((len(objects), len(clusters)))
             for i, obj1 in enumerate(objects):
-                for j, tclust in enumerate(object_clusters):
+                for j, tclust in enumerate(clusters):
                     # sample one object from cluster randomly
                     obj2 = np.random.choice(tclust)
                     # Compute cost
@@ -33,10 +57,20 @@ class SampledAssignmentClustering:
             )
             # add assignments to clusters and start new clusters with lone dets
             for obj_idx, clust_idx in assign_sol.iterate_over("rows").items():
-                object_clusters[list(clust_idx.keys())[0]].append(objects[obj_idx])
+                clust_id = list(clust_idx.keys())[0]
+                clusters[clust_id].append(objects[obj_idx])
+                if idx_agent not in object_to_cluster_map:
+                    object_to_cluster_map[idx_agent] = {obj_idx:clust_id}
+                else:
+                    object_to_cluster_map[idx_agent][obj_idx] = clust_id
             for obj_idx in assign_sol.unassigned_rows:
-                object_clusters.append([objects[obj_idx]])
-        return object_clusters
+                clusters.append([objects[obj_idx]])
+                if idx_agent not in object_to_cluster_map:
+                    object_to_cluster_map[idx_agent] = {obj_idx:len(clusters)}
+                else:
+                    object_to_cluster_map[idx_agent][obj_idx] = len(clusters)
+
+        return clusters, object_to_cluster_map
 
 
 class HierarchicalAssignmentClustering:
