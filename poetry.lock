@@ -38,7 +38,7 @@ files = [
 name = "albumentations"
 version = "1.3.1"
 description = "Fast image augmentation library and easy to use wrapper around other libraries"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "albumentations-1.3.1-py3-none-any.whl", hash = "sha256:6b641d13733181d9ecdc29550e6ad580d1bfa9d25e2213a66940062f25e291bd"},
@@ -1498,7 +1498,7 @@ files = [
 name = "imageio"
 version = "2.31.6"
 description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "imageio-2.31.6-py3-none-any.whl", hash = "sha256:70410af62626a4d725b726ab59138e211e222b80ddf8201c7a6561d694c6238e"},
@@ -1751,7 +1751,7 @@ i18n = ["Babel (>=2.7)"]
 name = "joblib"
 version = "1.3.2"
 description = "Lightweight pipelining with Python functions"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "joblib-1.3.2-py3-none-any.whl", hash = "sha256:ef4331c65f239985f3f2220ecc87db222f08fd22097a3dd5698f693875f8cbb9"},
@@ -2201,7 +2201,7 @@ files = [
 name = "lazy-loader"
 version = "0.3"
 description = "lazy_loader"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "lazy_loader-0.3-py3-none-any.whl", hash = "sha256:1e9e76ee8631e264c62ce10006718e80b2cfc74340d17d1031e0f84af7478554"},
@@ -2727,14 +2727,13 @@ develop = true
 [package.dependencies]
 matplotlib = "*"
 numpy = "*"
-pycocotools = "*"
 scipy = "*"
 shapely = "*"
 six = "*"
 terminaltables = "*"
 
 [package.extras]
-all = ["cityscapesscripts", "cython", "imagecorruptions", "matplotlib", "numpy", "pycocotools", "scikit-learn", "scipy", "shapely", "six", "terminaltables"]
+all = ["cython", "matplotlib", "numpy", "scipy", "shapely", "six", "terminaltables"]
 build = ["cython", "numpy"]
 mim = ["mmcv (>=2.0.0rc4,<2.1.0)", "mmengine (>=0.7.1,<1.0.0)"]
 optional = ["cityscapesscripts", "imagecorruptions", "scikit-learn"]
@@ -3027,7 +3026,7 @@ files = [
 name = "networkx"
 version = "3.2"
 description = "Python package for creating and manipulating graphs and networks"
-optional = false
+optional = true
 python-versions = ">=3.9"
 files = [
     {file = "networkx-3.2-py3-none-any.whl", hash = "sha256:8b25f564bd28f94ac821c58b04ae1a3109e73b001a7d476e4bb0d00d63706bf8"},
@@ -3461,7 +3460,7 @@ numpy = {version = ">=1.21.2", markers = "python_version >= \"3.10\" or python_v
 name = "opencv-python-headless"
 version = "4.8.1.78"
 description = "Wrapper package for OpenCV python bindings."
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "opencv-python-headless-4.8.1.78.tar.gz", hash = "sha256:bc7197b42352f6f865c302a49140b889ec7cd957dd697e2d7fc016ad0d3f28f1"},
@@ -4432,7 +4431,7 @@ test = ["pytest (>=6,!=7.0.0,!=7.0.1)", "pytest-cov (>=3.0.0)", "pytest-qt"]
 name = "qudida"
 version = "0.0.4"
 description = "QUick and DIrty Domain Adaptation"
-optional = false
+optional = true
 python-versions = ">=3.5.0"
 files = [
     {file = "qudida-0.0.4-py3-none-any.whl", hash = "sha256:4519714c40cd0f2e6c51e1735edae8f8b19f4efe1f33be13e9d644ca5f736dd6"},
@@ -4765,7 +4764,7 @@ pyasn1 = ">=0.1.3"
 name = "scikit-image"
 version = "0.22.0"
 description = "Image processing in Python"
-optional = false
+optional = true
 python-versions = ">=3.9"
 files = [
     {file = "scikit_image-0.22.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:74ec5c1d4693506842cc7c9487c89d8fc32aed064e9363def7af08b8f8cbb31d"},
@@ -4813,7 +4812,7 @@ test = ["asv", "matplotlib (>=3.5)", "numpydoc (>=1.5)", "pooch (>=1.6.0)", "pyt
 name = "scikit-learn"
 version = "1.3.2"
 description = "A set of python modules for machine learning and data mining"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "scikit-learn-1.3.2.tar.gz", hash = "sha256:a2f54c76accc15a34bfb9066e6c7a56c1e7235dda5762b990792330b52ccfb05"},
@@ -5256,7 +5255,7 @@ files = [
 name = "threadpoolctl"
 version = "3.2.0"
 description = "threadpoolctl"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "threadpoolctl-3.2.0-py3-none-any.whl", hash = "sha256:2b7818516e423bdaebb97c723f86a7c6b0a83d3f3b0970328d66f4d9104dc032"},
@@ -5267,7 +5266,7 @@ files = [
 name = "tifffile"
 version = "2023.9.26"
 description = "Read and write TIFF files"
-optional = false
+optional = true
 python-versions = ">=3.9"
 files = [
     {file = "tifffile-2023.9.26-py3-none-any.whl", hash = "sha256:1de47fa945fddaade256e25ad4f375ae65547f3c1354063aded881c32a64cf89"},
@@ -5718,10 +5717,10 @@ docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.link
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
 
 [extras]
-percep = ["midas", "mmcv", "mmdet", "mmdet3d", "mmengine", "mmsegmentation", "torch", "torchvision"]
+percep = ["albumentations", "midas", "mmcv", "mmdet", "mmdet3d", "mmengine", "mmsegmentation", "scikit-learn", "torch", "torchvision"]
 serve = ["mmdeploy", "mmdeploy-runtime-gpu", "nvgpu", "nvidia-cudnn-cu11", "onnxruntime-gpu", "tensorrt", "torch-model-archiver", "torch-workflow-archiver", "torchserve"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "54ec0e9d62c9ed0f5576c63a1cc722b8657ba91117a48eb9ebd9d1c6d3b8fa2e"
+content-hash = "17c7aa8e7ccebc46e00b6817bfe9826bfd2b757af23fed19967f6474d608ff52"

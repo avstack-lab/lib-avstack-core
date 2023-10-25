@@ -16,8 +16,11 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-from torch import flip as tflip
-
+try:
+    from torch import flip as tflip
+except ModuleNotFoundError:
+    pass
+    
 from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration, LidarCalibration
 from avstack.geometry import GlobalOrigin3D, PointMatrix3D, ReferenceFrame

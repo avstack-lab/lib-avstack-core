@@ -1,8 +1,15 @@
 import os
 
 import cv2
-import torch
-from midas.model_loader import load_model
+try:
+    import torch
+except ModuleNotFoundError:
+    print("No torch found.")
+
+try:
+    from midas.model_loader import load_model
+except ModuleNotFoundError:
+    print("MIDAS module not found.")
 
 from avstack import __file__ as avfile
 from avstack.modules.perception.base import _PerceptionAlgorithm
