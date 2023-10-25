@@ -4,6 +4,7 @@ deployment/libraries/*
 !deployment/libraries/.gitkeep 
 deployment/mmdeploy/mmdeploy_models/*
 
+.vscode/
 
 models/mmdet
 models/mmdet3d
