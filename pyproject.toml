@@ -25,13 +25,13 @@ cython = "^0.29"
 numpy-quaternion = "^2022.4"
 numba = "~0.57.1"
 seaborn = "~0.12.2"
-albumentations = "~1.3.1"
 Pillow = "^9"
 opencv-python = ">=4.3, <4.7"
 tqdm = "^4"
-scikit-learn = "^1.1"
 
 # percep dependencies
+albumentations = {version="~1.3.1", optional=true}
+scikit-learn = {version="^1.1", optional=true}
 torch = {url="https://download.pytorch.org/whl/cu117/torch-1.13.1%2Bcu117-cp310-cp310-linux_x86_64.whl", optional=true}
 torchvision = {url="https://download.pytorch.org/whl/cu117/torchvision-0.14.1%2Bcu117-cp310-cp310-linux_x86_64.whl", optional=true}
 mmcv = {url="https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmcv/torch1.13.1_cu11.7/mmcv-2.0.1-cp310-cp310-linux_x86_64.whl", optional=true}
@@ -53,9 +53,8 @@ tensorrt = {version="~8.5.3.1", optional=true}  # NOTE: to appropriately use, we
 nvidia-cudnn-cu11 = {version="8.9.4.25", optional=true}
 
 [tool.poetry.extras]
+percep = ["scikit-learn", "albumentations", "torch", "torchvision", "mmcv", "mmengine", "mmsegmentation", "mmdet", "mmdet3d", "midas"]
 serve = ["torchserve", "torch-model-archiver", "torch-workflow-archiver", "nvgpu", "mmdeploy-runtime-gpu", "mmdeploy", "onnxruntime-gpu", "tensorrt", "nvidia-cudnn-cu11"]
-percep = ["torch", "torchvision", "mmcv", "mmengine", "mmsegmentation", "mmdet", "mmdet3d", "midas"]
-
 
 [tool.poetry.group.docs.dependencies]
 mkdocstrings-python = "^0.8.3"
