@@ -15,7 +15,6 @@ from avstack.geometry import Attitude, GlobalOrigin3D, Position, bbox
 from avstack.modules import fusion, tracking
 
 
-
 def get_two_tracks():
     t0 = 0.0
     obj_type = "car"

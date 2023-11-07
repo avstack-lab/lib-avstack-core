@@ -755,7 +755,7 @@ class DataContainer:
             self.data.extend(other)
         else:
             raise NotImplementedError(type(other))
-        
+
     def apply(self, method, *args, **kwargs):
         for idx, item in enumerate(self):
             if hasattr(item, method):

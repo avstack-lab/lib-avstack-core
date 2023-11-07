@@ -1,5 +1,6 @@
-from typing import Dict, Union, List
 import itertools
+from typing import Dict, List, Union
+
 import numpy as np
 
 
@@ -26,9 +27,12 @@ class Cluster:
 
     def __str__(self) -> str:
         return "Cluster ({}, {} elements)".format(self.ID, len(self.tracks))
-    
+
     def __repr__(self) -> str:
         return self.__str__()
+
+    def __len__(self) -> int:
+        return len(self.tracks)
 
     def append(self, atrack: tuple) -> None:
         if not isinstance(atrack, tuple):
@@ -40,17 +44,19 @@ class Cluster:
 
     def centroid(self):
         return np.mean([trk.position.x for trk in self.tracks], axis=0)
-    
+
     def contains(self, agent_ID, track) -> bool:
         a_idxs = [i for i, ID in enumerate(self.agent_IDs) if i == agent_ID]
-        t_idxs = [i for i, trk in enumerate(self.tracks) if trk.ID == track.ID ]
+        t_idxs = [i for i, trk in enumerate(self.tracks) if trk.ID == track.ID]
         return any([t_idx in a_idxs for t_idx in t_idxs])
 
     def distance(self, track) -> float:
         return track.distance(self.centroid())
 
-    def get_tracks_by_agent_ID(self, ID: int):
-        return [track for i, track in enumerate(self.tracks) if i in self.agent_IDs.index(ID)]
+    def get_tracks_by_agent_ID(self, ID: int) -> list:
+        return [
+            trk for trk, agent_ID in zip(self.tracks, self.agent_IDs) if agent_ID == ID
+        ]
 
 
 class ClusterSet(list):
@@ -74,14 +80,14 @@ class SampledAssignmentClustering:
         """Perform clustering
 
         input:
-            list_objects -- list of list where list elements are each set of objects 
+            list_objects -- list of list where list elements are each set of objects
                 from e.g. an agent and each sublist are the objects
                 e.g., objects = {agent_1_ID: objects_agent_1, agent_2_ID: objects_agent_2, ... }
                     objects_agent_1 = [ object_1, object_2 ]
                     objects_agent_2 = [ object_3, object_4 ]
-        
+
         returns:
-            clusters -- list of list where list elements are each cluster and 
+            clusters -- list of list where list elements are each cluster and
                 sublist elements are all objects belonging to cluster
                 e.g., clusters = [ cluster_1, cluster_2, ... ]
                       cluster_1 = [ object_1, object_3, ... ]
