@@ -14,6 +14,15 @@ def get_objects(n_objects, n_agents):
     }
 
 
+def test_no_clustering():
+    n_objects = 10
+    n_agents = 2
+    objects = get_objects(n_objects, n_agents)
+    clusterer = clustering.NoClustering()
+    clusters = clusterer(objects)
+    assert len(clusters) == n_objects * n_agents
+
+
 def test_clustering_1_agent():
     n_objects = 10
     n_agents = 1

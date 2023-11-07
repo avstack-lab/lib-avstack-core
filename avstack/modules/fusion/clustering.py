@@ -34,6 +34,9 @@ class Cluster:
     def __len__(self) -> int:
         return len(self.tracks)
 
+    def __getitem__(self, key):
+        return self.tracks[key]
+
     def append(self, atrack: tuple) -> None:
         if not isinstance(atrack, tuple):
             raise TypeError("Input arguments must be tuples")
@@ -65,6 +68,17 @@ class ClusterSet(list):
             if clust.contains(agent_ID, track):
                 return i
         return False
+
+
+class NoClustering:
+    """Each track is its own cluster"""
+
+    def __call__(self, objects: Dict[int, list]) -> dict:
+        clusters = ClusterSet()
+        for agent_ID, tracks in objects.items():
+            for track in tracks:
+                clusters.append(Cluster((agent_ID, track)))
+        return clusters
 
 
 class SampledAssignmentClustering:
