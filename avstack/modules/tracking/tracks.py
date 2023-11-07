@@ -21,6 +21,7 @@ from avstack.geometry.transformations import (
     xyzvel_to_razelrrt,
 )
 from avstack.modules.perception.detections import BoxDetection
+from avstack.modules.tracking import gate_and_score
 
 
 zero3 = np.zeros((3, 3))
@@ -137,6 +138,23 @@ def KF_update(x, P, hx, H, z, R):
 class _TrackBase:
     ID_counter = 0
 
+    N_UPDATES_CONFIRMED = 10
+    SCORE_INIT = -2.7080502011  # -ln(15), NLLR
+    ALPHA_C = 1e-4  # N_FC / N_FA
+    BETA_C = 1e-2
+    SCORE_CONFIRM_THRESH = -np.log((1 - BETA_C) / ALPHA_C) + SCORE_INIT
+    SCORE_DELETE_THRESH = -np.log(BETA_C / (1 - ALPHA_C))
+    MAX_COAST = 5.0  # seconds for time without measurement
+    MAX_MISS = 6  # number of measurements missed before delete
+
+    # technically these actually belong at the tracker level NOT at the track level
+    PD = 0.9
+    PFA = 1e-7
+    VC = 1.0
+    MISSED_DET_SCORE = np.log(1 - PD)
+    BETA_FT = PFA / VC  # false target density
+    BETA_NT = 15 * BETA_FT / PD  # new target density
+
     def __init__(
         self,
         t0,
@@ -155,10 +173,9 @@ class _TrackBase:
             _TrackBase.ID_counter += 1
         else:
             ID = ID_force
+        self.allow_delete = True
         self.obj_type = obj_type
         self.coast = coast
-        self.active = True
-        self.n_updates = n_updates
         self.age = age
         self.ID = int(ID)
         self.t0 = t0
@@ -167,6 +184,10 @@ class _TrackBase:
         self.x = x
         self.P = P
         self.reference = reference
+        self.n_updates = n_updates
+        self.n_missed = 0  # TODO incorporate this
+        self.dt_coast = 0.0
+        self.score = self.SCORE_INIT
 
     @property
     def reference(self):
@@ -193,6 +214,47 @@ class _TrackBase:
     @velocity.setter
     def velocity(self, velocity: Velocity):
         self.x[self.idx_vel] = velocity.x
+
+    @property
+    def score(self):
+        return self._score
+
+    @score.setter
+    def score(self, score):
+        self._score = score
+
+    @property
+    def probability(self):
+        """Probability of a true track"""
+        if self.score < -500:
+            return 1.0
+        else:
+            return np.exp(-self.score) / (1 + np.exp(-self.score))
+
+    @property
+    def active(self):
+        if self.allow_delete:
+            if (
+                (self.score > self.SCORE_DELETE_THRESH)
+                or (self.dt_coast > self.MAX_COAST)
+                or (self.n_missed > self.MAX_MISS)
+            ):
+                return False
+        return True
+
+    @property
+    def confirmed(self):
+        if self.allow_delete and (
+            (self.score > self.SCORE_DELETE_THRESH)
+            or (self.dt_coast > self.MAX_COAST)
+            or (self.n_missed > self.MAX_MISS)
+        ):
+            return False
+        elif (self.score < self.SCORE_CONFIRM_THRESH) or (
+            self.n_updates > self.N_UPDATES_CONFIRMED
+        ):
+            return True
+        return False
 
     @staticmethod
     def f(x, dt):
@@ -228,6 +290,7 @@ class _TrackBase:
         self.t_last_predict = t
         self.age += 1
         self.coast += 1
+        self.dt_coast += dt
 
     def _update(self, z, R):
         y = z - self.h(self.x)
@@ -238,7 +301,10 @@ class _TrackBase:
         self.x = self.x + K @ y
         self.P = (np.eye(self.P.shape[0]) - K @ H) @ self.P
         self.coast = 0
+        self.dt_coast = 0.0
         self.n_updates += 1
+        d2 = y.T @ Sinv @ y
+        self.score += gate_and_score.get_score(d2, S, PD=self.PD, BETA_FT=self.BETA_FT)
 
     def predict(self, t):
         """Can override this in subclass"""

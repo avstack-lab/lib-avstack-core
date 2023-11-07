@@ -88,7 +88,7 @@ class _TrackingAlgorithm:
 
     @property
     def tracks_confirmed(self):
-        return [trk for trk in self.tracks if trk.n_updates >= self.threshold_confirmed]
+        return [trk for trk in self.tracks if trk.confirmed]
 
     @property
     def tracks_active(self):
