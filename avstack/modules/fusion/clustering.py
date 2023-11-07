@@ -93,9 +93,7 @@ class SampledAssignmentClustering:
         """
         assert len(objects) > 0
 
-        # first object defines a cluster
-        obj1 = (list(objects.keys())[0], list(objects.values())[0][0])
-        clusters = ClusterSet([Cluster(obj1)])
+        clusters = ClusterSet()
 
         # check out other objects
         for agent_ID, tracks in objects.items():
