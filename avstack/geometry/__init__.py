@@ -47,5 +47,16 @@ R_cam_to_stan = R_stan_to_cam.T
 q_cam_to_stan = q_stan_to_cam.conjugate()
 
 
-__all__ = ["Acceleration", "AngularVelocity", "Attitude", "PointMatrix2D", "PointMatrix3D",
-           "Pose", "Position", "RotationDecoder", "Twist", "VectorDecoder", "Velocity"]
+__all__ = [
+    "Acceleration",
+    "AngularVelocity",
+    "Attitude",
+    "PointMatrix2D",
+    "PointMatrix3D",
+    "Pose",
+    "Position",
+    "RotationDecoder",
+    "Twist",
+    "VectorDecoder",
+    "Velocity",
+]

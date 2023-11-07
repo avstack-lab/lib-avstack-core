@@ -12,7 +12,6 @@ import itertools
 import os
 import shutil
 
-
 from avstack import __file__ as avfile
 
 

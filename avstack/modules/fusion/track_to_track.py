@@ -8,6 +8,7 @@
 
 """
 from typing import Any
+
 import numpy as np
 
 from avstack.datastructs import DataContainer
@@ -38,12 +39,17 @@ def ci_fusion(x1, P1, x2, P2, w=0.5):
 
 class NoFusion:
     """Only returns the first set of tracks"""
+
     def __call__(self, *args: Any, **kwds: Any) -> list:
         tracks_out = [] if len(args) == 0 else args[0]
         if isinstance(tracks_out, (DataContainer, list)):
             pass
         elif isinstance(tracks_out, dict):
-            tracks_out = list(tracks_out.values())[0] if len(tracks_out) == 1 else  list(tracks_out.values())
+            tracks_out = (
+                list(tracks_out.values())[0]
+                if len(tracks_out) == 1
+                else list(tracks_out.values())
+            )
         elif isinstance(tracks_out, _TrackBase):
             tracks_out = [tracks_out]
         else:
@@ -102,7 +108,9 @@ class CovarianceIntersectionFusion:
                     # perform fusion on the array
                     x_fuse, P_fuse = cluster[0].x, cluster[0].P
                     for track in cluster[1:]:
-                        x_fuse, P_fuse = ci_fusion(x_fuse, P_fuse, track.x, track.P, w=0.5)
+                        x_fuse, P_fuse = ci_fusion(
+                            x_fuse, P_fuse, track.x, track.P, w=0.5
+                        )
                     # rebuild the track
                     track = XyFromRazTrack(
                         t0=cluster[0].t0,

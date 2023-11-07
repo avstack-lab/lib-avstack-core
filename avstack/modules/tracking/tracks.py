@@ -217,6 +217,9 @@ class _TrackBase:
     def encode(self):
         return json.dumps(self, cls=TrackEncoder)
 
+    def distance(self, other):
+        return self.position.distance(other)
+
     def _predict(self, t):
         dt = t - self.t_last_predict
         self.x = self.f(self.x, dt)

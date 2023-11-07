@@ -13,8 +13,8 @@ import time
 
 import numpy as np
 
-from avstack.geometry import ReferenceFrame, GlobalOrigin3D
 import avstack.datastructs as ds
+from avstack.geometry import GlobalOrigin3D, ReferenceFrame
 
 
 sys.path.append("tests/")
@@ -25,17 +25,16 @@ def get_object_dc():
     frame = timestamp = source_identifier = 0
     data = [get_object_global(seed=i, reference=GlobalOrigin3D) for i in range(4)]
     dc = ds.DataContainer(
-        frame=frame,
-        timestamp=timestamp,
-        data=data,
-        source_identifier=source_identifier
+        frame=frame, timestamp=timestamp, data=data, source_identifier=source_identifier
     )
     return dc
 
 
 def test_dataconatiner_apply():
     dc1 = get_object_dc()
-    ref2 = ReferenceFrame(x=np.array([1,2,3]), q=np.quaternion(1), reference=GlobalOrigin3D)
+    ref2 = ReferenceFrame(
+        x=np.array([1, 2, 3]), q=np.quaternion(1), reference=GlobalOrigin3D
+    )
 
     # check the initial
     ids = []
@@ -57,7 +56,7 @@ def test_dataconatiner_apply():
         assert item.reference == ref2
         assert id(item) != ids[idx]
     assert id(dc1) == id_dc1
-    
+
 
 def test_data_manager():
     data_manager = ds.DataManager()
