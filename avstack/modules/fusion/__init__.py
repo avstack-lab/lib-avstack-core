@@ -8,8 +8,8 @@
 
 """
 
-from . import clustering
-from .clustering import NoClustering, SampledAssignmentClustering
+from ..clustering import clusterers
+from ..clustering.clusterers import NoClustering, SampledAssignmentClustering
 from .track_to_track import BoxTrackToBoxTrackFusion3D, ci_fusion
 
 
@@ -18,5 +18,5 @@ __all__ = [
     "SampledAssignmentClustering",
     "BoxTrackToBoxTrackFusion3D",
     "ci_fusion",
-    "clustering",
+    "clusterers",
 ]

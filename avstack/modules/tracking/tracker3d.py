@@ -23,6 +23,7 @@ from .tracks import (
     BasicJointBoxTrack,
     XyzFromRazelRrtTrack,
     XyzFromRazelTrack,
+    XyzFromXyzTrack,
 )
 
 
@@ -282,7 +283,7 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
         return self.tracks_confirmed
 
 
-class BasicRazelTracker(_TrackingAlgorithm):
+class _BasicCenterTracker(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=3,
@@ -303,6 +304,21 @@ class BasicRazelTracker(_TrackingAlgorithm):
         )
 
     def spawn_track_from_detection(self, detection):
+        raise NotImplementedError
+
+
+class BasicXyzTracker(_BasicCenterTracker):
+    def spawn_track_from_detection(self, detection):
+        return XyzFromXyzTrack(
+            t0=self.t,
+            razel=detection.razel,
+            reference=detection.reference,
+            obj_type=detection.obj_type,
+        )
+
+
+class BasicRazelTracker(_BasicCenterTracker):
+    def spawn_track_from_detection(self, detection):
         return XyzFromRazelTrack(
             t0=self.t,
             razel=detection.razel,
@@ -311,26 +327,7 @@ class BasicRazelTracker(_TrackingAlgorithm):
         )
 
 
-class BasicRazelRrtTracker(_TrackingAlgorithm):
-    def __init__(
-        self,
-        threshold_confirmed=3,
-        threshold_coast=3,
-        v_max=60,  # meters per second
-        assign_metric="center_dist",
-        assign_radius=10,
-        **kwargs,
-    ):
-        super().__init__(
-            assign_metric=assign_metric,
-            assign_radius=assign_radius,
-            threshold_confirmed=threshold_confirmed,
-            threshold_coast=threshold_coast,
-            cost_threshold=0,  # bc we are subtracting off assign radius
-            v_max=v_max,
-            **kwargs,
-        )
-
+class BasicRazelRrtTracker(_BasicCenterTracker):
     def spawn_track_from_detection(self, detection):
         return XyzFromRazelRrtTrack(
             t0=self.t,

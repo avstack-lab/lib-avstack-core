@@ -15,8 +15,8 @@ from avstack.modules.assignment import build_A_from_iou, gnn_single_frame_assign
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
 from avstack.modules.tracking.tracks import XyFromRazTrack
 
+from ..clustering.clusterers import Cluster
 from .base import _FusionAlgorithm
-from .clustering import Cluster
 
 
 def ci_fusion(x1, P1, x2, P2, w=0.5):

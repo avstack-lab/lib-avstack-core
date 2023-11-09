@@ -67,6 +67,10 @@ def make_kitti_tracking_data(
                     np.array([*det.box3d.t.x, *det.velocity.x])
                 )
                 det = RazelRrtDetection(name_3d, razelrrt, reference, det.obj_type)
+            elif det_type == "xyz":
+                raise
+            elif det_type == "xy":
+                raise
             else:
                 raise NotImplementedError
             dets_class.append(det)

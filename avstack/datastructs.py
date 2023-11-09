@@ -766,6 +766,19 @@ class DataContainer:
                 else:
                     self[idx] = method_func(*args, **kwargs)
 
+    def apply_and_return(self, method, *args, **kwargs):
+        data = []
+        for item in self:
+            if hasattr(item, method):
+                method_func = getattr(item, method)
+                data.append(method_func(*args, **kwargs))
+        return type(self)(
+            frame=self.frame,
+            timestamp=self.timestamp,
+            data=data,
+            source_identifier=self.source_identifier,
+        )
+
     def _check_fundamentals(self, other):
         if isinstance(other, DataContainer):
             if (self.frame != other.frame) or (self.timestamp != other.timestamp):
