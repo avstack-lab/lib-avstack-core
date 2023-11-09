@@ -9,8 +9,8 @@ from utilities import get_object_global
 
 def get_objects(n_objects, n_agents):
     return {
-        i: [get_object_global(seed=i) for i in range(n_objects)]
-        for i in range(n_agents)
+        i_agent: [get_object_global(seed=j_object) for j_object in range(n_objects)]
+        for i_agent in range(n_agents)
     }
 
 

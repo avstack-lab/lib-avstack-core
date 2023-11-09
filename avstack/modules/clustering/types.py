@@ -4,6 +4,7 @@ from typing import List, Union
 import numpy as np
 
 from avstack.datastructs import DataContainer
+from avstack.geometry import Position
 
 
 class Cluster:
@@ -19,6 +20,7 @@ class Cluster:
         self.agent_IDs = []
         self.track_IDs = []
         self.tracks = []
+        self.reference = None
         for arg in args:
             if not isinstance(arg, tuple):
                 raise TypeError("Input arguments must be tuples")
@@ -26,6 +28,10 @@ class Cluster:
                 self.agent_IDs.append(arg[0])
                 self.track_IDs.append(arg[1].ID)
                 self.tracks.append(arg[1])
+                if self.reference is None:
+                    self.reference = arg[1].reference
+                else:
+                    assert self.reference.allclose(arg[1].reference)
 
     def __str__(self) -> str:
         return "Cluster ({}, {} elements)".format(self.ID, len(self.tracks))
@@ -46,9 +52,15 @@ class Cluster:
             self.agent_IDs.append(atrack[0])
             self.track_IDs.append(atrack[1].ID)
             self.tracks.append(atrack[1])
+            if self.reference is None:
+                self.reference = atrack[1].reference
+            else:
+                assert self.reference.allclose(atrack[1].reference)
 
     def centroid(self):
-        return np.mean([trk.position.x for trk in self.tracks], axis=0)
+        """Ensure all are of the same reference"""
+        x_mean = np.mean([trk.position.x for trk in self.tracks], axis=0)
+        return Position(x_mean, reference=self.reference)
 
     def contains(self, agent_ID, track) -> bool:
         a_idxs = [i for i, ID in enumerate(self.agent_IDs) if i == agent_ID]
