@@ -4,6 +4,7 @@ from copy import deepcopy
 import numpy as np
 
 from avstack.datastructs import DataContainer
+from avstack.geometry import GlobalOrigin3D
 from avstack.geometry.transformations import cartesian_to_spherical, xyzvel_to_razelrrt
 from avstack.modules.perception.detections import (
     BoxDetection,
@@ -54,8 +55,12 @@ def make_kitti_tracking_data(
             det.change_reference(reference, inplace=True)
             if det_type == "box":
                 det = BoxDetection(name_3d, det.box3d, reference, det.obj_type)
-            elif det_type == "centroid":
-                det = CentroidDetection(name_3d, det.box3d.t.x, reference, det.obj_type)
+            elif det_type in ["xy", "xyz", "centroid"]:
+                if det_type in ["xy"]:
+                    centroid = det.box3d.t.x[:2]
+                else:
+                    centroid = det.box3d.t.x
+                det = CentroidDetection(name_3d, centroid, reference, det.obj_type)
             elif det_type == "raz":
                 razel = cartesian_to_spherical(det.box3d.t.x)
                 det = RazDetection(name_3d, razel[:2], reference, det.obj_type)
@@ -67,10 +72,6 @@ def make_kitti_tracking_data(
                     np.array([*det.box3d.t.x, *det.velocity.x])
                 )
                 det = RazelRrtDetection(name_3d, razelrrt, reference, det.obj_type)
-            elif det_type == "xyz":
-                raise
-            elif det_type == "xy":
-                raise
             else:
                 raise NotImplementedError
             dets_class.append(det)
@@ -102,3 +103,32 @@ def make_kitti_2d_3d_tracking_data(dt=0.1, n_frames=10, n_targs=4):
         )
         assert isinstance(dets_3d, DataContainer)
     return dets_2d_all, dets_3d_all
+
+
+def run_tracker(tracker, det_type, dt=0.25):
+    platform = GlobalOrigin3D
+    dets_all = make_kitti_tracking_data(
+        dt=dt, n_frames=20, n_targs=4, det_type=det_type
+    )
+    for frame, dets in enumerate(dets_all):
+        tracks = tracker(
+            t=frame * dt,
+            frame=frame,
+            detections=dets,
+            platform=platform,
+            identifier="tracker-1",
+        )
+    assert len(tracks) == len(dets_all[-1])
+    for i, trk in enumerate(tracks):
+        for det in dets_all[-1]:
+            if hasattr(det, "xyz"):
+                if (trk.position - det.xyz).norm() < 4:
+                    break
+            elif hasattr(det, "xy"):
+                if (trk.position - det.xy).norm() < 4:
+                    break
+            elif hasattr(det, "box"):
+                if np.linalg.norm(trk.box.center.x - det.box.center.x) < 5:
+                    break
+        else:
+            raise

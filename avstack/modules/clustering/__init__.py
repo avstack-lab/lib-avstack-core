@@ -8,4 +8,5 @@ __all__ = [
     "SampledAssignmentClustering",
     "NoClustering",
     "ClusterAssignmentManager",
+    "ClusterTracker",
 ]

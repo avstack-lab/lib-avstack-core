@@ -471,7 +471,7 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
     def __init__(
         self,
         t0,
-        xy,
+        xyz,
         reference,
         obj_type,
         ID_force=None,
@@ -491,7 +491,7 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
         # Position can be initialized fairly well
         # Velocity can only be initialized along the range rate
         if x is None:
-            x = np.array([xy[0], xy[1], xy[2], 0, 0, 0])
+            x = np.array([xyz[0], xyz[1], xyz[2], 0, 0, 0])
         if P is None:
             r_sig = 5
             v_sig = 30

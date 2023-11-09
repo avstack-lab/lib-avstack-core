@@ -18,6 +18,7 @@ from avstack.environment.objects import VehicleState
 from avstack.geometry import Box2D, Box3D, ReferenceFrame
 from avstack.modules.perception.detections import (
     BoxDetection,
+    CentroidDetection,
     RazDetection,
     RazelDetection,
     RazelRrtDetection,
@@ -122,6 +123,13 @@ class _TrackingAlgorithm:
                 det = det_.xyz  # use the cartesian coordinates for gating
             elif isinstance(det_, RazDetection):
                 det = det_.xy  # use the cartesian coordinates for gating
+            elif isinstance(det_, CentroidDetection):
+                if self.dimensions == 3:
+                    det = det_.xyz
+                elif self.dimensions == 2:
+                    det = det_.xy
+                else:
+                    raise NotImplementedError(self.dimensions)
             else:
                 raise NotImplementedError(type(det_))
 
@@ -138,6 +146,13 @@ class _TrackingAlgorithm:
                     trk = trk.x[:3]
                 elif isinstance(det_, RazDetection):
                     trk = trk.x[:2]
+                elif isinstance(det_, CentroidDetection):
+                    if self.dimensions == 3:
+                        trk = trk.x[:3]
+                    elif self.dimensions == 2:
+                        trk = trk.x[:2]
+                    else:
+                        raise NotImplementedError(self.dimensions)
                 else:
                     raise NotImplementedError(type(det_))
 

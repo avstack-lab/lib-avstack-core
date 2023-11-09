@@ -14,7 +14,7 @@ from avstack.geometry import Box2D
 
 from ._sort import Sort
 from .base import _TrackingAlgorithm
-from .tracks import BasicBoxTrack2D, XyFromRazTrack
+from .tracks import BasicBoxTrack2D, XyFromRazTrack, XyFromXyTrack
 
 
 # ==============================================================
@@ -47,7 +47,7 @@ class PassthroughTracker2D(_TrackingAlgorithm):
         return tracks
 
 
-class BasicRazTracker(_TrackingAlgorithm):
+class _BaseCenterTracker(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=10,
@@ -67,6 +67,22 @@ class BasicRazTracker(_TrackingAlgorithm):
             **kwargs,
         )
 
+
+class BasicXyTracker(_BaseCenterTracker):
+    dimensions = 2
+
+    def spawn_track_from_detection(self, detection):
+        return XyFromXyTrack(
+            t0=self.t,
+            xy=detection.xy,
+            reference=detection.reference,
+            obj_type=detection.obj_type,
+        )
+
+
+class BasicRazTracker(_BaseCenterTracker):
+    dimensions = 2
+
     def spawn_track_from_detection(self, detection):
         return XyFromRazTrack(
             t0=self.t,
@@ -76,7 +92,7 @@ class BasicRazTracker(_TrackingAlgorithm):
         )
 
 
-class BasicBoxTracker2D(_TrackingAlgorithm):
+class _BaseBoxTracker2D(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=2,
@@ -94,6 +110,10 @@ class BasicBoxTracker2D(_TrackingAlgorithm):
             v_max=v_max,
             **kwargs,
         )
+
+
+class BasicBoxTracker2D(_BaseBoxTracker2D):
+    dimensions = 2
 
     def spawn_track_from_detection(self, detection):
         return BasicBoxTrack2D(

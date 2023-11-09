@@ -37,6 +37,8 @@ class GroundTruthTracker(_TrackingAlgorithm):
 
 
 class BasicBoxTracker3D(_TrackingAlgorithm):
+    dimensions = 3
+
     def __init__(
         self,
         threshold_confirmed=3,
@@ -67,6 +69,8 @@ class BasicBoxTracker3D(_TrackingAlgorithm):
 
 
 class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
+    dimensions = 3
+
     def __init__(
         self,
         threshold_confirmed_3d=3,
@@ -283,7 +287,7 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
         return self.tracks_confirmed
 
 
-class _BasicCenterTracker(_TrackingAlgorithm):
+class _BaseCenterTracker(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=3,
@@ -307,17 +311,21 @@ class _BasicCenterTracker(_TrackingAlgorithm):
         raise NotImplementedError
 
 
-class BasicXyzTracker(_BasicCenterTracker):
+class BasicXyzTracker(_BaseCenterTracker):
+    dimensions = 3
+
     def spawn_track_from_detection(self, detection):
         return XyzFromXyzTrack(
             t0=self.t,
-            razel=detection.razel,
+            xyz=detection.xyz,
             reference=detection.reference,
             obj_type=detection.obj_type,
         )
 
 
-class BasicRazelTracker(_BasicCenterTracker):
+class BasicRazelTracker(_BaseCenterTracker):
+    dimensions = 3
+
     def spawn_track_from_detection(self, detection):
         return XyzFromRazelTrack(
             t0=self.t,
@@ -327,7 +335,9 @@ class BasicRazelTracker(_BasicCenterTracker):
         )
 
 
-class BasicRazelRrtTracker(_BasicCenterTracker):
+class BasicRazelRrtTracker(_BaseCenterTracker):
+    dimensions = 3
+
     def spawn_track_from_detection(self, detection):
         return XyzFromRazelRrtTrack(
             t0=self.t,
@@ -343,6 +353,8 @@ class BasicRazelRrtTracker(_BasicCenterTracker):
 
 
 class Ab3dmotTracker(_TrackingAlgorithm):
+    dimensions = 3
+
     def __init__(self, **kwargs):
         self.iframe = 0
         self.tracker = libraries.AB3DMOT.model.AB3DMOT()
@@ -453,6 +465,8 @@ class Ab3dmotTracker(_TrackingAlgorithm):
 
 
 class EagermotTracker(_TrackingAlgorithm):
+    dimensions = 3
+
     def __init__(self, plus=False, n_box_confirmed=0, n_joint_coast=np.inf, **kwargs):
         self.tracker = libraries.EagerMOT.model.EagerMOT(
             plus, n_box_confirmed, n_joint_coast

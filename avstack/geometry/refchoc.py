@@ -486,6 +486,9 @@ class Vector:
     def __repr__(self):
         return str(self)
 
+    def __len__(self):
+        return len(self.x)
+
     def __iter__(self):
         return self.x
 

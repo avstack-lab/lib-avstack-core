@@ -12,7 +12,7 @@ from copy import deepcopy
 import numpy as np
 
 from avstack.geometry import Attitude, GlobalOrigin3D, Position, bbox
-from avstack.modules import fusion, tracking
+from avstack.modules import clustering, fusion, tracking
 
 
 def get_two_tracks():
@@ -38,8 +38,8 @@ def test_track_to_track_CI():
 
 def test_no_fusion():
     fuser = fusion.track_to_track.NoFusion()
-    clusterer = fusion.NoClustering()
+    clusterer = clustering.NoClustering()
     track_1, track_2 = get_two_tracks()
-    clusters = clusterer({0: [track_1, track_2]})
+    clusters = clusterer({0: [track_1, track_2]}, frame=0, timestamp=0)
     tracks_fused = [fuser(cluster) for cluster in clusters]
     assert tracks_fused == [track_1, track_2]

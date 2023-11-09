@@ -162,8 +162,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
             self.velocity = Velocity(self.x[3:6], self.reference)  # in ENU
             self.acceleration = None
             if self.velocity.norm() > 0:
-                forward = self.velocity / np.linalg.norm(self.velocity)  # in ENU
-                forward = forward.x
+                forward = self.velocity.x / np.linalg.norm(self.velocity.x)  # in ENU
             elif self.attitude is None:
                 forward = np.array([1, 0, 0])
             else:

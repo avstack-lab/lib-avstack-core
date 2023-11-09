@@ -17,13 +17,17 @@ from avstack import GroundTruthInformation
 from avstack.datastructs import DataContainer
 from avstack.geometry import Attitude, GlobalOrigin3D, Position, ReferenceFrame, bbox
 from avstack.geometry.transformations import xyzvel_to_razelrrt
-from avstack.modules import tracking
 from avstack.modules.perception.detections import BoxDetection, RazelRrtDetection
+from avstack.modules.tracking import tracker3d
 
 
 sys.path.append("tests/")
 sys.path.append("tests/modules/tracking")
-from track_utils import make_kitti_2d_3d_tracking_data, make_kitti_tracking_data
+from track_utils import (
+    make_kitti_2d_3d_tracking_data,
+    make_kitti_tracking_data,
+    run_tracker,
+)
 from utilities import get_ego, get_object_local, get_test_sensor_data
 
 
@@ -53,7 +57,7 @@ def test_groundtruth_tracking():
     ground_truth = GroundTruthInformation(
         frame, timestamp, ego_state=ego, objects=[obj1]
     )
-    tracker = tracking.tracker3d.GroundTruthTracker()
+    tracker = tracker3d.GroundTruthTracker()
     platform = ego.as_reference()
     tracks = tracker(
         t=timestamp,
@@ -86,90 +90,29 @@ def test_make_2d3d_tracking_data():
     assert len(dets_2d) == len(dets_3d)
 
 
-def run_tracker(tracker, det_type, dt=0.25):
-    platform = GlobalOrigin3D
-    dets_all = make_kitti_tracking_data(
-        dt=dt, n_frames=20, n_targs=4, det_type=det_type
-    )
-    for frame, dets in enumerate(dets_all):
-        tracks = tracker(
-            t=frame * dt,
-            frame=frame,
-            detections=dets,
-            platform=platform,
-            identifier="tracker-1",
-        )
-    assert len(tracks) == len(dets_all[-1])
-    for i, trk in enumerate(tracks):
-        for det in dets_all[-1]:
-            if hasattr(det, "xyz"):
-                if (trk.position - det.xyz).norm() < 4:
-                    break
-            elif hasattr(det, "xy"):
-                if (trk.position - det.xy).norm() < 4:
-                    break
-            elif hasattr(det, "box"):
-                if np.linalg.norm(trk.box2d.center - det.box.center) < 25:
-                    break
-        else:
-            raise
-
-
 def test_xyz_tracker_3d():
-    tracker = tracking.tracker3d.BasicXyzTracker(threshold_coast=5)
+    tracker = tracker3d.BasicXyzTracker(threshold_coast=5)
     run_tracker(tracker=tracker, det_type="xyz")
 
 
 def test_razel_tracker_3d():
-    tracker = tracking.tracker3d.BasicRazelTracker(threshold_coast=5)
+    tracker = tracker3d.BasicRazelTracker(threshold_coast=5)
     run_tracker(tracker=tracker, det_type="razel")
 
 
-def test_raz_tracker_2d():
-    tracker = tracking.tracker2d.BasicRazTracker(threshold_coast=5)
-    run_tracker(tracker=tracker, det_type="raz")
-
-
 def test_razelrrt_tracker_3d():
-    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
+    tracker = tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     run_tracker(tracker=tracker, det_type="razelrrt", dt=0.10)
 
 
 def test_basic_box_tracker_3d():
-    tracker = tracking.tracker3d.BasicBoxTracker3D()
+    tracker = tracker3d.BasicBoxTracker3D()
     run_tracker(tracker=tracker, det_type="box", dt=0.10)
 
 
 def test_ab3dmot_kitti():
-    tracker = tracking.tracker3d.Ab3dmotTracker()
+    tracker = tracker3d.Ab3dmotTracker()
     run_tracker(tracker=tracker, det_type="box", dt=0.10)
-
-
-def test_basic_box_tracker_2d():
-    platform = GlobalOrigin3D
-    n_targs = 4
-    dt = 0.05
-    dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
-        dt=dt, n_frames=10, n_targs=n_targs
-    )
-    tracker = tracking.tracker2d.BasicBoxTracker2D()
-    for frame, dets_2d in enumerate(dets_2d_all):
-        tracks = tracker(
-            t=frame * dt,
-            frame=frame,
-            detections=dets_2d,
-            platform=platform,
-            identifier="tracker-1",
-        )
-    assert len(tracker.tracks_active) == len(dets_3d_all[-1])
-    for i, trk in enumerate(tracker.tracks_active):
-        for det in dets_2d_all[-1]:
-            if (
-                np.linalg.norm(trk.box2d.center - det.box.center) < 25
-            ):  # NOTE: this is a little high
-                break
-        else:
-            raise
 
 
 def test_basic_joint_box_tracker():
@@ -179,7 +122,7 @@ def test_basic_joint_box_tracker():
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
         dt=dt, n_frames=4, n_targs=n_targs
     )
-    tracker = tracking.tracker3d.BasicBoxTrackerFusion3Stage()
+    tracker = tracker3d.BasicBoxTrackerFusion3Stage()
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
         tracks = tracker(
             t=frame * dt,
@@ -194,7 +137,7 @@ def test_basic_joint_box_tracker():
 def test_inline_razelrrt_tracker_3d():
     """test an object traveling in line with sensor"""
     platform = GlobalOrigin3D
-    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
+    tracker = tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     target_xyzvel = np.array([20, 0, 0, 30, 0, 0])
     dt = 0.1
     nframes = 20
@@ -219,7 +162,7 @@ def test_inline_razelrrt_tracker_3d():
 def tests_transverse_razelrrt_tracker_3d():
     """test an object traveling transverse to the sensor"""
     platform = GlobalOrigin3D
-    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
+    tracker = tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     target_xyzvel = np.array([20, 0, 0, 0, 10, 0])
     dt = 0.1
     nframes = 20
@@ -244,7 +187,7 @@ def tests_transverse_razelrrt_tracker_3d():
 def tests_full_razelrrt_tracker_3d():
     """test an object traveling transverse to the sensor"""
     platform = GlobalOrigin3D
-    tracker = tracking.tracker3d.BasicRazelRrtTracker(threshold_coast=5)
+    tracker = tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     target_xyzvel = np.array([20, 10, -5, 2, 10, 2.4])
     dt = 0.1
     nframes = 20
@@ -267,9 +210,7 @@ def tests_full_razelrrt_tracker_3d():
 
 def test_eagermot_fusion_kitti():
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(n_frames=10)
-    tracker_base = (
-        avstack.modules.tracking.tracker3d.libraries.EagerMOT.model.EagerMOT()
-    )
+    tracker_base = tracker3d.libraries.EagerMOT.model.EagerMOT()
     for dets_2d, dets_3d in zip(dets_2d_all, dets_3d_all):
         platform = dets_3d[0].reference
         # add false positives
@@ -295,7 +236,7 @@ def test_eagermot_associations():
     dt = 0.10
     platform = GlobalOrigin3D
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(dt=dt, n_frames=4)
-    tracker = tracking.tracker3d.EagermotTracker()
+    tracker = tracker3d.EagermotTracker()
     trk_base = tracker.tracker
     i = 0
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
@@ -370,7 +311,7 @@ def test_eagermot_performance():
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
         dt=dt, n_frames=4, n_targs=n_targs
     )
-    tracker = tracking.tracker3d.EagermotTracker()
+    tracker = tracker3d.EagermotTracker()
     tracks = tracker.tracker
     for frame, (dets_2d, dets_3d) in enumerate(zip(dets_2d_all, dets_3d_all)):
         tracks = tracker(
@@ -394,7 +335,7 @@ def test_box_tracker_moving_reference():
     dt = 0.1
     frames = 10
     v0 = np.array([5, 0, 0])
-    tracker = tracking.tracker3d.BasicBoxTracker3D()
+    tracker = tracker3d.BasicBoxTracker3D()
     for i in range(frames):
         reference = ReferenceFrame(
             box1.reference.x + v0 * dt * i, box1.reference.q, GlobalOrigin3D
