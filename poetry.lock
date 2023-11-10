@@ -577,23 +577,6 @@ files = [
 ]
 
 [[package]]
-name = "coloredlogs"
-version = "15.0.1"
-description = "Colored terminal output for Python's logging module"
-optional = true
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-files = [
-    {file = "coloredlogs-15.0.1-py2.py3-none-any.whl", hash = "sha256:612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934"},
-    {file = "coloredlogs-15.0.1.tar.gz", hash = "sha256:7c991aa71a4577af2f82600d8f8f3a89f936baeaf9b50a9c197da014e5bf16b0"},
-]
-
-[package.dependencies]
-humanfriendly = ">=9.1"
-
-[package.extras]
-cron = ["capturer (>=2.4)"]
-
-[[package]]
 name = "comm"
 version = "0.2.0"
 description = "Jupyter Python Comm implementation, for usage in ipykernel, xeus-python etc."
@@ -1110,17 +1093,6 @@ six = ">=1.3.0"
 docs = ["sphinx"]
 
 [[package]]
-name = "flatbuffers"
-version = "23.5.26"
-description = "The FlatBuffers serialization format for Python"
-optional = true
-python-versions = "*"
-files = [
-    {file = "flatbuffers-23.5.26-py2.py3-none-any.whl", hash = "sha256:c0ff356da363087b915fde4b8b45bdda73432fc17cddb3c8157472eab1422ad1"},
-    {file = "flatbuffers-23.5.26.tar.gz", hash = "sha256:9ea1144cac05ce5d86e2859f431c6cd5e66cd9c78c558317c7955fb8d4c78d89"},
-]
-
-[[package]]
 name = "fonttools"
 version = "4.44.0"
 description = "Tools to manipulate font files"
@@ -1432,20 +1404,6 @@ tensorflow = ["graphviz", "pydot", "tensorflow"]
 testing = ["InquirerPy (==0.3.4)", "Jinja2", "Pillow", "aiohttp", "gradio", "jedi", "numpy", "pydantic (>1.1,<3.0)", "pytest", "pytest-asyncio", "pytest-cov", "pytest-env", "pytest-vcr", "pytest-xdist", "soundfile", "urllib3 (<2.0)"]
 torch = ["torch"]
 typing = ["pydantic (>1.1,<3.0)", "types-PyYAML", "types-requests", "types-simplejson", "types-toml", "types-tqdm", "types-urllib3", "typing-extensions (>=4.8.0)"]
-
-[[package]]
-name = "humanfriendly"
-version = "10.0"
-description = "Human friendly output for text interfaces using Python"
-optional = true
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-files = [
-    {file = "humanfriendly-10.0-py2.py3-none-any.whl", hash = "sha256:1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477"},
-    {file = "humanfriendly-10.0.tar.gz", hash = "sha256:6b0b831ce8f15f7300721aa49829fc4e83921a9a301cc7f606be6686a2288ddc"},
-]
-
-[package.dependencies]
-pyreadline3 = {version = "*", markers = "sys_platform == \"win32\" and python_version >= \"3.8\""}
 
 [[package]]
 name = "idna"
@@ -2679,14 +2637,13 @@ develop = true
 [package.dependencies]
 matplotlib = "*"
 numpy = "*"
-pycocotools = "*"
 scipy = "*"
 shapely = "*"
 six = "*"
 terminaltables = "*"
 
 [package.extras]
-all = ["cityscapesscripts", "cython", "imagecorruptions", "matplotlib", "numpy", "pycocotools", "scikit-learn", "scipy", "shapely", "six", "terminaltables"]
+all = ["cython", "matplotlib", "numpy", "numpy", "scipy", "shapely", "six", "terminaltables"]
 build = ["cython", "numpy"]
 mim = ["mmcv (>=2.0.0rc4,<2.1.0)", "mmengine (>=0.7.1,<1.0.0)"]
 optional = ["cityscapesscripts", "imagecorruptions", "scikit-learn"]
@@ -2778,23 +2735,6 @@ tests = ["codecov", "flake8", "interrogate", "pytest", "xdoctest (>=0.10.0)", "y
 [package.source]
 type = "directory"
 url = "third_party/mmsegmentation"
-
-[[package]]
-name = "mpmath"
-version = "1.3.0"
-description = "Python library for arbitrary-precision floating-point arithmetic"
-optional = true
-python-versions = "*"
-files = [
-    {file = "mpmath-1.3.0-py3-none-any.whl", hash = "sha256:a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"},
-    {file = "mpmath-1.3.0.tar.gz", hash = "sha256:7a28eb2a9774d00c7bc92411c19a89209d5da7c4c9a9e227be8330a23a25b91f"},
-]
-
-[package.extras]
-develop = ["codecov", "pycodestyle", "pytest (>=4.6)", "pytest-cov", "wheel"]
-docs = ["sphinx"]
-gmpy = ["gmpy2 (>=2.1.0a4)"]
-tests = ["pytest (>=4.6)"]
 
 [[package]]
 name = "mypy"
@@ -3292,53 +3232,6 @@ typing-extensions = ">=3.6.2.1"
 
 [package.extras]
 lint = ["black (>=22.3)", "clang-format (==13.0.0)", "flake8 (>=5.0.2)", "isort[colors] (>=5.10)", "mypy (>=0.971)", "types-protobuf (==3.18.4)"]
-
-[[package]]
-name = "onnxruntime-gpu"
-version = "1.15.1"
-description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
-optional = true
-python-versions = "*"
-files = [
-    {file = "onnxruntime_gpu-1.15.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6c0cd0d67a4402222dacd02558e261890724f38e3dfcffedacc67d4575ebcdac"},
-    {file = "onnxruntime_gpu-1.15.1-cp310-cp310-win_amd64.whl", hash = "sha256:5e48ae99d3692b71cd95f75eb0c556bf196b708cb0dd760dbbb96720d81a00a2"},
-    {file = "onnxruntime_gpu-1.15.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ba0a1af33d6539a2dae9c7a8473988a1358e036b3c9dea09ff5b61f5bc2eb603"},
-    {file = "onnxruntime_gpu-1.15.1-cp311-cp311-win_amd64.whl", hash = "sha256:53bba07b335082ff26c834bb43bd12ed772221aa69e0d454b750c0df0d0ea719"},
-    {file = "onnxruntime_gpu-1.15.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:134c83e21f02f0629a7e0b2eb400a2cc16d088ac332822e04bafc57f84bfc77c"},
-    {file = "onnxruntime_gpu-1.15.1-cp38-cp38-win_amd64.whl", hash = "sha256:faeae730818546833fb2589feed03176f5469ef6cd06a0c5e5f5b3eec7ac84ec"},
-    {file = "onnxruntime_gpu-1.15.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:58773200fbe3a840cab163fc9f196a3de376a2902d633a714ef13501910c4dfc"},
-    {file = "onnxruntime_gpu-1.15.1-cp39-cp39-win_amd64.whl", hash = "sha256:b9fb31cb7608b4a0e84ba3325860f0b5159ccea5fe43e74eecf6f360021b987f"},
-]
-
-[package.dependencies]
-coloredlogs = "*"
-flatbuffers = "*"
-numpy = ">=1.21.6"
-packaging = "*"
-protobuf = "*"
-sympy = "*"
-
-[[package]]
-name = "onnxruntime-gpu"
-version = "1.15.1"
-description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
-optional = true
-python-versions = "*"
-files = [
-    {file = "6xzvfoay12xdbwxpirwp1f991z9jopfo.whl", hash = "sha256:2030f42812999a96ec896b1985fd6312d8e8ae69eb4b72ae3fda370dcb2dc2d7"},
-]
-
-[package.dependencies]
-coloredlogs = "*"
-flatbuffers = "*"
-numpy = ">=1.25.0"
-packaging = "*"
-protobuf = "*"
-sympy = "*"
-
-[package.source]
-type = "url"
-url = "https://nvidia.box.com/shared/static/6xzvfoay12xdbwxpirwp1f991z9jopfo.whl"
 
 [[package]]
 name = "open3d"
@@ -4010,17 +3903,6 @@ numpy = "*"
 [package.extras]
 dev = ["mkdocs"]
 test = ["nose"]
-
-[[package]]
-name = "pyreadline3"
-version = "3.4.1"
-description = "A python implementation of GNU readline."
-optional = true
-python-versions = "*"
-files = [
-    {file = "pyreadline3-3.4.1-py3-none-any.whl", hash = "sha256:b0efb6516fd4fb07b45949053826a62fa4cb353db5be2bbb4a7aa1fdd1e345fb"},
-    {file = "pyreadline3-3.4.1.tar.gz", hash = "sha256:6f3d1f7b8a31ba32b73917cefc1f28cc660562f39aea8646d30bd6eff21f7bae"},
-]
 
 [[package]]
 name = "pytest"
@@ -5028,20 +4910,6 @@ files = [
 pbr = ">=2.0.0,<2.1.0 || >2.1.0"
 
 [[package]]
-name = "sympy"
-version = "1.12"
-description = "Computer algebra system (CAS) in Python"
-optional = true
-python-versions = ">=3.8"
-files = [
-    {file = "sympy-1.12-py3-none-any.whl", hash = "sha256:c3588cd4295d0c0f603d0f2ae780587e64e2efeedb3521e46b9bb1d08d184fa5"},
-    {file = "sympy-1.12.tar.gz", hash = "sha256:ebf595c8dac3e0fdc4152c51878b498396ec7f30e7a914d6071e674d49420fb8"},
-]
-
-[package.dependencies]
-mpmath = ">=0.19"
-
-[[package]]
 name = "tabulate"
 version = "0.9.0"
 description = "Pretty-print tabular data"
@@ -5684,9 +5552,9 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [extras]
 percep = ["albumentations", "midas", "mmcv", "mmcv", "mmdet", "mmdet3d", "mmengine", "mmsegmentation", "scikit-learn", "torch", "torch", "torchvision", "torchvision"]
-serve = ["mmdeploy-runtime-gpu", "nvgpu", "nvidia-cudnn-cu11", "onnx", "onnxruntime-gpu", "onnxruntime-gpu", "tensorrt", "torch-model-archiver", "torch-workflow-archiver", "torchserve"]
+serve = ["mmdeploy-runtime-gpu", "nvgpu", "nvidia-cudnn-cu11", "onnx", "tensorrt", "torch-model-archiver", "torch-workflow-archiver", "torchserve"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "d3e7c2db79c32fc926ea121ade756cab523aadedc67aa9148d8c505429ba1bb2"
+content-hash = "a3b0e475b17899a896657290a78e82566e53ceecee25240156843e0828647624"
