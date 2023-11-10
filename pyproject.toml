@@ -61,7 +61,7 @@ onnx = [
 ]
 onnxruntime-gpu = [
     {version="~1.15.1", markers="platform_machine == 'x86_64'", optional=true},
-    # {url="https://nvidia.box.com/shared/static/6xzvfoay12xdbwxpirwp1f991z9jopfo.whl", markers="platform_machine == 'aarch64'", optional=true}
+    {url="https://nvidia.box.com/shared/static/6xzvfoay12xdbwxpirwp1f991z9jopfo.whl", markers="platform_machine == 'aarch64'", optional=true}
 ]
 tensorrt = [
     {version="~8.5.3.1", markers="platform_machine == 'x86_64'", optional=true}  # NOTE: to appropriately use, we need to download the same version tar package manually
@@ -72,15 +72,16 @@ nvidia-cudnn-cu11 = [
 mmdeploy-runtime-gpu = [
     {version="^1.2.0", markers="platform_machine == 'x86_64'", optional=true}
 ]
-mmdeploy = [
-    {version="^1.2.0", markers="platform_machine == 'x86_64'", optional=true},
-    {url="https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmdeploy/mmdeploy-1.2.0-cp310-cp310-linux_aarch64.whl", markers="platform_machine == 'aarch64'", optional=true}
-]
+# there is currently an issue with this
+#mmdeploy = [
+#    {version="^1.2.0", markers="platform_machine == 'x86_64'", optional=true},
+#    {url="https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmdeploy/mmdeploy-1.2.0-cp310-cp310-linux_aarch64.whl", markers="platform_machine == 'aarch64'", optional=true}
+#]
 
 
 [tool.poetry.extras]
 percep = ["scikit-learn", "albumentations", "torch", "torchvision", "mmcv", "mmengine", "mmsegmentation", "mmdet", "mmdet3d", "midas"]
-serve = ["torchserve", "torch-model-archiver", "torch-workflow-archiver", "nvgpu", "mmdeploy-runtime-gpu", "mmdeploy", "onnx", "onnxruntime-gpu", "tensorrt", "nvidia-cudnn-cu11"]
+serve = ["torchserve", "torch-model-archiver", "torch-workflow-archiver", "nvgpu", "mmdeploy-runtime-gpu", "onnx", "onnxruntime-gpu", "tensorrt", "nvidia-cudnn-cu11"]  # mmdeploy
 
 [tool.poetry.group.docs.dependencies]
 mkdocstrings-python = "^0.8.3"
