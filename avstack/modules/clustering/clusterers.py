@@ -2,6 +2,8 @@ from typing import Dict
 
 import numpy as np
 
+from avstack.datastructs import DataContainer
+
 from .types import Cluster, ClusterSet
 
 
@@ -9,7 +11,7 @@ class NoClustering:
     """Each track is its own cluster"""
 
     def __call__(
-        self, objects: Dict[int, list], frame: int, timestamp: int
+        self, objects: Dict[int, DataContainer], frame: int, timestamp: int
     ) -> ClusterSet:
         clusters = ClusterSet(
             frame=frame, timestamp=timestamp, data=[], source_identifier="no-clustering"
@@ -20,7 +22,7 @@ class NoClustering:
         return clusters
 
 
-class SampledAssignmentClustering:
+class SampledAssignmentClusterer:
     """Run assignment by sampling one object from a cluster
 
     Assumes each sublist does not contain duplicates
@@ -30,7 +32,7 @@ class SampledAssignmentClustering:
         self.assign_radius = assign_radius
 
     def __call__(
-        self, objects: Dict[int, list], frame: int, timestamp: float
+        self, objects: Dict[int, DataContainer], frame: int, timestamp: float
     ) -> ClusterSet:
         """Perform clustering
 
@@ -66,11 +68,17 @@ class SampledAssignmentClustering:
             for track in tracks:
                 if not clusters.contains(agent_ID, track):
                     distances = np.array([clust.distance(track) for clust in clusters])
-                    if any(distances <= self.assign_radius):
-                        idx_min = np.argmin(distances)
-                        clusters[idx_min].append((agent_ID, track))
-                    else:
-                        clusters.append(Cluster((agent_ID, track)))
+                    try:
+                        if any(distances <= self.assign_radius):
+                            idx_min = np.argmin(distances)
+                            clusters[idx_min].append((agent_ID, track))
+                        else:
+                            clusters.append(Cluster((agent_ID, track)))
+                    except ValueError:
+                        import pdb
+
+                        pdb.set_trace()
+                        raise
 
         return clusters
 

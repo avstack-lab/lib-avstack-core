@@ -1,12 +1,10 @@
-from .clusterers import Cluster, ClusterSet, NoClustering, SampledAssignmentClustering
-from .managers import ClusterTracker
+from .clusterers import Cluster, ClusterSet, NoClustering, SampledAssignmentClusterer
 
 
 __all__ = [
     "Cluster",
     "ClusterSet",
-    "SampledAssignmentClustering",
+    "SampledAssignmentClusterer",
     "NoClustering",
     "ClusterAssignmentManager",
-    "ClusterTracker",
 ]

@@ -62,6 +62,7 @@ class _TrackingAlgorithm:
         else:
             raise NotImplementedError(assign_metric)
         self.cost_threshold = cost_threshold
+        self.last_assignment = None
         self.threshold_confirmed = threshold_confirmed
         self.threshold_coast = threshold_coast
         self.check_reference = check_reference
@@ -235,9 +236,7 @@ class _TrackingAlgorithm:
                 assign_sol = gnn_single_frame_assign(
                     A, cost_threshold=self.cost_threshold
                 )
-                # import pdb; pdb.set_trace()
-                # print(assign_sol.assignment_tuples)
-                # print(A)
+                self.last_assignment = assign_sol
 
                 # -- update tracks with associations
                 for i_det, j_trk in assign_sol.assignment_tuples:

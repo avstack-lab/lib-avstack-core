@@ -21,10 +21,10 @@ def get_longitudinal_objects(n_objects, n_agents, n_frames, dt):
 
 
 def test_cluster_tracker():
-    clustering = clusterers.SampledAssignmentClustering(assign_radius=2)
+    clusterer = clusterers.SampledAssignmentClusterer(assign_radius=2)
     tracker = tracker3d.BasicXyzTracker(threshold_confirmed=3, threshold_coast=3)
     platform = GlobalOrigin3D
-    ctracker = managers.ClusterTracker(clustering, tracker, platform)
+    ctracker = managers.ClusterTracker(clusterer, tracker, platform)
 
     n_objects = 8
     n_agents = 3

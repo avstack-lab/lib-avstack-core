@@ -60,7 +60,7 @@ class CovarianceIntersectionFusion:
                 raz=None,
                 reference=cluster[0].reference,
                 obj_type=cluster[0].obj_type,
-                ID_force=i,
+                ID_force=0,
                 x=x_fuse,
                 P=P_fuse,
                 t=cluster[0].t,

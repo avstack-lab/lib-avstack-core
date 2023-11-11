@@ -1206,3 +1206,13 @@ class BasicJointBoxTrack(_TrackBase):
                 self.track_3d.change_reference(reference, inplace=inplace)
         else:
             raise NotImplementedError
+
+
+class GroupTrack:
+    def __init__(self, state, members) -> None:
+        """Keep track on multiple tracks via a single state
+
+        But maintain knowledge of the IDs of the members along the way
+        """
+        self.state = state
+        self.members = members
