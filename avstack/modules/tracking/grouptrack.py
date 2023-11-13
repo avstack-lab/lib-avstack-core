@@ -1,16 +1,21 @@
 from typing import Dict
 
-from avstack.config import ALGORITHMS
+from avstack.config import ALGORITHMS, ConfigDict
 from avstack.datastructs import DataContainer
 from avstack.geometry import ReferenceFrame
+from avstack.modules.perception.detections import CentroidDetection
 from avstack.modules.tracking.tracks import GroupTrack
 
 
 @ALGORITHMS.register_module()
 class GroupTrackerWrapper:
     def __init__(self, fusion, tracker):
-        self.fusion = ALGORITHMS.build(fusion)
-        self.tracker = ALGORITHMS.build(tracker)
+        self.fusion = (
+            ALGORITHMS.build(fusion) if isinstance(fusion, ConfigDict) else fusion
+        )
+        self.tracker = (
+            ALGORITHMS.build(tracker) if isinstance(tracker, ConfigDict) else tracker
+        )
 
     def __call__(
         self,
@@ -21,11 +26,32 @@ class GroupTrackerWrapper:
     ) -> DataContainer:
 
         # Track on the detections
-        detections = self.fusion(clusters)
+        dets_as_tracks = DataContainer(
+            frame=frame,
+            timestamp=timestamp,
+            data=[self.fusion(cluster) for cluster in clusters],
+            source_identifier="cluster-dets",
+        )
+        # HACK: to handle reference frame transformation
+        dets_as_dets = DataContainer(
+            frame=frame,
+            timestamp=timestamp,
+            data=[
+                CentroidDetection(
+                    source_identifier="centroid",
+                    centroid=track.x[:3],
+                    reference=track.reference,
+                    obj_type=track.obj_type,
+                    score=track.probability,
+                )
+                for track in dets_as_tracks
+            ],
+            source_identifier="cluster-dets",
+        )
         cluster_tracks = self.tracker(
             t=timestamp,
             frame=frame,
-            detections=detections,
+            detections=dets_as_dets,
             platform=platform,
         )
 

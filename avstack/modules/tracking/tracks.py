@@ -352,6 +352,7 @@ class _XYVxVyTrack(_TrackBase):
         if inplace:
             self.x[:2] = vec.x[:2]
             self.reference = reference
+            # TODO fix the P change reference
         else:
             raise NotImplementedError
 
@@ -386,13 +387,16 @@ class _XYZVxVyVzTrack(_TrackBase):
         return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
 
     def change_reference(self, reference, inplace: bool):
+        RO2N = self.R_old_to_new(reference)
+        position = self.position.change_reference(reference, inplace=False)
+        velocity = self.velocity.change_reference(reference, inplace=False)
+        RO2N_B = np.block([[RO2N, zero3], [zero3, RO2N]])
+        P = RO2N_B @ self.P @ RO2N_B.T
+        P[P < 1e-5] = 0
         if inplace:
-            RO2N = self.R_old_to_new(reference)
-            self.position = self.position.change_reference(reference, inplace=False)
-            self.velocity = self.velocity.change_reference(reference, inplace=False)
-            RO2N_B = np.block([[RO2N, zero3], [zero3, RO2N]])
-            self.P = RO2N_B @ self.P @ RO2N_B.T
-            self.P[self.P < 1e-5] = 0
+            self.position = position
+            self.velocity = velocity
+            self.P = P
             self.reference = reference
         else:
             raise NotImplementedError("Need to implement this")

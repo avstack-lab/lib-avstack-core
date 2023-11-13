@@ -9,10 +9,17 @@
 """
 
 
-from .track_to_track import BoxTrackToBoxTrackFusion3D, ci_fusion
+from .track_to_track import (
+    BoxTrackToBoxTrackFusion3D,
+    CovarianceIntersectionFusion,
+    NoFusion,
+    ci_fusion,
+)
 
 
 __all__ = [
     "BoxTrackToBoxTrackFusion3D",
     "ci_fusion",
+    "CovarianceIntersectionFusion",
+    "NoFusion",
 ]
