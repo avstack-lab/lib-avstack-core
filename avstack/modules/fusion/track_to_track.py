@@ -17,7 +17,7 @@ from avstack.datastructs import DataContainer
 from avstack.geometry import Position, bbox
 from avstack.modules.assignment import build_A_from_iou, gnn_single_frame_assign
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
-from avstack.modules.tracking.tracks import XyFromRazTrack, _TrackBase
+from avstack.modules.tracking.tracks import _TrackBase
 
 from ..clustering.clusterers import Cluster
 from .base import _FusionAlgorithm
@@ -87,29 +87,16 @@ class CovarianceIntersectionFusion:
     """Covariance intersection to build a track from a cluster"""
 
     def __call__(self, cluster: Cluster):
+        x_fuse = None
+        P_fuse = None
+
         if len(cluster) > 0:
             # perform fusion on the array
             x_fuse, P_fuse = cluster[0].x, cluster[0].P
             for track in cluster[1:]:
                 x_fuse, P_fuse = ci_fusion(x_fuse, P_fuse, track.x, track.P, w=0.5)
-            # rebuild the track
-            track_out = XyFromRazTrack(
-                t0=cluster[0].t0,
-                raz=None,
-                reference=cluster[0].reference,
-                obj_type=cluster[0].obj_type,
-                ID_force=0,
-                x=x_fuse,
-                P=P_fuse,
-                t=cluster[0].t,
-                coast=-1,
-                n_updates=-1,
-                age=-1,
-            )
-        else:
-            track_out = None
 
-        return track_out
+        return x_fuse, P_fuse
 
 
 @ALGORITHMS.register_module()

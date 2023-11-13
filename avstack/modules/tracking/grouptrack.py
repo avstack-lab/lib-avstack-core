@@ -26,32 +26,26 @@ class GroupTrackerWrapper:
     ) -> DataContainer:
 
         # Track on the detections
-        dets_as_tracks = DataContainer(
+        fuseds = [
+            CentroidDetection(
+                source_identifier="cluster",
+                centroid=self.fusion(cluster)[0][: len(cluster[0].position)],
+                reference=cluster[0].reference,
+                obj_type=cluster[0].obj_type,
+                score=None,
+            )
+            for cluster in clusters
+        ]
+        clusters_fused = DataContainer(
             frame=frame,
             timestamp=timestamp,
-            data=[self.fusion(cluster) for cluster in clusters],
-            source_identifier="cluster-dets",
-        )
-        # HACK: to handle reference frame transformation
-        dets_as_dets = DataContainer(
-            frame=frame,
-            timestamp=timestamp,
-            data=[
-                CentroidDetection(
-                    source_identifier="centroid",
-                    centroid=track.x[:3],
-                    reference=track.reference,
-                    obj_type=track.obj_type,
-                    score=track.probability,
-                )
-                for track in dets_as_tracks
-            ],
+            data=fuseds,
             source_identifier="cluster-dets",
         )
         cluster_tracks = self.tracker(
             t=timestamp,
             frame=frame,
-            detections=dets_as_dets,
+            detections=clusters_fused,
             platform=platform,
         )
 
@@ -76,64 +70,3 @@ class GroupTrackerWrapper:
             group_tracks.append(GroupTrack(ct, members))
 
         return group_tracks
-
-
-# class _BaseClusterManager:
-#     def __call__(
-#         self, t: float, frame: int, objects: Dict[int, DataContainer], **kwargs: Any
-#     ):
-#         cluster_data = self.cluster(
-#             timestamp=t, frame=frame, objects=objects, **kwargs
-#         )  # should already return datacontainer
-#         return cluster_data
-
-
-# class NoClusterTracker(_BaseClusterManager):
-#     def __init__(self) -> None:
-#         self.clusterer = NoClustering()
-
-#     def cluster(
-#         self, objects: Dict[int, DataContainer], frame: int, timestamp: float
-#     ) -> ClusterSet:
-#         clusters = self.clusterer(objects=objects, frame=frame, timestamp=timestamp)
-#         return clusters
-
-
-# class ClusterTracker(_BaseClusterManager):
-#     def __init__(self, clusterer, fusion, tracker, platform) -> None:
-#         """Perform tracking on the cluster centroids
-
-#         Helps to maintain consistent cluster IDs
-#         """
-#         self.clusterer = clusterer
-#         self.fusion = fusion
-#         self.tracker = tracker
-#         self.platform = platform
-
-#     def cluster(
-#         self, objects: Dict[int, DataContainer], frame: int, timestamp: float
-#     ) -> DataContainer:
-#         """Get centroids and track"""
-#         # Perform clustering across the agents
-#         clusters = self.clusterer(objects=objects, frame=frame, timestamp=timestamp)
-
-#         # Fuse the cluster information to get a "detection"
-#         detections = self.fusion(clusters)
-#         # centroids = clusters.apply_and_return("centroid")
-#         # centroid_dets = [
-#         #     CentroidDetection(
-#         #         source_identifier="ct", centroid=cent.x, reference=cent.reference
-#         #     )
-#         #     for cent in centroids
-#         # ]
-#         # detections = DataContainer(
-#         #     frame=frame, timestamp=timestamp, data=centroid_dets, source_identifier="ct"
-#         # )
-
-#         # Tracking on cluster centroids
-#         cluster_tracks = self.tracker(
-#             t=timestamp,
-#             frame=frame,
-#             detections=detections,
-#             platform=self.platform,
-#         )
