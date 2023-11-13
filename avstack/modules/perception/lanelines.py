@@ -8,9 +8,11 @@
 
 """
 
+from avstack.config import ALGORITHMS
 from avstack.modules.perception.base import _PerceptionAlgorithm
 
 
+@ALGORITHMS.register_module()
 class GroundTruthLaneLineDetector(_PerceptionAlgorithm):
     MODE = "lane lines"
 
@@ -19,5 +21,6 @@ class GroundTruthLaneLineDetector(_PerceptionAlgorithm):
         return ground_truth.lane_lines
 
 
+@ALGORITHMS.register_module()
 class LaneNet(_PerceptionAlgorithm):
     pass

@@ -1,7 +1,17 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .config import Config, ConfigDict
 from .registry import Registry
-from .root import ALGORITHMS, DATASETS
+from .root import AGENTS, ALGORITHMS, DATASETS, MODELS, PIPELINE, REFERENCE
 
 
-__all__ = ["ALGORITHMS", "Config", "ConfigDict", "DATASETS", "Registry"]
+__all__ = [
+    "AGENTS",
+    "ALGORITHMS",
+    "Config",
+    "ConfigDict",
+    "DATASETS",
+    "MODELS",
+    "PIPELINE",
+    "REFERENCE",
+    "Registry",
+]

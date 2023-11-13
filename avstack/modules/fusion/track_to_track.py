@@ -8,12 +8,16 @@
 
 """
 
+from typing import Any
+
 import numpy as np
 
+from avstack.config import ALGORITHMS
+from avstack.datastructs import DataContainer
 from avstack.geometry import Position, bbox
 from avstack.modules.assignment import build_A_from_iou, gnn_single_frame_assign
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
-from avstack.modules.tracking.tracks import XyFromRazTrack
+from avstack.modules.tracking.tracks import XyFromRazTrack, _TrackBase
 
 from ..clustering.clusterers import Cluster
 from .base import _FusionAlgorithm
@@ -36,15 +40,49 @@ def ci_fusion(x1, P1, x2, P2, w=0.5):
     return x_f, P_f
 
 
+@ALGORITHMS.register_module()
 class NoFusion:
     """Only returns the first set of tracks"""
 
-    def __call__(self, cluster: Cluster) -> list:
-        if len(cluster) != 1:
-            raise RuntimeError("NoFusion not well defined for non-singleton cluster")
-        return cluster[0]
+    def __call__(self, *args: Any, **kwds: Any) -> list:
+        tracks_out = [] if len(args) == 0 else args[0]
+        if isinstance(tracks_out, (DataContainer, list)):
+            pass
+        elif isinstance(tracks_out, dict):
+            tracks_out = (
+                list(tracks_out.values())[0]
+                if len(tracks_out) == 1
+                else list(tracks_out.values())
+            )
+        elif isinstance(tracks_out, _TrackBase):
+            tracks_out = [tracks_out]
+        elif isinstance(tracks_out, Cluster):
+            pass
+        else:
+            raise NotImplementedError(type(tracks_out))
+        return tracks_out
 
 
+@ALGORITHMS.register_module()
+class AggregatorFusion:
+    """Simply appends all tracks together not worrying about duplicates"""
+
+    def __call__(self, *args: Any, **kwds: Any) -> list:
+        tracks_out = []
+        for arg in args:
+            if isinstance(arg, list):
+                tracks_out += arg
+            elif isinstance(arg, dict):
+                for v in arg.values():
+                    tracks_out += v
+            elif isinstance(arg, _TrackBase):
+                tracks_out += [arg]
+            else:
+                raise NotImplementedError(type(arg))
+        return tracks_out
+
+
+@ALGORITHMS.register_module()
 class CovarianceIntersectionFusion:
     """Covariance intersection to build a track from a cluster"""
 
@@ -74,6 +112,7 @@ class CovarianceIntersectionFusion:
         return track_out
 
 
+@ALGORITHMS.register_module()
 class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
     def __init__(self, association="IoU", assignment="gnn", algorithm="CI", **kwargs):
         """

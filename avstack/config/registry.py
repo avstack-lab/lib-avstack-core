@@ -2,6 +2,9 @@ import logging
 from importlib import import_module
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
+from rich.console import Console
+from rich.table import Table
+
 from .build_functions import build_from_cfg
 from .utils import is_seq_of
 
@@ -53,6 +56,20 @@ class Registry:
 
     def __contains__(self, key):
         return self.get(key) is not None
+
+    def __repr__(self):
+        table = Table(title=f"Registry of {self._name}")
+        table.add_column("Names", justify="left", style="cyan")
+        table.add_column("Objects", justify="left", style="green")
+
+        for name, obj in sorted(self._module_dict.items()):
+            table.add_row(name, str(obj))
+
+        console = Console()
+        with console.capture() as capture:
+            console.print(table, end="")
+
+        return capture.get()
 
     @property
     def name(self):

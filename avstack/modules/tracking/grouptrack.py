@@ -1,17 +1,23 @@
 from typing import Dict
 
+from avstack.config import ALGORITHMS
 from avstack.datastructs import DataContainer
+from avstack.geometry import ReferenceFrame
 from avstack.modules.tracking.tracks import GroupTrack
 
 
+@ALGORITHMS.register_module()
 class GroupTrackerWrapper:
-    def __init__(self, fusion, tracker, platform):
-        self.fusion = fusion
-        self.tracker = tracker
-        self.platform = platform
+    def __init__(self, fusion, tracker):
+        self.fusion = ALGORITHMS.build(fusion)
+        self.tracker = ALGORITHMS.build(tracker)
 
     def __call__(
-        self, clusters: Dict[int, DataContainer], frame: int, timestamp: float
+        self,
+        clusters: Dict[int, DataContainer],
+        platform: ReferenceFrame,
+        frame: int,
+        timestamp: float,
     ) -> DataContainer:
 
         # Track on the detections
@@ -20,7 +26,7 @@ class GroupTrackerWrapper:
             t=timestamp,
             frame=frame,
             detections=detections,
-            platform=self.platform,
+            platform=platform,
         )
 
         # Convert to a group track datastructure to keep track of members

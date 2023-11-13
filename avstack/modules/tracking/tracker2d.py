@@ -10,6 +10,7 @@
 
 import numpy as np
 
+from avstack.config import ALGORITHMS
 from avstack.geometry import Box2D
 
 from ._sort import Sort
@@ -22,6 +23,7 @@ from .tracks import BasicBoxTrack2D, XyFromRazTrack, XyFromXyTrack
 # ==============================================================
 
 
+@ALGORITHMS.register_module()
 class PassthroughTracker2D(_TrackingAlgorithm):
     def __init__(self, **kwargs):
         super().__init__("PassthroughTracker")
@@ -68,6 +70,7 @@ class _BaseCenterTracker(_TrackingAlgorithm):
         )
 
 
+@ALGORITHMS.register_module()
 class BasicXyTracker(_BaseCenterTracker):
     dimensions = 2
 
@@ -80,6 +83,7 @@ class BasicXyTracker(_BaseCenterTracker):
         )
 
 
+@ALGORITHMS.register_module()
 class BasicRazTracker(_BaseCenterTracker):
     dimensions = 2
 
@@ -112,6 +116,7 @@ class _BaseBoxTracker2D(_TrackingAlgorithm):
         )
 
 
+@ALGORITHMS.register_module()
 class BasicBoxTracker2D(_BaseBoxTracker2D):
     dimensions = 2
 
@@ -124,6 +129,7 @@ class BasicBoxTracker2D(_BaseBoxTracker2D):
         )
 
 
+@ALGORITHMS.register_module()
 class SortTracker2D(_TrackingAlgorithm):
     def __init__(
         self,

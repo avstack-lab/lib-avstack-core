@@ -14,6 +14,7 @@ except ModuleNotFoundError:
     print("MIDAS module not found.")
 
 from avstack import __file__ as avfile
+from avstack.config import ALGORITHMS
 from avstack.modules.perception.base import _PerceptionAlgorithm
 from avstack.sensors import DepthImageData
 
@@ -23,6 +24,7 @@ midas_root = os.path.join(
 )
 
 
+@ALGORITHMS.register_module()
 class MidasDepthEstimator(_PerceptionAlgorithm):
     MODE = "monocular_depth"
 

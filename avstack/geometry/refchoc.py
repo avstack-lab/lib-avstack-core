@@ -98,8 +98,8 @@ class ReferenceFrame:
             reference._point_from.append(self)
 
         # -- set fields
-        self.x = x.astype(float)
-        self.q = q
+        self.x = np.array(x, float) if isinstance(x, list) else x.astype(float)
+        self.q = np.quaternion(*q) if isinstance(q, list) else q
         self.v = v.astype(float)
         self.acc = acc.astype(float)
         self.ang = ang

@@ -42,4 +42,4 @@ def test_no_fusion():
     track_1, track_2 = get_two_tracks()
     clusters = clusterer({0: [track_1, track_2]}, frame=0, timestamp=0)
     tracks_fused = [fuser(cluster) for cluster in clusters]
-    assert tracks_fused == [track_1, track_2]
+    assert [tracks_fused[0][0], tracks_fused[1][0]] == [track_1, track_2]

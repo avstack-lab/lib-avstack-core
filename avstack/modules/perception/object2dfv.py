@@ -13,6 +13,7 @@ import tempfile
 import numpy as np
 from cv2 import imwrite
 
+from avstack.config import ALGORITHMS
 from avstack.datastructs import DataContainer
 from avstack.modules.perception import utils
 from avstack.modules.perception.base import _MMObjectDetector, _PerceptionAlgorithm
@@ -23,6 +24,7 @@ from avstack.modules.perception.base import _MMObjectDetector, _PerceptionAlgori
 # ===========================================================================
 
 
+@ALGORITHMS.register_module()
 class GroundTruth2DFvObjectDetector(_PerceptionAlgorithm):
     MODE = "object_2d"
 
@@ -35,6 +37,7 @@ class GroundTruth2DFvObjectDetector(_PerceptionAlgorithm):
 # ===========================================================================
 
 
+@ALGORITHMS.register_module()
 class InfrastructureCameraTo3d(_PerceptionAlgorithm):
     """
     This algorithm is suitable for 2D infrastructure sensors that have some
@@ -86,6 +89,7 @@ class InfrastructureCameraTo3d(_PerceptionAlgorithm):
 # ===========================================================================
 
 
+@ALGORITHMS.register_module()
 class MMDetObjectDetector2D(_MMObjectDetector):
     MODE = "object_2d"
 

@@ -2,11 +2,13 @@ from typing import Dict
 
 import numpy as np
 
+from avstack.config import ALGORITHMS
 from avstack.datastructs import DataContainer
 
 from .types import Cluster, ClusterSet
 
 
+@ALGORITHMS.register_module()
 class NoClustering:
     """Each track is its own cluster"""
 
@@ -22,6 +24,7 @@ class NoClustering:
         return clusters
 
 
+@ALGORITHMS.register_module()
 class SampledAssignmentClusterer:
     """Run assignment by sampling one object from a cluster
 
@@ -83,5 +86,6 @@ class SampledAssignmentClusterer:
         return clusters
 
 
+@ALGORITHMS.register_module()
 class HierarchicalAssignmentClustering:
     """Run assignment pairwise from binary tree for efficiency"""
