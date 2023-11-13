@@ -173,7 +173,6 @@ class _TrackBase:
             _TrackBase.ID_counter += 1
         else:
             ID = ID_force
-        self.allow_delete = True
         self.obj_type = obj_type
         self.coast = coast
         self.age = age
@@ -188,6 +187,8 @@ class _TrackBase:
         self.n_missed = 0  # TODO incorporate this
         self.dt_coast = 0.0
         self.score = self.SCORE_INIT
+        self.active = True
+        self.confirmed = False
 
     @property
     def reference(self):
@@ -233,28 +234,37 @@ class _TrackBase:
 
     @property
     def active(self):
-        if self.allow_delete:
-            if (
-                (self.score > self.SCORE_DELETE_THRESH)
-                or (self.dt_coast > self.MAX_COAST)
-                or (self.n_missed > self.MAX_MISS)
-            ):
-                return False
-        return True
-
-    @property
-    def confirmed(self):
-        if self.allow_delete and (
+        if (
             (self.score > self.SCORE_DELETE_THRESH)
             or (self.dt_coast > self.MAX_COAST)
             or (self.n_missed > self.MAX_MISS)
         ):
-            return False
+            self.active = False
+        return self._active
+
+    @active.setter
+    def active(self, active):
+        self._active = active
+
+    @property
+    def confirmed(self):
+        if (
+            (self.score > self.SCORE_DELETE_THRESH)
+            or (self.dt_coast > self.MAX_COAST)
+            or (self.n_missed > self.MAX_MISS)
+        ):
+            self.confirmed = False
         elif (self.score < self.SCORE_CONFIRM_THRESH) or (
             self.n_updates > self.N_UPDATES_CONFIRMED
         ):
-            return True
-        return False
+            self.confirmed = True
+        else:
+            self.confirmed = False
+        return self._confirmed
+
+    @confirmed.setter
+    def confirmed(self, confirmed):
+        self._confirmed = confirmed
 
     @staticmethod
     def f(x, dt):
@@ -1220,3 +1230,15 @@ class GroupTrack:
         """
         self.state = state
         self.members = members
+
+    def change_reference(self, other, inplace):
+        if inplace:
+            self.state.change_reference(other, inplace=True)
+        else:
+            raise
+
+    def __getattr__(self, attr):
+        try:
+            return getattr(self, attr)
+        except:
+            return getattr(self.state, attr)
