@@ -246,6 +246,10 @@ class _TrackingAlgorithm:
                 for i_det in assign_sol.unassigned_rows:
                     self.tracks.append(self.spawn_track_from_detection(dets[i_det]))
 
+                # -- tell unassigned tracks we missed them
+                for j_trk in assign_sol.unassigned_cols:
+                    trks_active[j_trk].missed()
+
             # -- prune dead tracks -- only in a non-predict_only state
             self.tracks = [
                 trk

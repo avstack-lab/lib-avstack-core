@@ -324,6 +324,11 @@ class _TrackBase:
         """Can override this in subclass"""
         self._update(z, R)
 
+    def missed(self):
+        """Assume that dt_coast is updated during predict step"""
+        self.n_missed += 1
+        self.score += self.MISSED_DET_SCORE
+
     def R_old_to_new(self, reference):
         diff = self.reference.differential(reference)
         R_old_to_new = transform_orientation(diff.q, "quat", "dcm")
