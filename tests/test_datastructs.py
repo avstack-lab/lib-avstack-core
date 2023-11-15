@@ -30,7 +30,7 @@ def get_object_dc():
     return dc
 
 
-def test_dataconatiner_apply():
+def test_datacontainer_apply():
     dc1 = get_object_dc()
     ref2 = ReferenceFrame(
         x=np.array([1, 2, 3]), q=np.quaternion(1), reference=GlobalOrigin3D
@@ -56,6 +56,17 @@ def test_dataconatiner_apply():
         assert item.reference == ref2
         assert id(item) != ids[idx]
     assert id(dc1) == id_dc1
+
+
+def test_datacontainer_apply_and_return():
+    dc1 = get_object_dc()
+    ref2 = ReferenceFrame(
+        x=np.array([1, 2, 3]), q=np.quaternion(1), reference=GlobalOrigin3D
+    )
+    dc2 = dc1.apply_and_return("change_reference", reference=ref2, inplace=False)
+    assert id(dc1) != id(dc2)
+    for el1, el2 in zip(dc1, dc2):
+        assert id(el1) != id(el2)
 
 
 def test_data_manager():

@@ -21,6 +21,7 @@ from avstack.geometry.transformations import (
     xyzvel_to_razelrrt,
 )
 from avstack.modules.perception.detections import BoxDetection
+from avstack.modules.tracking import gate_and_score
 
 
 zero3 = np.zeros((3, 3))
@@ -137,6 +138,23 @@ def KF_update(x, P, hx, H, z, R):
 class _TrackBase:
     ID_counter = 0
 
+    N_UPDATES_CONFIRMED = 10
+    SCORE_INIT = -2.7080502011  # -ln(15), NLLR
+    ALPHA_C = 1e-4  # N_FC / N_FA
+    BETA_C = 1e-2
+    SCORE_CONFIRM_THRESH = -np.log((1 - BETA_C) / ALPHA_C) + SCORE_INIT
+    SCORE_DELETE_THRESH = -np.log(BETA_C / (1 - ALPHA_C))
+    MAX_COAST = 5.0  # seconds for time without measurement
+    MAX_MISS = 6  # number of measurements missed before delete
+
+    # technically these actually belong at the tracker level NOT at the track level
+    PD = 0.9
+    PFA = 1e-7
+    VC = 1.0
+    MISSED_DET_SCORE = np.log(1 - PD)
+    BETA_FT = PFA / VC  # false target density
+    BETA_NT = 15 * BETA_FT / PD  # new target density
+
     def __init__(
         self,
         t0,
@@ -157,8 +175,6 @@ class _TrackBase:
             ID = ID_force
         self.obj_type = obj_type
         self.coast = coast
-        self.active = True
-        self.n_updates = n_updates
         self.age = age
         self.ID = int(ID)
         self.t0 = t0
@@ -167,6 +183,12 @@ class _TrackBase:
         self.x = x
         self.P = P
         self.reference = reference
+        self.n_updates = n_updates
+        self.n_missed = 0  # TODO incorporate this
+        self.dt_coast = 0.0
+        self.score = self.SCORE_INIT
+        self.active = True
+        self.confirmed = False
 
     @property
     def reference(self):
@@ -193,6 +215,56 @@ class _TrackBase:
     @velocity.setter
     def velocity(self, velocity: Velocity):
         self.x[self.idx_vel] = velocity.x
+
+    @property
+    def score(self):
+        return self._score
+
+    @score.setter
+    def score(self, score):
+        self._score = score
+
+    @property
+    def probability(self):
+        """Probability of a true track"""
+        if self.score < -500:
+            return 1.0
+        else:
+            return np.exp(-self.score) / (1 + np.exp(-self.score))
+
+    @property
+    def active(self):
+        if (
+            (self.score > self.SCORE_DELETE_THRESH)
+            or (self.dt_coast > self.MAX_COAST)
+            or (self.n_missed > self.MAX_MISS)
+        ):
+            self.active = False
+        return self._active
+
+    @active.setter
+    def active(self, active):
+        self._active = active
+
+    @property
+    def confirmed(self):
+        if (
+            (self.score > self.SCORE_DELETE_THRESH)
+            or (self.dt_coast > self.MAX_COAST)
+            or (self.n_missed > self.MAX_MISS)
+        ):
+            self.confirmed = False
+        elif (self.score < self.SCORE_CONFIRM_THRESH) or (
+            self.n_updates > self.N_UPDATES_CONFIRMED
+        ):
+            self.confirmed = True
+        else:
+            self.confirmed = False
+        return self._confirmed
+
+    @confirmed.setter
+    def confirmed(self, confirmed):
+        self._confirmed = confirmed
 
     @staticmethod
     def f(x, dt):
@@ -228,6 +300,7 @@ class _TrackBase:
         self.t_last_predict = t
         self.age += 1
         self.coast += 1
+        self.dt_coast += dt
 
     def _update(self, z, R):
         y = z - self.h(self.x)
@@ -238,7 +311,10 @@ class _TrackBase:
         self.x = self.x + K @ y
         self.P = (np.eye(self.P.shape[0]) - K @ H) @ self.P
         self.coast = 0
+        self.dt_coast = 0.0
         self.n_updates += 1
+        d2 = y.T @ Sinv @ y
+        self.score += gate_and_score.get_score(d2, S, PD=self.PD, BETA_FT=self.BETA_FT)
 
     def predict(self, t):
         """Can override this in subclass"""
@@ -247,6 +323,11 @@ class _TrackBase:
     def update(self, z, R):
         """Can override this in subclass"""
         self._update(z, R)
+
+    def missed(self):
+        """Assume that dt_coast is updated during predict step"""
+        self.n_missed += 1
+        self.score += self.MISSED_DET_SCORE
 
     def R_old_to_new(self, reference):
         diff = self.reference.differential(reference)
@@ -257,7 +338,211 @@ class _TrackBase:
         raise NotImplementedError
 
 
-class XyFromRazTrack(_TrackBase):
+# ================================================
+# Base classes based on track state vectors
+# ================================================
+
+
+class _XYVxVyTrack(_TrackBase):
+    """When the track state is [x, y, vx, vy]"""
+
+    @staticmethod
+    def F(x, dt):
+        """Partial derivative of the propagation function w.r.t. x at x hat"""
+        return np.array([[1, 0, dt, 0], [0, 1, 0, dt], [0, 0, 1, 0], [0, 0, 0, 1]])
+
+    @staticmethod
+    def f(x, dt):
+        """State propagation function"""
+        return np.array([x[0] + x[2] * dt, x[1] + x[3] * dt, x[2], x[3]])
+
+    @staticmethod
+    def Q(dt):
+        """This is most definitely not optimal and should be tuned in the future"""
+        return (np.diag([2, 2, 2, 2]) * dt) ** 2
+
+    def change_reference(self, reference, inplace: bool):
+        vec = Position(np.array([self.x[0], self.x[1], 0]), self.reference)
+        vec.change_reference(reference, inplace=True)
+        if inplace:
+            self.x[:2] = vec.x[:2]
+            self.reference = reference
+            # TODO fix the P change reference
+        else:
+            raise NotImplementedError
+
+
+class _XYZVxVyVzTrack(_TrackBase):
+    """When the track state is [x, y, z, vx, vy, vz]"""
+
+    @staticmethod
+    def F(x, dt):
+        """Partial derivative of the propagation function w.r.t. x at x hat"""
+        return np.array(
+            [
+                [1, 0, 0, dt, 0, 0],
+                [0, 1, 0, 0, dt, 0],
+                [0, 0, 1, 0, 0, dt],
+                [0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 1],
+            ]
+        )
+
+    @staticmethod
+    def f(x, dt):
+        """State propagation function"""
+        return np.array(
+            [x[0] + x[3] * dt, x[1] + x[4] * dt, x[2] + x[5] * dt, x[3], x[4], x[5]]
+        )
+
+    @staticmethod
+    def Q(dt):
+        """This is most definitely not optimal and should be tuned in the future"""
+        return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
+
+    def change_reference(self, reference, inplace: bool):
+        RO2N = self.R_old_to_new(reference)
+        position = self.position.change_reference(reference, inplace=False)
+        velocity = self.velocity.change_reference(reference, inplace=False)
+        RO2N_B = np.block([[RO2N, zero3], [zero3, RO2N]])
+        P = RO2N_B @ self.P @ RO2N_B.T
+        P[P < 1e-5] = 0
+        if inplace:
+            self.position = position
+            self.velocity = velocity
+            self.P = P
+            self.reference = reference
+        else:
+            raise NotImplementedError("Need to implement this")
+
+
+# ================================================
+# Fully functioning centroid trackers
+# ================================================
+
+
+class XyFromXyTrack(_XYVxVyTrack):
+    """Tracking 2D positions"""
+
+    NAME = "xytrack"
+
+    def __init__(
+        self,
+        t0,
+        xy,
+        reference,
+        obj_type,
+        ID_force=None,
+        x=None,
+        P=None,
+        t=None,
+        coast=0,
+        n_updates=1,
+        age=0,
+        *args,
+        **kwargs,
+    ):
+        """
+        Track state is: [x, y, vx, vy]
+        Measurement is: [x, y]
+        """
+        # Position can be initialized fairly well
+        # Velocity can only be initialized along the range rate
+        if x is None:
+            x = np.array([xy[0], xy[1], 0, 0])
+        if P is None:
+            r_sig = 5
+            v_sig = 30
+            P = np.diag([r_sig, r_sig, v_sig, v_sig]) ** 2
+        self.idx_pos = [0, 1]
+        self.idx_vel = [2, 3]
+        super().__init__(
+            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+        )
+
+    @staticmethod
+    def H(x):
+        """Partial derivative of the measurement function w.r.t x at x hat
+
+        NOTE: assumes we are in a sensor-relative coordinate frame
+        """
+        H = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
+        return H
+
+    @staticmethod
+    def h(x):
+        """Measurement function
+
+        NOTE: assumes we are in a sensor-relative coordinate frame
+        """
+        return x[:2]
+
+    def update(self, z, R=np.diag([2, 2]) ** 2):
+        self._update(z, R)
+
+
+class XyzFromXyzTrack(_XYZVxVyVzTrack):
+    """Tracking 3D positions"""
+
+    NAME = "xyztrack"
+
+    def __init__(
+        self,
+        t0,
+        xyz,
+        reference,
+        obj_type,
+        ID_force=None,
+        x=None,
+        P=None,
+        t=None,
+        coast=0,
+        n_updates=1,
+        age=0,
+        *args,
+        **kwargs,
+    ):
+        """
+        Track state is: [x, y, z, vx, vy, vz]
+        Measurement is: [x, y, z]
+        """
+        # Position can be initialized fairly well
+        # Velocity can only be initialized along the range rate
+        if x is None:
+            x = np.array([xyz[0], xyz[1], xyz[2], 0, 0, 0])
+        if P is None:
+            r_sig = 5
+            v_sig = 30
+            P = np.diag([r_sig, r_sig, r_sig, v_sig, v_sig, v_sig]) ** 2
+        self.idx_pos = [0, 1, 2]
+        self.idx_vel = [3, 4, 5]
+        super().__init__(
+            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+        )
+
+    @staticmethod
+    def H(x):
+        """Partial derivative of the measurement function w.r.t x at x hat
+
+        NOTE: assumes we are in a sensor-relative coordinate frame
+        """
+        H = np.array([[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]])
+        return H
+
+    @staticmethod
+    def h(x):
+        """Measurement function
+
+        NOTE: assumes we are in a sensor-relative coordinate frame
+        """
+        return x[:3]
+
+    def update(self, z, R=np.diag([2, 2, 2]) ** 2):
+        self._update(z, R)
+
+
+class XyFromRazTrack(_XYVxVyTrack):
     """Tracking on raz measurements
 
     IMPORTANT: assumes we are in a sensor-relative coordinate frame.
@@ -324,35 +609,11 @@ class XyFromRazTrack(_TrackBase):
         """
         return np.array([np.linalg.norm(x[:2]), np.arctan2(x[1], x[0])])
 
-    @staticmethod
-    def F(x, dt):
-        """Partial derivative of the propagation function w.r.t. x at x hat"""
-        return np.array([[1, 0, dt, 0], [0, 1, 0, dt], [0, 0, 1, 0], [0, 0, 0, 1]])
-
-    @staticmethod
-    def f(x, dt):
-        """State propagation function"""
-        return np.array([x[0] + x[2] * dt, x[1] + x[3] * dt, x[2], x[3]])
-
-    @staticmethod
-    def Q(dt):
-        """This is most definitely not optimal and should be tuned in the future"""
-        return (np.diag([2, 2, 2, 2]) * dt) ** 2
-
     def update(self, z, R=np.diag([10, 1e-2]) ** 2):
         self._update(z, R)
 
-    def change_reference(self, reference, inplace: bool):
-        vec = Position(np.array([self.x[0], self.x[1], 0]), self.reference)
-        vec.change_reference(reference, inplace=True)
-        if inplace:
-            self.x[:2] = vec.x[:2]
-            self.reference = reference
-        else:
-            raise NotImplementedError
 
-
-class XyzFromRazelTrack(_TrackBase):
+class XyzFromRazelTrack(_XYZVxVyVzTrack):
     """Tracking on razel measurements
 
     IMPORTANT: assumes we are in a sensor-relative coordinate frame.
@@ -423,49 +684,11 @@ class XyzFromRazelTrack(_TrackBase):
         """
         return cartesian_to_spherical(x[:3])
 
-    @staticmethod
-    def F(x, dt):
-        """Partial derivative of the propagation function w.r.t. x at x hat"""
-        return np.array(
-            [
-                [1, 0, 0, dt, 0, 0],
-                [0, 1, 0, 0, dt, 0],
-                [0, 0, 1, 0, 0, dt],
-                [0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 1],
-            ]
-        )
-
-    @staticmethod
-    def f(x, dt):
-        """State propagation function"""
-        return np.array(
-            [x[0] + x[3] * dt, x[1] + x[4] * dt, x[2] + x[5] * dt, x[3], x[4], x[5]]
-        )
-
-    @staticmethod
-    def Q(dt):
-        """This is most definitely not optimal and should be tuned in the future"""
-        return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
-
     def update(self, z, R=np.diag([4, 1e-2, 5e-2]) ** 2):
         self._update(z, R)
 
-    def change_reference(self, reference, inplace: bool):
-        if inplace:
-            RO2N = self.R_old_to_new(reference)
-            self.position = self.position.change_reference(reference, inplace=False)
-            self.velocity = self.velocity.change_reference(reference, inplace=False)
-            RO2N_B = np.block([[RO2N, zero3], [zero3, RO2N]])
-            self.P = RO2N_B @ self.P @ RO2N_B.T
-            self.P[self.P < 1e-5] = 0
-            self.reference = reference
-        else:
-            raise NotImplementedError("Need to implement this")
 
-
-class XyzFromRazelRrtTrack(_TrackBase):
+class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
     """Tracking on razel rrt measurements
 
     NOTE: to reduce the nonlinearities of the range rate,
@@ -574,49 +797,16 @@ class XyzFromRazelRrtTrack(_TrackBase):
         zhat[3] = zhat[0] * zhat[3]
         return zhat
 
-    @staticmethod
-    def F(x, dt):
-        """Partial derivative of the propagation function w.r.t. x at x hat"""
-        return np.array(
-            [
-                [1, 0, 0, dt, 0, 0],
-                [0, 1, 0, 0, dt, 0],
-                [0, 0, 1, 0, 0, dt],
-                [0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 1],
-            ]
-        )
-
-    @staticmethod
-    def f(x, dt):
-        """State propagation function"""
-        return np.array(
-            [x[0] + x[3] * dt, x[1] + x[4] * dt, x[2] + x[5] * dt, x[3], x[4], x[5]]
-        )
-
-    @staticmethod
-    def Q(dt):
-        """This is most definitely not optimal and should be tuned in the future"""
-        return (np.diag([2, 2, 2, 2, 2, 2]) * dt) ** 2
-
     def update(self, z, R=np.diag([1, 1e-2, 5e-2, 10]) ** 2):
         """Construct the pseudo measurement for range rate"""
         z = z.copy()  # copy bc we are doing pseudo measurement manipulation
         z[3] = z[0] * z[3]
         self._update(z, R)
 
-    def change_reference(self, reference, inplace: bool):
-        if inplace:
-            RO2N = self.R_old_to_new(reference)
-            self.position = self.position.change_reference(reference, inplace=False)
-            self.velocity = self.velocity.change_reference(reference, inplace=False)
-            RO2N_B = np.block([[RO2N, zero3], [zero3, RO2N]])
-            self.P = RO2N_B @ self.P @ RO2N_B.T
-            self.P[self.P < 1e-5] = 0
-            self.reference = reference
-        else:
-            raise NotImplementedError("Need to implement this")
+
+# =========================================
+# Fully functioning box trackers
+# =========================================
 
 
 class BasicBoxTrack3D(_TrackBase):
@@ -1035,3 +1225,25 @@ class BasicJointBoxTrack(_TrackBase):
                 self.track_3d.change_reference(reference, inplace=inplace)
         else:
             raise NotImplementedError
+
+
+class GroupTrack:
+    def __init__(self, state, members) -> None:
+        """Keep track on multiple tracks via a single state
+
+        But maintain knowledge of the IDs of the members along the way
+        """
+        self.state = state
+        self.members = members
+
+    def change_reference(self, other, inplace):
+        if inplace:
+            self.state.change_reference(other, inplace=True)
+        else:
+            raise
+
+    def __getattr__(self, attr):
+        try:
+            return getattr(self, attr)
+        except:
+            return getattr(self.state, attr)

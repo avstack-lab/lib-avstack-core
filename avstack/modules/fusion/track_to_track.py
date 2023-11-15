@@ -7,16 +7,19 @@
 """
 
 """
+
 from typing import Any
 
 import numpy as np
 
+from avstack.config import ALGORITHMS
 from avstack.datastructs import DataContainer
 from avstack.geometry import Position, bbox
 from avstack.modules.assignment import build_A_from_iou, gnn_single_frame_assign
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
-from avstack.modules.tracking.tracks import XyFromRazTrack, _TrackBase
+from avstack.modules.tracking.tracks import _TrackBase
 
+from ..clustering.clusterers import Cluster
 from .base import _FusionAlgorithm
 
 
@@ -37,6 +40,7 @@ def ci_fusion(x1, P1, x2, P2, w=0.5):
     return x_f, P_f
 
 
+@ALGORITHMS.register_module()
 class NoFusion:
     """Only returns the first set of tracks"""
 
@@ -52,11 +56,14 @@ class NoFusion:
             )
         elif isinstance(tracks_out, _TrackBase):
             tracks_out = [tracks_out]
+        elif isinstance(tracks_out, Cluster):
+            pass
         else:
             raise NotImplementedError(type(tracks_out))
         return tracks_out
 
 
+@ALGORITHMS.register_module()
 class AggregatorFusion:
     """Simply appends all tracks together not worrying about duplicates"""
 
@@ -75,61 +82,24 @@ class AggregatorFusion:
         return tracks_out
 
 
+@ALGORITHMS.register_module()
 class CovarianceIntersectionFusion:
-    """Runs assignment algorithm to determine if there are duplicates
+    """Covariance intersection to build a track from a cluster"""
 
-    For duplicates, run covariance intersection for fusion
-    """
+    def __call__(self, cluster: Cluster):
+        x_fuse = None
+        P_fuse = None
 
-    def __init__(self, clustering):
-        self.clustering = clustering
+        if len(cluster) > 0:
+            # perform fusion on the array
+            x_fuse, P_fuse = cluster[0].x, cluster[0].P
+            for track in cluster[1:]:
+                x_fuse, P_fuse = ci_fusion(x_fuse, P_fuse, track.x, track.P, w=0.5)
 
-    def __call__(self, *tracks):
-        # -- run clustering
-        if len(tracks) == 0:
-            tracks_out = []
-        else:
-            objects = []
-            for trks in tracks:
-                if isinstance(trks, list):
-                    objects.extend([trk.data for trk in trks])
-                elif isinstance(trks, dict):
-                    objects.extend([trk.data for trk in trks.values()])
-                elif isinstance(trks, _TrackBase):
-                    objects.append(trks.data)
-                else:
-                    raise NotImplementedError(type(trks))
-            clusters = self.clustering(objects)
-
-            # -- run fusion
-            tracks_out = []
-            for i, cluster in enumerate(clusters):
-                if len(cluster) > 0:
-                    # perform fusion on the array
-                    x_fuse, P_fuse = cluster[0].x, cluster[0].P
-                    for track in cluster[1:]:
-                        x_fuse, P_fuse = ci_fusion(
-                            x_fuse, P_fuse, track.x, track.P, w=0.5
-                        )
-                    # rebuild the track
-                    track = XyFromRazTrack(
-                        t0=cluster[0].t0,
-                        raz=None,
-                        reference=cluster[0].reference,
-                        obj_type=cluster[0].obj_type,
-                        ID_force=i,
-                        x=x_fuse,
-                        P=P_fuse,
-                        t=cluster[0].t,
-                        coast=-1,
-                        n_updates=-1,
-                        age=-1,
-                    )
-                    tracks_out.append(track)
-
-        return tracks_out
+        return x_fuse, P_fuse
 
 
+@ALGORITHMS.register_module()
 class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
     def __init__(self, association="IoU", assignment="gnn", algorithm="CI", **kwargs):
         """

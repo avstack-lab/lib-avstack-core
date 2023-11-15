@@ -18,6 +18,7 @@ from avstack.environment.objects import VehicleState
 from avstack.geometry import Box2D, Box3D, ReferenceFrame
 from avstack.modules.perception.detections import (
     BoxDetection,
+    CentroidDetection,
     RazDetection,
     RazelDetection,
     RazelRrtDetection,
@@ -61,6 +62,7 @@ class _TrackingAlgorithm:
         else:
             raise NotImplementedError(assign_metric)
         self.cost_threshold = cost_threshold
+        self.last_assignment = None
         self.threshold_confirmed = threshold_confirmed
         self.threshold_coast = threshold_coast
         self.check_reference = check_reference
@@ -88,7 +90,7 @@ class _TrackingAlgorithm:
 
     @property
     def tracks_confirmed(self):
-        return [trk for trk in self.tracks if trk.n_updates >= self.threshold_confirmed]
+        return [trk for trk in self.tracks if trk.confirmed]
 
     @property
     def tracks_active(self):
@@ -122,6 +124,13 @@ class _TrackingAlgorithm:
                 det = det_.xyz  # use the cartesian coordinates for gating
             elif isinstance(det_, RazDetection):
                 det = det_.xy  # use the cartesian coordinates for gating
+            elif isinstance(det_, CentroidDetection):
+                if self.dimensions == 3:
+                    det = det_.xyz
+                elif self.dimensions == 2:
+                    det = det_.xy
+                else:
+                    raise NotImplementedError(self.dimensions)
             else:
                 raise NotImplementedError(type(det_))
 
@@ -138,6 +147,13 @@ class _TrackingAlgorithm:
                     trk = trk.x[:3]
                 elif isinstance(det_, RazDetection):
                     trk = trk.x[:2]
+                elif isinstance(det_, CentroidDetection):
+                    if self.dimensions == 3:
+                        trk = trk.x[:3]
+                    elif self.dimensions == 2:
+                        trk = trk.x[:2]
+                    else:
+                        raise NotImplementedError(self.dimensions)
                 else:
                     raise NotImplementedError(type(det_))
 
@@ -220,9 +236,7 @@ class _TrackingAlgorithm:
                 assign_sol = gnn_single_frame_assign(
                     A, cost_threshold=self.cost_threshold
                 )
-                # import pdb; pdb.set_trace()
-                # print(assign_sol.assignment_tuples)
-                # print(A)
+                self.last_assignment = assign_sol
 
                 # -- update tracks with associations
                 for i_det, j_trk in assign_sol.assignment_tuples:
@@ -231,6 +245,10 @@ class _TrackingAlgorithm:
                 # -- unassigned dets for new tracks
                 for i_det in assign_sol.unassigned_rows:
                     self.tracks.append(self.spawn_track_from_detection(dets[i_det]))
+
+                # -- tell unassigned tracks we missed them
+                for j_trk in assign_sol.unassigned_cols:
+                    trks_active[j_trk].missed()
 
             # -- prune dead tracks -- only in a non-predict_only state
             self.tracks = [

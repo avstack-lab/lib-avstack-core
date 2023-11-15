@@ -8,6 +8,7 @@
 
 """
 
+import avstack.modules.clustering
 import avstack.modules.control
 import avstack.modules.fusion
 import avstack.modules.localization

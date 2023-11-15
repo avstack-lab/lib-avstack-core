@@ -198,6 +198,14 @@ class CentroidDetection(Detection_):
     def z(self):
         return self.centroid
 
+    @property
+    def xyz(self):
+        return self.centroid[:3]
+
+    @property
+    def xy(self):
+        return self.centroid[:2]
+
     @centroid.setter
     def centroid(self, centroid):
         if not isinstance(centroid, (np.ndarray)):
@@ -211,12 +219,17 @@ class CentroidDetection(Detection_):
         return CentroidDetection
 
     def _change_reference(self, reference, inplace: bool):
-        vec = Vector(self.centroid, self.reference)
+        if len(self.centroid) == 3:
+            vec = Vector(self.centroid, self.reference)
+        elif len(self.centroid) == 2:
+            vec = Vector([self.centroid[0], self.centroid[1], 0], self.reference)
+        else:
+            raise NotImplementedError(len(self.centroid))
         vec.change_reference(reference, inplace=True)
         if inplace:
-            self.centroid = vec.x
+            self.centroid = vec.x[: len(self.centroid)]
         else:
-            return vec.x
+            return vec.x[: len(self.centroid)]
 
 
 class RazDetection(Detection_):

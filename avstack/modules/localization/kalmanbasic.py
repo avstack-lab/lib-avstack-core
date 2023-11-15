@@ -11,6 +11,7 @@
 import numpy as np
 import quaternion
 
+from avstack.config import ALGORITHMS
 from avstack.geometry import Attitude, GlobalOrigin3D, Position, Velocity
 from avstack.geometry import transformations as tforms
 from avstack.sensors import DataBuffer, ImuBuffer
@@ -38,6 +39,7 @@ def KF_linear_propagate(x, P, F, Q):
 # =============================================================
 
 
+@ALGORITHMS.register_module()
 class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
     """
     Extremely simple state estimator
@@ -162,8 +164,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
             self.velocity = Velocity(self.x[3:6], self.reference)  # in ENU
             self.acceleration = None
             if self.velocity.norm() > 0:
-                forward = self.velocity / np.linalg.norm(self.velocity)  # in ENU
-                forward = forward.x
+                forward = self.velocity.x / np.linalg.norm(self.velocity.x)  # in ENU
             elif self.attitude is None:
                 forward = np.array([1, 0, 0])
             else:
@@ -200,6 +201,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
 # =============================================================
 
 
+@ALGORITHMS.register_module()
 class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
     """
     Simple state estimator

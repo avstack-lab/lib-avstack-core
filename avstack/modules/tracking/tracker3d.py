@@ -10,6 +10,7 @@
 
 import numpy as np
 
+from avstack.config import ALGORITHMS
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
 from avstack.geometry import Attitude, Box3D, Position, Velocity
@@ -23,9 +24,11 @@ from .tracks import (
     BasicJointBoxTrack,
     XyzFromRazelRrtTrack,
     XyzFromRazelTrack,
+    XyzFromXyzTrack,
 )
 
 
+@ALGORITHMS.register_module()
 class GroundTruthTracker(_TrackingAlgorithm):
     def __init__(self, **kwargs):
         self.is_ground_truth = True
@@ -35,7 +38,10 @@ class GroundTruthTracker(_TrackingAlgorithm):
         return ground_truth.objects
 
 
+@ALGORITHMS.register_module()
 class BasicBoxTracker3D(_TrackingAlgorithm):
+    dimensions = 3
+
     def __init__(
         self,
         threshold_confirmed=3,
@@ -65,7 +71,10 @@ class BasicBoxTracker3D(_TrackingAlgorithm):
         )
 
 
+@ALGORITHMS.register_module()
 class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
+    dimensions = 3
+
     def __init__(
         self,
         threshold_confirmed_3d=3,
@@ -282,7 +291,7 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
         return self.tracks_confirmed
 
 
-class BasicRazelTracker(_TrackingAlgorithm):
+class _BaseCenterTracker(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=3,
@@ -303,6 +312,27 @@ class BasicRazelTracker(_TrackingAlgorithm):
         )
 
     def spawn_track_from_detection(self, detection):
+        raise NotImplementedError
+
+
+@ALGORITHMS.register_module()
+class BasicXyzTracker(_BaseCenterTracker):
+    dimensions = 3
+
+    def spawn_track_from_detection(self, detection):
+        return XyzFromXyzTrack(
+            t0=self.t,
+            xyz=detection.xyz,
+            reference=detection.reference,
+            obj_type=detection.obj_type,
+        )
+
+
+@ALGORITHMS.register_module()
+class BasicRazelTracker(_BaseCenterTracker):
+    dimensions = 3
+
+    def spawn_track_from_detection(self, detection):
         return XyzFromRazelTrack(
             t0=self.t,
             razel=detection.razel,
@@ -311,25 +341,9 @@ class BasicRazelTracker(_TrackingAlgorithm):
         )
 
 
-class BasicRazelRrtTracker(_TrackingAlgorithm):
-    def __init__(
-        self,
-        threshold_confirmed=3,
-        threshold_coast=3,
-        v_max=60,  # meters per second
-        assign_metric="center_dist",
-        assign_radius=10,
-        **kwargs,
-    ):
-        super().__init__(
-            assign_metric=assign_metric,
-            assign_radius=assign_radius,
-            threshold_confirmed=threshold_confirmed,
-            threshold_coast=threshold_coast,
-            cost_threshold=0,  # bc we are subtracting off assign radius
-            v_max=v_max,
-            **kwargs,
-        )
+@ALGORITHMS.register_module()
+class BasicRazelRrtTracker(_BaseCenterTracker):
+    dimensions = 3
 
     def spawn_track_from_detection(self, detection):
         return XyzFromRazelRrtTrack(
@@ -345,7 +359,10 @@ class BasicRazelRrtTracker(_TrackingAlgorithm):
 # ==============================================================
 
 
+@ALGORITHMS.register_module()
 class Ab3dmotTracker(_TrackingAlgorithm):
+    dimensions = 3
+
     def __init__(self, **kwargs):
         self.iframe = 0
         self.tracker = libraries.AB3DMOT.model.AB3DMOT()
@@ -455,7 +472,10 @@ class Ab3dmotTracker(_TrackingAlgorithm):
         return tracks_format
 
 
+@ALGORITHMS.register_module()
 class EagermotTracker(_TrackingAlgorithm):
+    dimensions = 3
+
     def __init__(self, plus=False, n_box_confirmed=0, n_joint_coast=np.inf, **kwargs):
         self.tracker = libraries.EagerMOT.model.EagerMOT(
             plus, n_box_confirmed, n_joint_coast

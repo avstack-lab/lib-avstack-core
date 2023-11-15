@@ -10,11 +10,12 @@
 
 import numpy as np
 
+from avstack.config import ALGORITHMS
 from avstack.geometry import Box2D
 
 from ._sort import Sort
 from .base import _TrackingAlgorithm
-from .tracks import BasicBoxTrack2D, XyFromRazTrack
+from .tracks import BasicBoxTrack2D, XyFromRazTrack, XyFromXyTrack
 
 
 # ==============================================================
@@ -22,6 +23,7 @@ from .tracks import BasicBoxTrack2D, XyFromRazTrack
 # ==============================================================
 
 
+@ALGORITHMS.register_module()
 class PassthroughTracker2D(_TrackingAlgorithm):
     def __init__(self, **kwargs):
         super().__init__("PassthroughTracker")
@@ -47,7 +49,7 @@ class PassthroughTracker2D(_TrackingAlgorithm):
         return tracks
 
 
-class BasicRazTracker(_TrackingAlgorithm):
+class _BaseCenterTracker(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=10,
@@ -67,6 +69,24 @@ class BasicRazTracker(_TrackingAlgorithm):
             **kwargs,
         )
 
+
+@ALGORITHMS.register_module()
+class BasicXyTracker(_BaseCenterTracker):
+    dimensions = 2
+
+    def spawn_track_from_detection(self, detection):
+        return XyFromXyTrack(
+            t0=self.t,
+            xy=detection.xy,
+            reference=detection.reference,
+            obj_type=detection.obj_type,
+        )
+
+
+@ALGORITHMS.register_module()
+class BasicRazTracker(_BaseCenterTracker):
+    dimensions = 2
+
     def spawn_track_from_detection(self, detection):
         return XyFromRazTrack(
             t0=self.t,
@@ -76,7 +96,7 @@ class BasicRazTracker(_TrackingAlgorithm):
         )
 
 
-class BasicBoxTracker2D(_TrackingAlgorithm):
+class _BaseBoxTracker2D(_TrackingAlgorithm):
     def __init__(
         self,
         threshold_confirmed=2,
@@ -95,6 +115,11 @@ class BasicBoxTracker2D(_TrackingAlgorithm):
             **kwargs,
         )
 
+
+@ALGORITHMS.register_module()
+class BasicBoxTracker2D(_BaseBoxTracker2D):
+    dimensions = 2
+
     def spawn_track_from_detection(self, detection):
         return BasicBoxTrack2D(
             t0=self.t,
@@ -104,6 +129,7 @@ class BasicBoxTracker2D(_TrackingAlgorithm):
         )
 
 
+@ALGORITHMS.register_module()
 class SortTracker2D(_TrackingAlgorithm):
     def __init__(
         self,
