@@ -89,6 +89,9 @@ class ReferenceFrame:
         ang: np.quaternion = np.quaternion(1),
         handedness="right",
         n_prec=8,
+        from_frame='',
+        to_frame='',
+        timestamp=0.0,
     ) -> None:
         self.n_prec = n_prec
 
@@ -121,6 +124,9 @@ class ReferenceFrame:
         self.handedness = handedness
         assert self.handedness == "right"
         self._fixed = None
+        self.from_frame = from_frame
+        self.to_frame = to_frame
+        self.timestamp = timestamp
 
         # -- everything must trace back to the global origin
         ref_check = self
