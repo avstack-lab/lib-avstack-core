@@ -453,6 +453,8 @@ GlobalOrigin3D = ReferenceFrame(
     ang=np.quaternion(1),
     reference=None,
     handedness="right",
+    to_frame="world",
+    from_frame="world",
 )
 
 
