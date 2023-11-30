@@ -13,7 +13,6 @@ from __future__ import annotations
 import os
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
@@ -201,6 +200,8 @@ class ImageData(SensorData):
                 return tflip(self.data, dims=(2,))
 
     def view(self, axis=False, extent=None, objects=None, view="box2d"):
+        import matplotlib.pyplot as plt
+        
         pil_im = Image.fromarray(self.rgb_image)
         plt.figure(figsize=[2 * x for x in plt.rcParams["figure.figsize"]])
         plt.imshow(pil_im, extent=extent)
