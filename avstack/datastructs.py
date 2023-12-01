@@ -496,7 +496,7 @@ class DataManager:
         return self.__str__()
 
     def __len__(self):
-        return len(self.data)
+        return self.n_buckets
 
     def __iter__(self):
         return iter(self.data)
@@ -513,15 +513,17 @@ class DataManager:
     def data_names(self):
         return list(self.data.keys())
 
-    def push(self, data):
+    def push(self, data, ID=None):
         if data is not None:
             if isinstance(data, list):
                 raise TypeError("Cannot process list in data manager")
-            if data.source_identifier not in self.data:
-                self.data[data.source_identifier] = DataBucket(
-                    data.source_identifier, self.max_size
-                )
-            self.data[data.source_identifier].push(data)
+            else:
+                ID = ID if ID else data.source_identifier
+                if ID not in self.data:
+                    self.data[ID] = DataBucket(
+                        ID, self.max_size
+                    )
+                self.data[ID].push(data)
 
     def has_data(self, s_ID):
         if (s_ID in self.data) and (len(self.data[s_ID]) > 0):
@@ -529,12 +531,12 @@ class DataManager:
         else:
             return False
 
-    def pop(self, s_ID=None):
+    def pop(self, s_ID=None, with_priority=True):
         try:
             if s_ID is None:
-                return {ID: self.data[ID].pop() for ID in self.data}
+                return {ID: self.data[ID].pop(with_priority=with_priority) for ID in self.data}
             else:
-                return self.data[s_ID].pop()
+                return self.data[s_ID].pop(with_priority=with_priority)
         except KeyError as e:
             raise KeyError(f"{self} does not have key {s_ID}, has {self.keys}")
 
@@ -606,12 +608,17 @@ class DataBucket(PriorityQueue):
         self.source_identifier = source_identifier
 
     def push(self, data):
-        assert (
-            data.source_identifier == self.source_identifier
-        ), f"{data.source_identifier} needs to match {self.source_identifier}"
-        super(DataBucket, self).push(data.timestamp, data)
+        if hasattr(data, "timestamp"):
+            assert (
+                data.source_identifier == self.source_identifier
+            ), f"{data.source_identifier} needs to match {self.source_identifier}"
+            super(DataBucket, self).push(data.timestamp, data)
+        else:
+            if not isinstance(data, tuple):
+                raise ValueError("Input must be tuple of (time, data)")
+            super(DataBucket, self).push(data[0], data[1])
 
-    def pop(self, with_priority=False):
+    def pop(self, with_priority=True):
         if with_priority:
             return super(DataBucket, self).pop()
         else:
