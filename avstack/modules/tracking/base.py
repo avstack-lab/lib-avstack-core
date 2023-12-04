@@ -15,7 +15,7 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
-from avstack.geometry import Box2D, Box3D, ReferenceFrame
+from avstack.geometry import Box2D, Box3D, PassiveReferenceFrame, ReferenceFrame
 from avstack.modules.perception.detections import (
     BoxDetection,
     CentroidDetection,
@@ -160,11 +160,21 @@ class _TrackingAlgorithm:
                 # -- either way, change origin and use radius to filter coarsely
                 try:
                     if self.check_reference:
-                        if det.reference != trk.reference:
+                        err = False
+                        if isinstance(det.reference, ReferenceFrame):
+                            if det.reference != trk.reference:
+                                err = True
+                        elif isinstance(det.reference, PassiveReferenceFrame):
+                            if det.reference.frame_id != trk.reference.frame_id:
+                                err = True
+                        else:
+                            raise NotImplementedError(
+                                f"type of {type(det.reference)} not understood"
+                            )
+                        if err:
                             raise RuntimeError(
                                 "Should have performed reference transformations earlier..."
                             )
-                            # det = det.change_reference(trk.reference, inplace=False)
                 except AttributeError as e:
                     pass
 
@@ -210,7 +220,8 @@ class _TrackingAlgorithm:
         """
         # -- propagation
         for trk in self.tracks_active:
-            trk.change_reference(platform, inplace=True)
+            if platform:
+                trk.change_reference(platform, inplace=True)
             trk.predict(t)
             if self.v_max is not None:
                 if trk.velocity.norm() > self.v_max:
@@ -222,13 +233,15 @@ class _TrackingAlgorithm:
                 detections = {"sensor_1": detections}
             for sensor, dets in detections.items():
                 # -- change to platform reference
-                if not change_in_place:
-                    dets = [
-                        det.change_reference(platform, inplace=False) for det in dets
-                    ]
-                else:
-                    for det in dets:
-                        det.change_reference(platform, inplace=True)
+                if platform is not None:
+                    if not change_in_place:
+                        dets = [
+                            det.change_reference(platform, inplace=False)
+                            for det in dets
+                        ]
+                    else:
+                        for det in dets:
+                            det.change_reference(platform, inplace=True)
 
                 # -- assignment with active tracks
                 trks_active = self.tracks_active

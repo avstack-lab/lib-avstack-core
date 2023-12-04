@@ -201,7 +201,7 @@ class ImageData(SensorData):
 
     def view(self, axis=False, extent=None, objects=None, view="box2d"):
         import matplotlib.pyplot as plt
-        
+
         pil_im = Image.fromarray(self.rgb_image)
         plt.figure(figsize=[2 * x for x in plt.rcParams["figure.figsize"]])
         plt.imshow(pil_im, extent=extent)

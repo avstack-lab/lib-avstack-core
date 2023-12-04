@@ -78,6 +78,32 @@ class ReferenceDecoder(json.JSONDecoder):
             return json_object
 
 
+class PassiveReferenceFrame:
+    def __init__(
+        self,
+        frame_id: str,
+        timestamp: float,
+    ) -> None:
+        self.frame_id = frame_id
+        self.timestamp = timestamp
+
+    def __str__(self):
+        return f"PassiveReferenceFrame - {self.frame_id} frame at {self.timestamp} time"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other: PassiveReferenceFrame):
+        if isinstance(other, PassiveReferenceFrame):
+            return (self.frame_id == other.frame_id) and (
+                self.timestamp == other.timestamp
+            )
+        else:
+            raise NotImplementedError(
+                f"Cannot check equality between reference frame and {type(other)}"
+            )
+
+
 class ReferenceFrame:
     def __init__(
         self,
@@ -89,8 +115,8 @@ class ReferenceFrame:
         ang: np.quaternion = np.quaternion(1),
         handedness="right",
         n_prec=8,
-        from_frame='',
-        to_frame='',
+        from_frame="",
+        to_frame="",
         timestamp=0.0,
     ) -> None:
         self.n_prec = n_prec
@@ -485,7 +511,7 @@ class Vector:
 
     @reference.setter
     def reference(self, reference):
-        assert isinstance(reference, ReferenceFrame)
+        assert isinstance(reference, (PassiveReferenceFrame, ReferenceFrame))
         self._reference = reference
 
     def __str__(self):
@@ -731,7 +757,7 @@ class Rotation:
 
     @reference.setter
     def reference(self, reference):
-        assert isinstance(reference, ReferenceFrame)
+        assert isinstance(reference, (PassiveReferenceFrame, ReferenceFrame))
         self._reference = reference
 
     @property

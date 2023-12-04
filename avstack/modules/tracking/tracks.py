@@ -7,6 +7,7 @@ from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     Attitude,
     BoxDecoder,
+    PassiveReferenceFrame,
     Position,
     ReferenceDecoder,
     ReferenceFrame,
@@ -167,6 +168,7 @@ class _TrackBase:
         coast=0,
         n_updates=1,
         age=0,
+        check_reference=False,
     ) -> None:
         if ID_force is None:
             ID = _TrackBase.ID_counter
@@ -189,6 +191,7 @@ class _TrackBase:
         self.score = self.SCORE_INIT
         self.active = True
         self.confirmed = False
+        self.check_reference = check_reference
 
     @property
     def reference(self):
@@ -196,7 +199,7 @@ class _TrackBase:
 
     @reference.setter
     def reference(self, reference):
-        if not isinstance(reference, ReferenceFrame):
+        if not isinstance(reference, (PassiveReferenceFrame, ReferenceFrame)):
             raise ValueError(f"Reference frame type not appropriate, {type(reference)}")
         self._reference = reference
 
@@ -911,8 +914,11 @@ class BasicBoxTrack3D(_TrackBase):
         return self.box3d.yaw
 
     def update(self, box3d, R=np.diag([1, 1, 1, 0.25, 0.25, 0.25]) ** 2):
-        if box3d.reference != self.reference:
-            raise RuntimeError("Should have converted the box location before this...")
+        if self.check_reference:
+            if box3d.reference != self.reference:
+                raise RuntimeError(
+                    "Should have converted the box location before this..."
+                )
         if self.where_is_t != box3d.where_is_t:
             raise NotImplementedError(
                 "Differing t locations not implemented: {}, {}".format(

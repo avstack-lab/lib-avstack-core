@@ -520,9 +520,7 @@ class DataManager:
             else:
                 ID = ID if ID else data.source_identifier
                 if ID not in self.data:
-                    self.data[ID] = DataBucket(
-                        ID, self.max_size
-                    )
+                    self.data[ID] = DataBucket(ID, self.max_size)
                 self.data[ID].push(data)
 
     def has_data(self, s_ID):
@@ -534,7 +532,10 @@ class DataManager:
     def pop(self, s_ID=None, with_priority=True):
         try:
             if s_ID is None:
-                return {ID: self.data[ID].pop(with_priority=with_priority) for ID in self.data}
+                return {
+                    ID: self.data[ID].pop(with_priority=with_priority)
+                    for ID in self.data
+                }
             else:
                 return self.data[s_ID].pop(with_priority=with_priority)
         except KeyError as e:

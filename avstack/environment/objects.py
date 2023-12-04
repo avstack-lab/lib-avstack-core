@@ -23,6 +23,7 @@ from avstack.geometry import (
     Box2D,
     Box3D,
     GlobalOrigin3D,
+    PassiveReferenceFrame,
     Position,
     ReferenceFrame,
     RotationDecoder,
@@ -205,7 +206,9 @@ class ObjectState:
         att = self.attitude.q if self.attitude else np.quaternion(1)
         ang = self.angular_velocity.q if self.angular_velocity else np.quaternion(1)
         ref = self.reference
-        return ReferenceFrame(x=pos, v=vel, acc=acc, q=att, ang=ang, reference=ref, timestamp=self.t)
+        return ReferenceFrame(
+            x=pos, v=vel, acc=acc, q=att, ang=ang, reference=ref, timestamp=self.t
+        )
 
     def set(
         self,
@@ -289,7 +292,7 @@ class ObjectState:
         """
 
         # wrapping reference frame
-        if isinstance(reference, ReferenceFrame):
+        if isinstance(reference, (PassiveReferenceFrame, ReferenceFrame)):
             pass
         elif isinstance(reference, ObjectState):
             reference = reference.as_reference()

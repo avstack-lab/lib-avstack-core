@@ -30,6 +30,7 @@ from .datastructs import (
 from .planes import GroundPlane, plane_2_transform
 from .refchoc import (
     GlobalOrigin3D,
+    PassiveReferenceFrame,
     ReferenceDecoder,
     ReferenceFrame,
     Rotation,
@@ -55,6 +56,7 @@ __all__ = [
     "PointMatrix3D",
     "Pose",
     "Position",
+    "PassiveReferenceFrame",
     "RotationDecoder",
     "Twist",
     "VectorDecoder",
