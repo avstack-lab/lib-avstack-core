@@ -17,6 +17,7 @@ from avstack.datastructs import DataContainerDecoder
 from avstack.geometry import (
     Box2D,
     Box3D,
+    PassiveReferenceFrame,
     ReferenceDecoder,
     ReferenceFrame,
     SegMask2D,
@@ -128,7 +129,7 @@ class Detection_:
 
     @reference.setter
     def reference(self, reference):
-        assert isinstance(reference, ReferenceFrame)
+        assert isinstance(reference, (PassiveReferenceFrame, ReferenceFrame))
         self._reference = reference
 
     @property

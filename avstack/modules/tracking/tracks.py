@@ -3,10 +3,11 @@ import json
 import numpy as np
 
 from avstack.datastructs import DataContainerDecoder
-from avstack.environment.objects import VehicleState
+from avstack.environment.objects import ObjectState
 from avstack.geometry import (
     Attitude,
     BoxDecoder,
+    PassiveReferenceFrame,
     Position,
     ReferenceDecoder,
     ReferenceFrame,
@@ -167,6 +168,7 @@ class _TrackBase:
         coast=0,
         n_updates=1,
         age=0,
+        check_reference=False,
     ) -> None:
         if ID_force is None:
             ID = _TrackBase.ID_counter
@@ -189,6 +191,8 @@ class _TrackBase:
         self.score = self.SCORE_INIT
         self.active = True
         self.confirmed = False
+        self.check_reference = check_reference
+        self.attitude = None
 
     @property
     def reference(self):
@@ -196,7 +200,7 @@ class _TrackBase:
 
     @reference.setter
     def reference(self, reference):
-        if not isinstance(reference, ReferenceFrame):
+        if not isinstance(reference, (PassiveReferenceFrame, ReferenceFrame)):
             raise ValueError(f"Reference frame type not appropriate, {type(reference)}")
         self._reference = reference
 
@@ -215,6 +219,18 @@ class _TrackBase:
     @velocity.setter
     def velocity(self, velocity: Velocity):
         self.x[self.idx_vel] = velocity.x
+
+    @property
+    def attitude(self):
+        return self._attitude
+
+    @attitude.setter
+    def attitude(self, attitude):
+        self._attitude = attitude
+
+    @property
+    def box3d(self):
+        return None  # to be defined in subclass
 
     @property
     def score(self):
@@ -333,6 +349,19 @@ class _TrackBase:
         diff = self.reference.differential(reference)
         R_old_to_new = transform_orientation(diff.q, "quat", "dcm")
         return R_old_to_new
+
+    def as_object(self):
+        vs = ObjectState(obj_type=self.obj_type, ID=self.ID)
+        vs.set(
+            t=self.t,
+            position=self.position,
+            box=self.box3d,
+            velocity=self.velocity,
+            acceleration=None,
+            attitude=self.attitude,
+            angular_velocity=None,
+        )
+        return vs
 
     def change_reference(self, reference, inplace: bool):
         raise NotImplementedError
@@ -830,6 +859,8 @@ class BasicBoxTrack3D(_TrackBase):
         """Box state is: [x, y, z, h, w, l, vx, vy, vz] w/ yaw as attribute"""
         if v is None:
             v = np.array([0, 0, 0])
+        elif isinstance(v, Velocity):
+            v = v.x
         x = np.array(
             [
                 box3d.t[0],
@@ -911,8 +942,11 @@ class BasicBoxTrack3D(_TrackBase):
         return self.box3d.yaw
 
     def update(self, box3d, R=np.diag([1, 1, 1, 0.25, 0.25, 0.25]) ** 2):
-        if box3d.reference != self.reference:
-            raise RuntimeError("Should have converted the box location before this...")
+        if self.check_reference:
+            if box3d.reference != self.reference:
+                raise RuntimeError(
+                    "Should have converted the box location before this..."
+                )
         if self.where_is_t != box3d.where_is_t:
             raise NotImplementedError(
                 "Differing t locations not implemented: {}, {}".format(
@@ -921,20 +955,8 @@ class BasicBoxTrack3D(_TrackBase):
             )
         det = np.array([box3d.t[0], box3d.t[1], box3d.t[2], box3d.h, box3d.w, box3d.l])
         self._update(det, R)
+        self.attitude = box3d.attitude
         self.q = box3d.q
-
-    def as_object(self):
-        vs = VehicleState(obj_type=self.obj_type, ID=self.ID)
-        vs.set(
-            t=self.t,
-            position=self.position,
-            box=self.box3d,
-            velocity=self.velocity,
-            acceleration=None,
-            attitude=self.attitude,
-            angular_velocity=None,
-        )
-        return vs
 
     def as_box_detection(self):
         return BoxDetection(

@@ -25,13 +25,13 @@ class WaypointPlan(PriorityQueue):
 
     def clear(self):
         while not self.empty():
-            _, _ = self.pop()
+            _ = self.pop()
 
     def update(self, ego_state):
         """reorganize waypoints based on ego state"""
         p_wpts = []
         while not self.empty():
-            wpt = self.pop()[1]
+            wpt = self.pop(with_priority=False)
             prior = ego_state.position.distance(wpt.target_point.position)
             if prior >= self.dist_arrived:
                 p_wpts.append((prior, wpt))

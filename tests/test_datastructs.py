@@ -76,7 +76,7 @@ def test_data_manager():
     assert data_manager.has_data(pc1.source_identifier)
     pc2 = get_lidar_data(1.0, 100)
     data_manager.push(pc2)
-    pc_got = data_manager.pop(pc1.source_identifier)
+    pc_got = data_manager.pop(pc1.source_identifier, with_priority=False)
     assert pc_got == pc1
 
 
@@ -113,7 +113,7 @@ def test_delay_managed_buffer_event_driven_emit_one():
     data = generate_data(dt_interval=dt_interval)
     for i, dc in enumerate(data.values()):
         buffer.push(dc)
-        elements = buffer.emit_one()
+        elements = buffer.emit_one(with_priority=False)
         if i > 1:
             assert len(elements) == 1, len(elements)
             assert len(elements[list(elements.keys())[0]]) == 1

@@ -250,7 +250,7 @@ class Box2D:
     @property
     def w(self):
         return self.xmax - self.xmin
-    
+
     @property
     def width(self):
         return self.w

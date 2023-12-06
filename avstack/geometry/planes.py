@@ -10,7 +10,7 @@
 import numpy as np
 import quaternion
 
-from .refchoc import ReferenceFrame, Rotation, Vector
+from .refchoc import PassiveReferenceFrame, ReferenceFrame, Rotation, Vector
 
 
 def plane_2_transform(plane):
@@ -49,7 +49,7 @@ class GroundPlane:
         Last element describes the height of the sensor relative to the plane
         """
         self.p = np.asarray(plane_coeffs)
-        assert isinstance(reference, ReferenceFrame)
+        assert isinstance(reference, (PassiveReferenceFrame, ReferenceFrame))
         self.reference = reference
         self.normal = self.p[:3] / np.linalg.norm(self.p[:3])
 

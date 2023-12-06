@@ -4,7 +4,7 @@ from typing import List, Union
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import Position
+from avstack.geometry import PassiveReferenceFrame, Position
 
 
 class Cluster:
@@ -31,7 +31,10 @@ class Cluster:
                 if self.reference is None:
                     self.reference = arg[1].reference
                 else:
-                    assert self.reference.allclose(arg[1].reference)
+                    if isinstance(self.reference, PassiveReferenceFrame):
+                        assert self.reference == args[1].reference
+                    else:
+                        assert self.reference.allclose(arg[1].reference)
 
     def __str__(self) -> str:
         return "Cluster ({}, {} elements)".format(self.ID, len(self.tracks))
@@ -55,7 +58,10 @@ class Cluster:
             if self.reference is None:
                 self.reference = atrack[1].reference
             else:
-                assert self.reference.allclose(atrack[1].reference)
+                if isinstance(self.reference, PassiveReferenceFrame):
+                    assert self.reference == atrack[1].reference
+                else:
+                    assert self.reference.allclose(atrack[1].reference)
 
     def centroid(self):
         """Ensure all are of the same reference"""

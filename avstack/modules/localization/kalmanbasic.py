@@ -355,7 +355,7 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
 
         # -- process all gps measurements for low-rate
         while not self.gps_buffer.empty():
-            t_gps, gps_data = self.gps_buffer.pop()
+            t_gps, gps_data = self.gps_buffer.pop(with_priority=True)
             if t_gps >= self.t:
                 self._propagate(t_gps)
                 self._update(gps_data)
