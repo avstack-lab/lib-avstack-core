@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 from avstack.datastructs import DataContainerDecoder
-from avstack.environment.objects import VehicleState
+from avstack.environment.objects import ObjectState, VehicleState
 from avstack.geometry import (
     Attitude,
     BoxDecoder,
@@ -192,6 +192,7 @@ class _TrackBase:
         self.active = True
         self.confirmed = False
         self.check_reference = check_reference
+        self.attitude = None
 
     @property
     def reference(self):
@@ -218,6 +219,18 @@ class _TrackBase:
     @velocity.setter
     def velocity(self, velocity: Velocity):
         self.x[self.idx_vel] = velocity.x
+
+    @property
+    def attitude(self):
+        return self._attitude
+    
+    @attitude.setter
+    def attitude(self, attitude):
+        self._attitude = attitude
+
+    @property
+    def box3d(self):
+        return None  # to be defined in subclass
 
     @property
     def score(self):
@@ -336,6 +349,19 @@ class _TrackBase:
         diff = self.reference.differential(reference)
         R_old_to_new = transform_orientation(diff.q, "quat", "dcm")
         return R_old_to_new
+
+    def as_object(self):
+        vs = ObjectState(obj_type=self.obj_type, ID=self.ID)
+        vs.set(
+            t=self.t,
+            position=self.position,
+            box=self.box3d,
+            velocity=self.velocity,
+            acceleration=None,
+            attitude=self.attitude,
+            angular_velocity=None,
+        )
+        return vs
 
     def change_reference(self, reference, inplace: bool):
         raise NotImplementedError
@@ -931,19 +957,6 @@ class BasicBoxTrack3D(_TrackBase):
         self._update(det, R)
         self.attitude = box3d.attitude
         self.q = box3d.q
-
-    def as_object(self):
-        vs = VehicleState(obj_type=self.obj_type, ID=self.ID)
-        vs.set(
-            t=self.t,
-            position=self.position,
-            box=self.box3d,
-            velocity=self.velocity,
-            acceleration=None,
-            attitude=self.attitude,
-            angular_velocity=None,
-        )
-        return vs
 
     def as_box_detection(self):
         return BoxDetection(
