@@ -8,19 +8,17 @@
 
 """
 
-from typing import Any, List
+from typing import Any, List, Union
 
 import numpy as np
 
 from avstack.config import ALGORITHMS
 from avstack.datastructs import DataContainer
-from avstack.geometry import Position, bbox
-from avstack.modules.assignment import build_A_from_iou, gnn_single_frame_assign
+from avstack.geometry import Box3D, Position, Velocity
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
 from avstack.modules.tracking.tracks import _TrackBase
 
 from ..clustering.clusterers import Cluster
-from .base import _FusionAlgorithm
 
 
 def ci_fusion(x: List[np.ndarray], P: List[np.ndarray], w_method="naive_bayes"):
@@ -98,101 +96,66 @@ class AggregatorFusion:
 class CovarianceIntersectionFusion:
     """Covariance intersection to build a track from a cluster"""
 
-    def __call__(self, cluster: Cluster):
+    def __call__(self, tracks: Union[Cluster, List[_TrackBase]]):
         x_fuse = None
         P_fuse = None
 
-        if len(cluster) > 0:
+        if len(tracks) > 0:
             # perform fusion on the array
-            xs = [track.x for track in cluster]
-            Ps = [track.P for track in cluster]
+            xs = [track.x for track in tracks]
+            Ps = [track.P for track in tracks]
             x_fuse, P_fuse = ci_fusion(xs, Ps, w_method="naive_bayes")
 
         return x_fuse, P_fuse
 
 
 @ALGORITHMS.register_module()
-class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
-    def __init__(self, association="IoU", assignment="gnn", algorithm="CI", **kwargs):
+class CovarianceIntersectionFusionToBox:
+    """Performs CI fusion for box tracks and outputs a track"""
+
+    def __call__(
+        self, tracks: Union[Cluster, List[BasicBoxTrack3D]]
+    ) -> BasicBoxTrack3D:
+        """Assume that inputs are box tracks
+
+        Therefore, the state vector is:
+        [x, y, z, h, w, l, vx, vy, vz]
+
+        The attitude is NOT being fused here which is an approximation
         """
+        if len(tracks) > 0:
+            # perform fusion on the array
+            xs = [track.x for track in tracks]
+            Ps = [track.P for track in tracks]
+            x_fuse, P_fuse = ci_fusion(xs, Ps, w_method="naive_bayes")
 
-        NOTE: assumes state vector is [x, y, z, h, w, l, vx, vy, vz]
+            # get other attributes
+            t0 = min([track.t0 for track in tracks])
+            t = max([track.t for track in tracks])
+            reference = tracks[0].reference
+            obj_type = tracks[0].obj_type
+            coast = min([track.coast for track in tracks])
+            n_updates = max([track.n_updates for track in tracks])
+            age = max([track.age for track in tracks])
+            attitude = tracks[0].attitude  # APPROXIMATION
 
-        Track-to-track fusion can suffer from the track-ID ambiguity problem.
-        We attempt to solve that by keeping a double dictionary of track keys.
-        The dictionary is as follows: {'track1_ID':{'track2_ID': 'fuse_ID'}}.
-        Thus any common combination of track1_ID and track2_ID always yields
-        the same fused track ID.
-        """
-        super().__init__(**kwargs)
-        self.association = association
-        self.assignment = assignment
-        self.algorithm = algorithm
+            # wrap into expected attributes
+            position = Position(x_fuse[0:3], reference=reference)
+            hwl = x_fuse[3:6]
+            box3d = Box3D(position, attitude, hwl)
+            v = Velocity(x_fuse[6:9], reference=reference)
 
-        self.ID_registry = {}
-
-    def fuse(
-        self, tracks3d_1, tracks3d_2, keep_lones=False, IoU_thresh=0.2, *args, **kwargs
-    ):
-        """
-        Get association metrics...assign...fuse
-
-        NOTE: tracks should be put into the same coordinate frame before this!!
-        """
-        if (len(tracks3d_1) == 0) or (len(tracks3d_2) == 0):
-            return []
-
-        # -- step 1: association metrics
-        if self.association == "IoU":
-            # NOTE: this step is ok to have difference origins
-            A = build_A_from_iou(
-                [trk1.box3d for trk1 in tracks3d_1], [trk2.box3d for trk2 in tracks3d_2]
+            return BasicBoxTrack3D(
+                t0=t0,
+                box3d=box3d,
+                reference=reference,
+                obj_type=obj_type,
+                v=v,
+                P=P_fuse,
+                t=t,
+                coast=coast,
+                n_updates=n_updates,
+                age=age,
             )
         else:
-            raise NotImplementedError(self.association)
-        # import ipdb; ipdb.set_trace()
-
-        # -- step 2: assignment solution
-        if self.assignment == "gnn":
-            assign_sol = gnn_single_frame_assign(A, cost_threshold=-IoU_thresh)
-        else:
-            raise NotImplementedError(self.assignment)
-
-        # -- step 3: fusion
-        tracks3d_fused = []
-        if self.algorithm == "CI":
-            for row, col in assign_sol.assignment_tuples:
-                t1 = tracks3d_1[row]
-                t2 = tracks3d_2[col]
-                if not t1.reference == t2.reference:
-                    t2.change_reference(t1.reference, inplace=True)
-                x_f, P_f = ci_fusion([t1.x, t2.x], [t1.P, t2.P], w_method="naive_bayes")
-                x, y, z, h, w, l, vx, vy, vz = x_f
-                v_f = [vx, vy, vz]
-                t = t2.t0
-                obj_type = t2.obj_type
-                reference = t2.reference
-                pos = Position(np.array([x, y, z]), reference)
-                rot = t2.q
-                box_f = bbox.Box3D(pos, rot, [h, w, l], where_is_t=t2.box3d.where_is_t)
-                ID = None
-                if t1.ID in self.ID_registry:
-                    ID = self.ID_registry[t1.ID].get(t2.ID, None)
-                else:
-                    self.ID_registry[t1.ID] = {}
-                fused = BasicBoxTrack3D(
-                    t, box_f, box_f.reference, obj_type, ID_force=ID, v=v_f, P=P_f
-                )
-                self.ID_registry[t1.ID][t2.ID] = fused.ID
-                tracks3d_fused.append(fused)
-
-            # keep loners
-            if keep_lones:
-                for idx_row in assign_sol.unassigned_rows:
-                    tracks3d_fused.append(tracks3d_1[idx_row])
-                for idx_col in assign_sol.unassigned_cols:
-                    tracks3d_fused.append(tracks3d_2[idx_col])
-        else:
-            raise NotImplementedError(self.algorithm)
-
-        return tracks3d_fused
+            return None

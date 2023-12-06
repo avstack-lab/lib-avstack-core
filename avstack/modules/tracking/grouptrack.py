@@ -1,10 +1,12 @@
 from typing import Dict
 
+import numpy as np
+
 from avstack.config import ALGORITHMS, ConfigDict
 from avstack.datastructs import DataContainer
 from avstack.geometry import ReferenceFrame
-from avstack.modules.perception.detections import CentroidDetection
-from avstack.modules.tracking.tracks import GroupTrack
+from avstack.modules.perception.detections import BoxDetection, CentroidDetection
+from avstack.modules.tracking.tracks import BasicBoxTrack3D, GroupTrack
 
 
 @ALGORITHMS.register_module()
@@ -26,20 +28,36 @@ class GroupTrackerWrapper:
     ) -> DataContainer:
 
         # Track on the detections
-        fuseds = [
-            CentroidDetection(
-                source_identifier="cluster",
-                centroid=self.fusion(cluster)[0][: len(cluster[0].position)],
-                reference=cluster[0].reference,
-                obj_type=cluster[0].obj_type,
-                score=None,
-            )
-            for cluster in clusters
-        ]
+        fused_dets = []
+        for cluster in clusters:
+            fuse_out = self.fusion(cluster)
+            if isinstance(fuse_out, BasicBoxTrack3D):
+                fuse_as_det = BoxDetection(
+                    source_identifier="cluster",
+                    box=fuse_out.box3d,
+                    reference=cluster.reference,
+                    obj_type=fuse_out.obj_type,
+                    score=None,
+                )
+            elif isinstance(fuse_out, tuple):
+                if isinstance(fuse_out[0], np.ndarray):
+                    fuse_as_det = CentroidDetection(
+                        source_identifier="cluster",
+                        centroid=fuse_out[0][: len(cluster[0].position)],
+                        reference=cluster[0].reference,
+                        obj_type=cluster[0].obj_type,
+                        score=None,
+                    )
+                else:
+                    raise NotImplemented(fuse_out)
+            else:
+                raise NotImplementedError(fuse_out)
+            fused_dets.append(fuse_as_det)
+
         clusters_fused = DataContainer(
             frame=frame,
             timestamp=timestamp,
-            data=fuseds,
+            data=fused_dets,
             source_identifier="cluster-dets",
         )
         cluster_tracks = self.tracker(

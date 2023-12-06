@@ -28,15 +28,6 @@ def get_n_tracks(n_tracks=2):
     return tracks
 
 
-def test_track_to_track_boxtrack_ci():
-    fuser = fusion.BoxTrackToBoxTrackFusion3D()
-    frame = 0
-    tracks = get_n_tracks(n_tracks=2)
-    track_fused = fuser([tracks[0]], [tracks[1]], frame=frame)[0]
-    assert fuser.ID_registry == {tracks[0].ID: {tracks[1].ID: track_fused.ID}}
-    assert track_fused.box3d.allclose(tracks[0].box)
-
-
 def test_no_fusion():
     fuser = fusion.track_to_track.NoFusion()
     clusterer = clustering.NoClustering()
@@ -56,3 +47,10 @@ def test_ci_fusion_base_naive_bayes():
     x_f, P_f = fusion.track_to_track.ci_fusion(xs, Ps, w_method="naive_bayes")
     assert np.allclose(x_f, x)
     assert np.allclose(P_f, P)
+
+
+def test_fusion_into_boxtrack():
+    tracks = get_n_tracks(n_tracks=4)
+    fuser = fusion.CovarianceIntersectionFusionToBox()
+    fused_out = fuser(tracks)
+    assert isinstance(fused_out, tracking.tracker3d.BasicBoxTrack3D)
