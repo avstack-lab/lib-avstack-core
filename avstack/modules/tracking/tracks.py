@@ -833,6 +833,8 @@ class BasicBoxTrack3D(_TrackBase):
         """Box state is: [x, y, z, h, w, l, vx, vy, vz] w/ yaw as attribute"""
         if v is None:
             v = np.array([0, 0, 0])
+        elif isinstance(v, Velocity):
+            v = v.x
         x = np.array(
             [
                 box3d.t[0],
@@ -927,6 +929,7 @@ class BasicBoxTrack3D(_TrackBase):
             )
         det = np.array([box3d.t[0], box3d.t[1], box3d.t[2], box3d.h, box3d.w, box3d.l])
         self._update(det, R)
+        self.attitude = box3d.attitude
         self.q = box3d.q
 
     def as_object(self):
