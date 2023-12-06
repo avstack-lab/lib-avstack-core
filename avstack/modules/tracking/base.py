@@ -134,24 +134,27 @@ class _TrackingAlgorithm:
             else:
                 raise NotImplementedError(type(det_))
 
-            for j, trk in enumerate(tracks):
+            for j, trk_ in enumerate(tracks):
                 # -- pull off track state
                 if isinstance(det_, (VehicleState, BoxDetection, Box3D, Box2D)):
                     try:
-                        trk = trk.as_object().box
+                        trk = trk_.as_object().box
                     except AttributeError:
-                        trk = trk.box2d
+                        trk = trk_.box2d
+                    else:
+                        if trk is None:
+                            trk = trk_.box2d
                 elif isinstance(det_, RazelRrtDetection):
-                    trk = np.array([*trk.x[:3], trk.rrt])
+                    trk = np.array([*trk_.x[:3], trk_.rrt])
                 elif isinstance(det_, RazelDetection):
-                    trk = trk.x[:3]
+                    trk = trk_.x[:3]
                 elif isinstance(det_, RazDetection):
-                    trk = trk.x[:2]
+                    trk = trk_.x[:2]
                 elif isinstance(det_, CentroidDetection):
                     if self.dimensions == 3:
-                        trk = trk.x[:3]
+                        trk = trk_.x[:3]
                     elif self.dimensions == 2:
-                        trk = trk.x[:2]
+                        trk = trk_.x[:2]
                     else:
                         raise NotImplementedError(self.dimensions)
                 else:

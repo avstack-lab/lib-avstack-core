@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 from avstack.datastructs import DataContainerDecoder
-from avstack.environment.objects import ObjectState, VehicleState
+from avstack.environment.objects import ObjectState
 from avstack.geometry import (
     Attitude,
     BoxDecoder,
@@ -223,7 +223,7 @@ class _TrackBase:
     @property
     def attitude(self):
         return self._attitude
-    
+
     @attitude.setter
     def attitude(self, attitude):
         self._attitude = attitude

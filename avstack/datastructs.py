@@ -81,10 +81,12 @@ class _Priority:
     def empty(self):
         return len(self.heap) == 0
 
-    def top(self):
-        # index, _ = min(enumerate(self.heap), key=lambda x: x[1])
+    def top(self, with_priority=True):
         priority, item = self.heap[0]
-        return self.mult * priority, item
+        if with_priority:
+            return self.mult * priority, item
+        else:
+            return item
 
     def bottom(self):
         index, _ = max(enumerate(self.heap), key=lambda x: x[1])
@@ -118,7 +120,7 @@ class _Priority:
             all_things.append(self.pop(with_priority=with_priority))
         return all_things
 
-    def pop_all_above(self, priority_min):
+    def pop_all_above(self, priority_min, with_priority=False):
         """
         NOTE: THIS IS SLOW FOR MIN HEAP
         """
@@ -130,7 +132,7 @@ class _Priority:
             and (not self.empty())
             and (self.bottom()[0] >= priority_min)
         ):
-            all_things.append(self.pop())
+            all_things.append(self.pop(with_priority=with_priority))
         return all_things
 
 
@@ -172,7 +174,7 @@ class PriorityQueue(_Priority):
             self.pushpop(priority, item)
         self.max_priority = max(self.max_priority, self.mult * priority)
 
-    def pop(self, with_priority=True):
+    def pop(self, with_priority=False):
         """Pop top-priority item (smallest in min-heap)"""
         if self.empty() and self.empty_returns_none:
             if with_priority:
@@ -529,7 +531,7 @@ class DataManager:
         else:
             return False
 
-    def pop(self, s_ID=None, with_priority=True):
+    def pop(self, s_ID=None, with_priority=False):
         try:
             if s_ID is None:
                 return {
@@ -541,21 +543,31 @@ class DataManager:
         except KeyError as e:
             raise KeyError(f"{self} does not have key {s_ID}, has {self.keys}")
 
-    def top(self, s_ID=None):
+    def top(self, s_ID=None, with_priority=True):
         try:
             if s_ID is None:
-                return {ID: self.data[ID].top() for ID in self.data}
+                return {
+                    ID: self.data[ID].top(with_priority=with_priority)
+                    for ID in self.data
+                }
             else:
-                return self.data[s_ID].top()
+                return self.data[s_ID].top(with_priority=with_priority)
         except KeyError as e:
             raise KeyError(f"{self} does not have key {s_ID}, has {self.keys}")
 
-    def pop_all_below(self, priority, s_ID=None):
+    def pop_all_below(self, priority, s_ID=None, with_priority=False):
         try:
             if s_ID is None:
-                return {ID: self.data[ID].pop_all_below(priority) for ID in self.data}
+                return {
+                    ID: self.data[ID].pop_all_below(
+                        priority, with_priority=with_priority
+                    )
+                    for ID in self.data
+                }
             else:
-                return self.data[s_ID].pop_all_below(priority)
+                return self.data[s_ID].pop_all_below(
+                    priority, with_priority=with_priority
+                )
         except KeyError as e:
             raise KeyError(f"{self} does not have key {s_ID}, has {self.keys}")
 
@@ -619,11 +631,8 @@ class DataBucket(PriorityQueue):
                 raise ValueError("Input must be tuple of (time, data)")
             super(DataBucket, self).push(data[0], data[1])
 
-    def pop(self, with_priority=True):
-        if with_priority:
-            return super(DataBucket, self).pop()
-        else:
-            return super(DataBucket, self).pop()[1]
+    def pop(self, with_priority=False):
+        return super(DataBucket, self).pop(with_priority=with_priority)
 
 
 class DataContainerEncoder(json.JSONEncoder):
@@ -824,7 +833,7 @@ class DelayManagedDataBuffer(DataManager):
         """Remove any elements that are too old"""
         self.pop_all_below(self.t_last_emit)
 
-    def emit_one(self):
+    def emit_one(self, with_priority=False):
         """Only emit a single element per queue that satisfies the delay timing"""
         t_emit = self._get_emit_timing()
         elements = {}
@@ -832,13 +841,13 @@ class DelayManagedDataBuffer(DataManager):
             if len(self[key]) > 0:
                 this_t = self.top(key)[0]
                 if this_t <= t_emit:
-                    elements[key] = self.pop(key)
+                    elements[key] = self.pop(key, with_priority=with_priority)
         return elements
 
-    def emit_all(self):
+    def emit_all(self, with_priority=False):
         """Emit all element per queue that satisfy the delay timing"""
         t_emit = self._get_emit_timing()
-        elements = self.pop_all_below(t_emit)
+        elements = self.pop_all_below(t_emit, with_priority=with_priority)
         # TODO: add in the t_last_emit logic here
         return elements
 

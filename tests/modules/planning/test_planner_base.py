@@ -27,7 +27,7 @@ def test_waypoints():
 
     assert len(WPP) == 1
     assert not WPP.needs_waypoint()
-    wp_1 = WPP.top()[1]
-    wp_2 = WPP.pop()[1]
+    wp_1 = WPP.top(with_priority=False)
+    wp_2 = WPP.pop(with_priority=False)
     assert wp == wp_1
     assert wp == wp_2

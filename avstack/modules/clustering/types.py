@@ -4,7 +4,7 @@ from typing import List, Union
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import Position, PassiveReferenceFrame
+from avstack.geometry import PassiveReferenceFrame, Position
 
 
 class Cluster:

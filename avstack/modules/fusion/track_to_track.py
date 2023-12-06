@@ -8,7 +8,7 @@
 
 """
 
-from typing import Any
+from typing import Any, List
 
 import numpy as np
 
@@ -23,7 +23,7 @@ from ..clustering.clusterers import Cluster
 from .base import _FusionAlgorithm
 
 
-def ci_fusion(x1, P1, x2, P2, w=0.5):
+def ci_fusion(x: List[np.ndarray], P: List[np.ndarray], w_method="naive_bayes"):
     """Covariance intersection fusion between filter states
     useful if the cross-correlation between the two data elements is not known
 
@@ -32,11 +32,23 @@ def ci_fusion(x1, P1, x2, P2, w=0.5):
 
     NOTE: only allows for full state fusion right now
     """
-    assert len(x1) == len(x2) == P1.shape[0] == P2.shape[0]
-    P1_inv = np.linalg.inv(P1)
-    P2_inv = np.linalg.inv(P2)
-    P_f = np.linalg.inv(w * P1_inv + (1 - w) * P2_inv)
-    x_f = P_f @ (w * P1_inv @ x1 + (1 - w) * P2_inv @ x2)
+    if (not isinstance(x, list)) or (not isinstance(P, list)):
+        raise TypeError(
+            "Input state and covariance must be list of states and list of covariances"
+        )
+
+    if len(x) == 1:
+        return x[0], P[0]  # no fusion to be done for one
+
+    if w_method == "naive_bayes":
+        ws = 1 / len(x) * np.ones((len(x)))
+    else:
+        raise NotImplementedError(w_method)
+
+    P_invs = [np.linalg.inv(P_) for P_ in P]
+    P_f = np.linalg.inv(sum([w * P_inv for w, P_inv in zip(ws, P_invs)]))
+    x_f = P_f @ (sum([w * P_inv @ x_ for w, P_inv, x_ in zip(ws, P_invs, x)]))
+
     return x_f, P_f
 
 
@@ -92,9 +104,9 @@ class CovarianceIntersectionFusion:
 
         if len(cluster) > 0:
             # perform fusion on the array
-            x_fuse, P_fuse = cluster[0].x, cluster[0].P
-            for track in cluster[1:]:
-                x_fuse, P_fuse = ci_fusion(x_fuse, P_fuse, track.x, track.P, w=0.5)
+            xs = [track.x for track in cluster]
+            Ps = [track.P for track in cluster]
+            x_fuse, P_fuse = ci_fusion(xs, Ps, w_method="naive_bayes")
 
         return x_fuse, P_fuse
 
@@ -154,7 +166,7 @@ class BoxTrackToBoxTrackFusion3D(_FusionAlgorithm):
                 t2 = tracks3d_2[col]
                 if not t1.reference == t2.reference:
                     t2.change_reference(t1.reference, inplace=True)
-                x_f, P_f = ci_fusion(t1.x, t1.P, t2.x, t2.P)
+                x_f, P_f = ci_fusion([t1.x, t2.x], [t1.P, t2.P], w_method="naive_bayes")
                 x, y, z, h, w, l, vx, vy, vz = x_f
                 v_f = [vx, vy, vz]
                 t = t2.t0
