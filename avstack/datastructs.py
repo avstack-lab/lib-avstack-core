@@ -475,9 +475,10 @@ class DataManager:
 
     TYPE = "DataManager"
 
-    def __init__(self, max_size: int = 10):
+    def __init__(self, max_size: int = 10, max_heap: bool = False) -> None:
         self.data = {}
         self.max_size = max_size
+        self.max_heap = max_heap
 
     @property
     def n_buckets(self):
@@ -522,7 +523,7 @@ class DataManager:
             else:
                 ID = ID if ID else data.source_identifier
                 if ID not in self.data:
-                    self.data[ID] = DataBucket(ID, self.max_size)
+                    self.data[ID] = DataBucket(ID, max_size=self.max_size, max_heap=self.max_heap)
                 self.data[ID].push(data)
 
     def has_data(self, s_ID):
@@ -574,16 +575,20 @@ class DataManager:
     def get_highest_earliest_priority(self):
         """Get the highest earliest priority (max of mins) from all the buckets
 
-        Buckets are min-heaps, so the "top" returns the lowest priority. This is fast.
+        Buckets are min-heaps, so the "top" returns the lowest priority. This is fast for min heap.
         """
+        if self.max_heap:
+            raise NotImplementedError("check that this works for max heap...")
         t_earliest = [bucket.top()[0] for bucket in self.data.values()]
         return max(t_earliest) if len(t_earliest) > 0 else None
 
     def get_lowest_latest_priority(self):
         """Get the lowest latest priority (min of maxes) from all the buckets
 
-        Buckets are max-heaps, so the "bottom" returns the highest priority. This is slow.
+        Buckets are max-heaps, so the "bottom" returns the highest priority. This is slow for min heap.
         """
+        if self.max_heap:
+            raise NotImplementedError("check that this works for max heap...")
         t_latest = [bucket.bottom()[0] for bucket in self.data.values()]
         return min(t_latest) if len(t_latest) > 0 else None
 
