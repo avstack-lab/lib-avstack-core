@@ -35,7 +35,11 @@ class SampledAssignmentClusterer:
         self.assign_radius = assign_radius
 
     def __call__(
-        self, objects: Dict[int, DataContainer], frame: int, timestamp: float, check_reference: bool=True
+        self,
+        objects: Dict[int, DataContainer],
+        frame: int,
+        timestamp: float,
+        check_reference: bool = True,
     ) -> ClusterSet:
         """Perform clustering
 
@@ -70,7 +74,12 @@ class SampledAssignmentClusterer:
         for agent_ID, tracks in objects.items():
             for track in tracks:
                 if not clusters.contains(agent_ID, track):
-                    distances = np.array([clust.distance(track, check_reference=check_reference) for clust in clusters])
+                    distances = np.array(
+                        [
+                            clust.distance(track, check_reference=check_reference)
+                            for clust in clusters
+                        ]
+                    )
                     try:
                         if any(distances <= self.assign_radius):
                             idx_min = np.argmin(distances)

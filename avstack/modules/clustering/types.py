@@ -73,13 +73,16 @@ class Cluster:
         t_idxs = [i for i, trk in enumerate(self.tracks) if trk.ID == track.ID]
         return any([t_idx in a_idxs for t_idx in t_idxs])
 
-    def distance(self, track, check_reference: bool=True) -> float:
+    def distance(self, track, check_reference: bool = True) -> float:
         return track.distance(self.centroid(), check_reference=check_reference)
 
     def get_tracks_by_agent_ID(self, ID: int) -> list:
         return [
             trk for trk, agent_ID in zip(self.tracks, self.agent_IDs) if agent_ID == ID
         ]
+
+    def sample(self):
+        return np.random.choice(self.tracks, size=1, replace=False)[0]
 
 
 class ClusterSet(DataContainer):
