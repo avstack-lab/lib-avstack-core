@@ -289,39 +289,42 @@ class ReferenceFrame:
 
     def allclose(self, other: ReferenceFrame):
         """Check if two are nearly the same via the differential"""
-        diff = self.differential(other)
-        return (
-            np.allclose(
-                diff.x,
-                np.zeros(
-                    3,
-                ),
+        if self == other:
+            return True
+        else:
+            diff = self.differential(other)
+            return (
+                np.allclose(
+                    diff.x,
+                    np.zeros(
+                        3,
+                    ),
+                )
+                and np.allclose(
+                    diff.q.vec,
+                    np.zeros(
+                        3,
+                    ),
+                )
+                and np.allclose(
+                    diff.v,
+                    np.zeros(
+                        3,
+                    ),
+                )
+                and np.allclose(
+                    diff.acc,
+                    np.zeros(
+                        3,
+                    ),
+                )
+                and np.allclose(
+                    diff.ang.vec,
+                    np.zeros(
+                        3,
+                    ),
+                )
             )
-            and np.allclose(
-                diff.q.vec,
-                np.zeros(
-                    3,
-                ),
-            )
-            and np.allclose(
-                diff.v,
-                np.zeros(
-                    3,
-                ),
-            )
-            and np.allclose(
-                diff.acc,
-                np.zeros(
-                    3,
-                ),
-            )
-            and np.allclose(
-                diff.ang.vec,
-                np.zeros(
-                    3,
-                ),
-            )
-        )
 
     def check_hash_trail(self):
         target = self
