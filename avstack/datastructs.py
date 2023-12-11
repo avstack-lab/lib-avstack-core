@@ -687,16 +687,20 @@ class DataBucket(PriorityQueue):
         )
         self.source_identifier = source_identifier
 
-    def push(self, data):
+    def push(self, data, item=None):
         if hasattr(data, "timestamp"):
             assert (
                 data.source_identifier == self.source_identifier
             ), f"{data.source_identifier} needs to match {self.source_identifier}"
             super(DataBucket, self).push(data.timestamp, data)
         else:
-            if not isinstance(data, tuple):
-                raise ValueError("Input must be tuple of (time, data)")
-            super(DataBucket, self).push(data[0], data[1])
+            if item is not None:
+                priority = data
+                super(DataBucket, self).push(priority, item)
+            else:
+                if not isinstance(data, tuple):
+                    raise ValueError("Input must be tuple of (time, data)")
+                super(DataBucket, self).push(data[0], data[1])
 
 
 class DataContainerEncoder(json.JSONEncoder):
