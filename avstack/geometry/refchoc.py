@@ -246,19 +246,6 @@ class ReferenceFrame:
             ref_check = ref_check.reference
         return ancestors
 
-    @property
-    def transform(self):
-        """Convert to a transformation matrix
-        
-        self.x : x_a_to_b_in_a
-        self.q : q_a_to_b
-        """
-        R_a_to_b = tforms.transform_orientation(self.q, "quat", "dcm")
-        t_b_to_a_in_b = q_mult_vec(self.q, -self.x)
-        return np.block(
-            [[R_a_to_b, t_b_to_a_in_b[:, None]], [np.zeros((1, 3)), np.ones((1, 1))]]
-        )
-
     def __str__(self) -> str:
         if self.level == 0:
             return f"GlobalOrigin"
