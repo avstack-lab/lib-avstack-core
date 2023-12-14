@@ -47,14 +47,19 @@ class _Priority:
     max_heap (bool):
         If True, is a max-heap where the "top" item has the "highest" priority,
         if False, is a min-heap where the "top" item has the "lowest" priority.
+
+    circular (bool):
+        If True, pushing on a full min-heap will pop the MAX value
+        If False, pushing on a full min-heap will pop the MIN value
     """
 
-    def __init__(self, max_size: int, max_heap: bool = False):
+    def __init__(self, max_size: int, max_heap: bool = False, circular: bool = False):
         self.max_size = max_size
         self.heap = []
         self.is_max = max_heap
         self.mult = -1 if max_heap else 1
         self.max_priority = -np.inf
+        self.circular = circular
 
     def __repr__(self):
         return self.__str__()
@@ -82,16 +87,21 @@ class _Priority:
         return len(self.heap) == 0
 
     def top(self, with_priority=True):
+        """Returns the smallest item in a min-heap, largest in max heap"""
         priority, item = self.heap[0]
         if with_priority:
             return self.mult * priority, item
         else:
             return item
 
-    def bottom(self):
+    def bottom(self, with_priority=True):
+        """Returns the largest item in a min-heap, smallest in max heap"""
         index, _ = max(enumerate(self.heap), key=lambda x: x[1])
         priority, item = self.heap[index]
-        return self.mult * priority, item
+        if with_priority:
+            return self.mult * priority, item
+        else:
+            return item
 
     def n_largest(self, n):
         if self.is_max:
@@ -148,6 +158,9 @@ class PriorityQueue(_Priority):
         empty_returns_none (bool):
             If True, popping when empty returns "None",
             if False, popping when empty causes an error.
+        circular (bool):
+            If True, pushing on a full min-heap will pop the MAX value
+            If False, pushing on a full min-heap will pop the MIN value
     """
 
     TYPE = "PriorityQueue"
@@ -157,8 +170,9 @@ class PriorityQueue(_Priority):
         max_size: int = None,
         max_heap: bool = False,
         empty_returns_none: bool = False,
+        circular: bool = False,
     ):
-        super().__init__(max_size, max_heap)
+        super().__init__(max_size, max_heap, circular)
         self.empty_returns_none = empty_returns_none
 
     def push(self, priority, item):
@@ -167,11 +181,18 @@ class PriorityQueue(_Priority):
             try:
                 heapq.heappush(self.heap, (self.mult * priority, item))
             except TypeError as e:
-                # print(priority, item, item.source_identifier)
-                # raise e
-                pass
+                print(priority, item, item.source_identifier)
+                raise e
         else:
-            self.pushpop(priority, item)
+            # highest multiplied will be removed
+            if self.circular:
+                if (self.mult * priority) < self.bottom(with_priority=True)[0]:
+                    _ = self.pop_bottom()
+                    self.push(priority, item)
+                else:
+                    pass  # don't add the new one on
+            else:
+                _ = self.pushpop(priority, item)
         self.max_priority = max(self.max_priority, self.mult * priority)
 
     def pop(self, with_priority=False):
@@ -188,14 +209,30 @@ class PriorityQueue(_Priority):
             else:
                 return item
 
+    def pop_bottom(self, with_priority=False):
+        """Pop low-priority item (largest in min-heap)"""
+        if self.empty() and self.empty_returns_none:
+            if with_priority:
+                return None, None
+            else:
+                return None
+        else:
+            index, _ = max(enumerate(self.heap), key=lambda x: x[1])
+            priority, item = self.heap[index]
+            del self.heap[index]
+            heapq.heapify(self.heap)
+            if with_priority:
+                return self.mult * priority, item
+            else:
+                return item
+
     def pushpop(self, priority, item):
         """Push item then return item"""
         try:
             priority, item = heapq.heappushpop(self.heap, (self.mult * priority, item))
         except TypeError as e:
-            # print(priority, item, item.source_identifier)
-            # raise e
-            pass
+            print(priority, item, item.source_identifier)
+            raise e
         return self.mult * priority, item
 
 
@@ -217,6 +254,9 @@ class PrioritySet(_Priority):
         allow_priority_update (bool):
             If True, adding a duplicate item will update the priority to the new value,
             If False, adding a duplicate entry will do nothing.
+        circular (bool):
+            If True, pushing on a full min-heap will pop the MAX value
+            If False, pushing on a full min-heap will pop the MIN value
     """
 
     TYPE = "PrioritySet"
@@ -225,6 +265,7 @@ class PrioritySet(_Priority):
         self,
         max_size: int = None,
         max_heap: bool = False,
+        circular: bool = False,
         empty_returns_none: bool = False,
         allow_priority_update: bool = False,
     ):
@@ -236,6 +277,9 @@ class PrioritySet(_Priority):
         self.empty_returns_none = empty_returns_none
         self.item_set = set()
         self.item_priority_map = {}
+        self.circular = circular
+        if self.circular:
+            raise NotImplementedError
 
     def push(self, priority, item):
         """Push element onto heap"""
@@ -471,14 +515,20 @@ class DataManager:
     Attributes:
         max_size (int):
             Maximum size for each data bucket.
+        circular (bool):
+            If True, pushing on a full min-heap will pop the MAX value
+            If False, pushing on a full min-heap will pop the MIN value
     """
 
     TYPE = "DataManager"
 
-    def __init__(self, max_size: int = 10, max_heap: bool = False) -> None:
+    def __init__(
+        self, max_size: int = 10, max_heap: bool = False, circular: bool = False
+    ) -> None:
         self.data = {}
         self.max_size = max_size
         self.max_heap = max_heap
+        self.circular = circular
 
     @property
     def n_buckets(self):
@@ -523,7 +573,12 @@ class DataManager:
             else:
                 ID = ID if ID else data.source_identifier
                 if ID not in self.data:
-                    self.data[ID] = DataBucket(ID, max_size=self.max_size, max_heap=self.max_heap)
+                    self.data[ID] = DataBucket(
+                        ID,
+                        max_size=self.max_size,
+                        max_heap=self.max_heap,
+                        circular=self.circular,
+                    )
                 self.data[ID].push(data)
 
     def has_data(self, s_ID):
@@ -609,6 +664,9 @@ class DataBucket(PriorityQueue):
         max_heap (bool):
             If True, is a max-heap where the "top" item has the "highest" priority,
             if False, is a min-heap where the "top" item has the "lowest" priority.
+        circular (bool):
+            If True, pushing on a full min-heap will pop the MAX value
+            If False, pushing on a full min-heap will pop the MIN value
     """
 
     TYPE = "DataBucket"
@@ -619,25 +677,30 @@ class DataBucket(PriorityQueue):
         max_size: int = 10,
         empty_returns_none: bool = True,
         max_heap: bool = False,
+        circular: bool = False,
     ):
         super().__init__(
-            max_size, empty_returns_none=empty_returns_none, max_heap=max_heap
+            max_size,
+            empty_returns_none=empty_returns_none,
+            max_heap=max_heap,
+            circular=circular,
         )
         self.source_identifier = source_identifier
 
-    def push(self, data):
+    def push(self, data, item=None):
         if hasattr(data, "timestamp"):
             assert (
                 data.source_identifier == self.source_identifier
             ), f"{data.source_identifier} needs to match {self.source_identifier}"
             super(DataBucket, self).push(data.timestamp, data)
         else:
-            if not isinstance(data, tuple):
-                raise ValueError("Input must be tuple of (time, data)")
-            super(DataBucket, self).push(data[0], data[1])
-
-    def pop(self, with_priority=False):
-        return super(DataBucket, self).pop(with_priority=with_priority)
+            if item is not None:
+                priority = data
+                super(DataBucket, self).push(priority, item)
+            else:
+                if not isinstance(data, tuple):
+                    raise ValueError("Input must be tuple of (time, data)")
+                super(DataBucket, self).push(data[0], data[1])
 
 
 class DataContainerEncoder(json.JSONEncoder):
@@ -713,7 +776,7 @@ class DataContainer:
 
     def __getitem__(self, index):
         return self.data[index]
-    
+
     def __delitem__(self, index):
         del self.data[index]
 

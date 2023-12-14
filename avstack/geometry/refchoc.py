@@ -246,6 +246,19 @@ class ReferenceFrame:
             ref_check = ref_check.reference
         return ancestors
 
+    @property
+    def transform(self):
+        """Convert to a transformation matrix
+        
+        self.x : x_a_to_b_in_a
+        self.q : q_a_to_b
+        """
+        R_a_to_b = tforms.transform_orientation(self.q, "quat", "dcm")
+        t_b_to_a_in_b = q_mult_vec(self.q, -self.x)
+        return np.block(
+            [[R_a_to_b, t_b_to_a_in_b[:, None]], [np.zeros((1, 3)), np.ones((1, 1))]]
+        )
+
     def __str__(self) -> str:
         if self.level == 0:
             return f"GlobalOrigin"
@@ -289,39 +302,42 @@ class ReferenceFrame:
 
     def allclose(self, other: ReferenceFrame):
         """Check if two are nearly the same via the differential"""
-        diff = self.differential(other)
-        return (
-            np.allclose(
-                diff.x,
-                np.zeros(
-                    3,
-                ),
+        if self == other:
+            return True
+        else:
+            diff = self.differential(other)
+            return (
+                np.allclose(
+                    diff.x,
+                    np.zeros(
+                        3,
+                    ),
+                )
+                and np.allclose(
+                    diff.q.vec,
+                    np.zeros(
+                        3,
+                    ),
+                )
+                and np.allclose(
+                    diff.v,
+                    np.zeros(
+                        3,
+                    ),
+                )
+                and np.allclose(
+                    diff.acc,
+                    np.zeros(
+                        3,
+                    ),
+                )
+                and np.allclose(
+                    diff.ang.vec,
+                    np.zeros(
+                        3,
+                    ),
+                )
             )
-            and np.allclose(
-                diff.q.vec,
-                np.zeros(
-                    3,
-                ),
-            )
-            and np.allclose(
-                diff.v,
-                np.zeros(
-                    3,
-                ),
-            )
-            and np.allclose(
-                diff.acc,
-                np.zeros(
-                    3,
-                ),
-            )
-            and np.allclose(
-                diff.ang.vec,
-                np.zeros(
-                    3,
-                ),
-            )
-        )
 
     def check_hash_trail(self):
         target = self
@@ -469,6 +485,9 @@ class ReferenceFrame:
             reference=self,
             n_prec=self.n_prec,
         )
+
+    def as_passive_frame(self):
+        return PassiveReferenceFrame(frame_id=self.to_frame, timestamp=self.timestamp)
 
 
 GlobalOrigin3D = ReferenceFrame(

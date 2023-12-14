@@ -466,6 +466,10 @@ def transform_orientation(x, a_from, a_to):
     else:
         raise NotImplementedError
 
+    if TO in q_list:
+        if x_out.w < 0:
+            x_out *= -1
+
     return x_out
 
 

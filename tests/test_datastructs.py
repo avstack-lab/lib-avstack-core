@@ -21,6 +21,46 @@ sys.path.append("tests/")
 from utilities import get_lidar_data, get_object_global
 
 
+def test_priority_min_heap_full():
+    # min heap should give the lowest value first
+    # non-circular means lowest popped if full
+    max_size = 10
+    queue = ds.PriorityQueue(max_size=max_size, max_heap=False, circular=False)
+    for i in range(20):
+        queue.push(priority=i, item=None)
+        assert queue.top()[0] == max(0, i - max_size + 1)
+
+
+def test_priority_max_heap_full():
+    # max heap should give the highest value first
+    # non-circular means highest popped if full
+    max_size = 10
+    queue = ds.PriorityQueue(max_size=max_size, max_heap=True, circular=False)
+    for i in range(20):
+        queue.push(priority=i, item=None)
+        assert queue.top()[0] == min(i, max_size - 1)
+
+
+def test_priority_min_heap_full_circular():
+    # min heap should give the lowest value first
+    # circular means highest popped if full
+    max_size = 10
+    queue = ds.PriorityQueue(max_size=max_size, max_heap=False, circular=True)
+    for i in range(20):
+        queue.push(priority=i, item=None)
+        assert queue.top()[0] == 0
+
+
+def test_priority_max_heap_full_circular():
+    # max heap should give the highest value first
+    # circular means lowest popped if full
+    max_size = 10
+    queue = ds.PriorityQueue(max_size=max_size, max_heap=True, circular=True)
+    for i in range(20):
+        queue.push(priority=i, item=None)
+        assert queue.top()[0] == i
+
+
 def get_object_dc():
     frame = timestamp = source_identifier = 0
     data = [get_object_global(seed=i, reference=GlobalOrigin3D) for i in range(4)]
