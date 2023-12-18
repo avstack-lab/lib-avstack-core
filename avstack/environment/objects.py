@@ -257,7 +257,7 @@ class ObjectState:
         )
         self.angular_velocity = angular_velocity
 
-    def distance(self, other, check_reference: bool=True) -> float:
+    def distance(self, other, check_reference: bool = True) -> float:
         return self.position.distance(other, check_reference=check_reference)
 
     def predict(self, dt):
