@@ -31,23 +31,26 @@ class RotationEncoder(json.JSONEncoder):
 
 class ReferenceEncoder(json.JSONEncoder):
     def default(self, o):
-        if o.reference is None:
-            reference = None
+        if isinstance(o, PassiveReferenceFrame):
+            ref_dict = {"frame_id": o.frame_id, "timestamp": o.timestamp}
         else:
-            reference = o.reference.encode()
-        ref_dict = {
-            "x": o.x.tolist(),
-            "qw": o.q.w,
-            "qv": o.q.vec.tolist(),
-            "v": o.v.tolist(),
-            "acc": o.acc.tolist(),
-            "angw": o.ang.w,
-            "angv": o.ang.vec.tolist(),
-            "reference": reference,
-            "handedness": o.handedness,
-            "n_prec": o.n_prec,
-            "level": o.level,
-        }
+            if o.reference is None:
+                reference = None
+            else:
+                reference = o.reference.encode()
+            ref_dict = {
+                "x": o.x.tolist(),
+                "qw": o.q.w,
+                "qv": o.q.vec.tolist(),
+                "v": o.v.tolist(),
+                "acc": o.acc.tolist(),
+                "angw": o.ang.w,
+                "angv": o.ang.vec.tolist(),
+                "reference": reference,
+                "handedness": o.handedness,
+                "n_prec": o.n_prec,
+                "level": o.level,
+            }
         return {"reference": ref_dict}
 
 
@@ -63,17 +66,24 @@ class ReferenceDecoder(json.JSONDecoder):
             else:
                 if isinstance(json_object["reference"], ReferenceFrame):
                     return json_object["reference"]
-                reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
-                return ReferenceFrame(
-                    x=np.array(json_object["x"]),
-                    q=np.quaternion(json_object["qw"], *json_object["qv"]),
-                    v=np.array(json_object["v"]),
-                    acc=np.array(json_object["acc"]),
-                    ang=np.quaternion(json_object["angw"], *json_object["angv"]),
-                    reference=reference,
-                    handedness=json_object["handedness"],
-                    n_prec=json_object["n_prec"],
-                )
+                if "x" in json_object:
+                    reference = json.loads(
+                        json_object["reference"], cls=ReferenceDecoder
+                    )
+                    return ReferenceFrame(
+                        x=np.array(json_object["x"]),
+                        q=np.quaternion(json_object["qw"], *json_object["qv"]),
+                        v=np.array(json_object["v"]),
+                        acc=np.array(json_object["acc"]),
+                        ang=np.quaternion(json_object["angw"], *json_object["angv"]),
+                        reference=reference,
+                        handedness=json_object["handedness"],
+                        n_prec=json_object["n_prec"],
+                    )
+                else:
+                    return PassiveReferenceFrame(
+                        frame_id=json_object["frame_id"], timestamp=json["timestamp"]
+                    )
         else:
             return json_object
 
@@ -102,6 +112,9 @@ class PassiveReferenceFrame:
             raise NotImplementedError(
                 f"Cannot check equality between reference frame and {type(other)}"
             )
+
+    def encode(self):
+        return json.dumps(self, cls=ReferenceEncoder)
 
 
 class ReferenceFrame:
