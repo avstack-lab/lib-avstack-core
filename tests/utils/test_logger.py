@@ -1,7 +1,9 @@
 import os
+import shutil
 import sys
 import tempfile
 
+from avstack.config import ALGORITHMS, Config
 from avstack.datastructs import DataContainer
 from avstack.modules.base import BaseModule
 from avstack.utils.decorators import apply_hooks
@@ -12,6 +14,7 @@ sys.path.append("tests/")
 from utilities import get_object_global
 
 
+@ALGORITHMS.register_module()
 class MyTestModule(BaseModule):
     @apply_hooks
     def __call__(self, frame, n_objects):
@@ -51,3 +54,19 @@ def test_object_logger_as_hook():
             module(frame=i, n_objects=n_objects)
         _, _, files = next(os.walk(tmpdir))
         assert len(files) == n_files
+
+
+def test_logger_form_config():
+    try:
+        fname = "tests/utils/logger_cfg.py"
+        cfg = Config.fromfile(fname)
+        save_dir = cfg.alg.post_hooks[0].save_folder
+        module = ALGORITHMS.build(cfg.alg)
+        module(frame=10, n_objects=4)
+        _, _, files = next(os.walk(save_dir))
+        assert len(files) == 1
+    except Exception as e:
+        shutil.rmtree(save_dir)
+        raise e
+    finally:
+        shutil.rmtree(save_dir)
