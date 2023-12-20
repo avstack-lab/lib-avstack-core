@@ -16,8 +16,8 @@ TODO:
 
 
 class PIDBase(BaseModule):
-    def __init__(self, K_P, K_D, K_I, buffer_len=10):
-        super().__init__()
+    def __init__(self, K_P, K_D, K_I, buffer_len=10, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._k_p = K_P
         self._k_d = K_D
         self._k_i = K_I
@@ -59,8 +59,8 @@ class PIDBase(BaseModule):
 
 
 class _PIDController(BaseModule):
-    def __init__(self, K_P, K_D, K_I, buffer_len):
-        super().__init__()
+    def __init__(self, K_P, K_D, K_I, buffer_len, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.controller = PIDBase(K_P, K_D, K_I, buffer_len)
 
     def update_coefficients(self, K_P, K_D, K_I, buffer_len=None):
@@ -73,8 +73,8 @@ class _PIDController(BaseModule):
 
 
 class PIDLongitudinalController(_PIDController):
-    def __init__(self, K_P=1.0, K_D=0.0, K_I=0.0, buffer_len=10):
-        super().__init__(K_P, K_D, K_I, buffer_len)
+    def __init__(self, K_P=1.0, K_D=0.0, K_I=0.0, buffer_len=10, *args, **kwargs):
+        super().__init__(K_P, K_D, K_I, buffer_len, *args, **kwargs)
 
     @apply_hooks
     def __call__(self, t, current_speed: float, target_speed: float, debug=False):
@@ -83,8 +83,8 @@ class PIDLongitudinalController(_PIDController):
 
 
 class PIDLateralController(_PIDController):
-    def __init__(self, K_P=1.95, K_D=0.2, K_I=0.05, buffer_len=10):
-        super().__init__(K_P, K_D, K_I, buffer_len)
+    def __init__(self, K_P=1.95, K_D=0.2, K_I=0.05, buffer_len=10, *args, **kwargs):
+        super().__init__(K_P, K_D, K_I, buffer_len, *args, **kwargs)
         self.last_error = None
 
     @apply_hooks

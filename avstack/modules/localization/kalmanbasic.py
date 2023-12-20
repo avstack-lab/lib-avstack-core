@@ -51,8 +51,10 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
         sigma_m=1,
         tau_m=5,
         reference=GlobalOrigin3D,
+        *args,
+        **kwargs,
     ):
-        super().__init__(t_init, ego_init, rate)
+        super().__init__(t_init, ego_init, rate, *args, **kwargs)
         self.ego_template = ego_init
         self.integrity_delay = integrity_delay
         vR = 5**2
@@ -199,9 +201,9 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
     Uses GPS and IMU measurements to perform navigation
     """
 
-    def __init__(self, t_init, ego_init, integrity, reference):
+    def __init__(self, t_init, ego_init, integrity, reference, *args, **kwargs):
         rate = 1e4  # some large number
-        super().__init__(t_init, ego_init, rate)
+        super().__init__(t_init, ego_init, rate, *args, **kwargs)
         self.ego_template = ego_init
         self.reference = reference
         self.n_states = 9  # p-v-attitude

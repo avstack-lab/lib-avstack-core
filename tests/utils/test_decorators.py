@@ -39,21 +39,23 @@ def test_apply_hooks():
             super().__init__()
 
         @decorators.apply_hooks
-        def __call__(self):
-            self.a += 1
+        def __call__(self, increment):
+            self.a += increment
+            return self.a
 
-    def pre_hook(aclass, *args, **kwargs):
-        aclass.a += 10
-        return args, kwargs
+    def pre_hook(increment, *args, **kwargs):
+        increment += 10
+        return args, {**kwargs, "increment": increment}
 
-    def post_hook(aclass, *args):
-        aclass.a += 100
-        return args
+    def post_hook(a):
+        a += 100
+        return (a,)
 
     atest = TestClass()
     atest.register_pre_hook(pre_hook)
     atest.register_post_hook(post_hook)
 
     assert atest.a == 0
-    atest()
-    assert atest.a == 111
+    a_out = atest(increment=1)
+    assert atest.a == 11
+    assert a_out == 111

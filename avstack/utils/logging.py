@@ -19,7 +19,7 @@ class ObjectLogger(Logger):
     def __call__(self, objects: DataContainer, *args, **kwargs):
         file = os.path.join(
             self.save_folder,
-            f"objects-{objects.frame:04d}-{objects.timestamp:5.2f}.txt",
+            f"objects-{objects.frame:010d}-{objects.timestamp:012.2f}.txt",
         )
         with open(file, "w") as f:
             f.write(objects.encode())

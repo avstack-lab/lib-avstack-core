@@ -48,7 +48,7 @@ class _TrackingAlgorithm(BaseModule):
 
         Cost threshold means any cost higher than this value is rejected
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.ID = ID
         self.tracks = []

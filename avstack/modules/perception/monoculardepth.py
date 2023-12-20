@@ -36,6 +36,7 @@ class MidasDepthEstimator(_PerceptionAlgorithm):
         height=None,
         side=False,
         square=False,
+        *args,
         **kwargs,
     ):
         """Run MonoDepthNN to compute depth maps.
@@ -47,7 +48,7 @@ class MidasDepthEstimator(_PerceptionAlgorithm):
             height (int): inference encoder image height
             square (bool): resize to a square resolution?
         """
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
         self.model_name = model
         if optimize:
             raise NotImplementedError

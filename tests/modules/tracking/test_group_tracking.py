@@ -48,7 +48,7 @@ def test_grouptracking_clusters():
     clusters_sets = make_longitudinal_cluster_data(
         n_objects=n_objects, n_agents=n_agents
     )
-    group_tracker = grouptrack.GroupTrackerWrapper(
+    group_tracker = grouptrack.GroupTracker(
         fusion=CovarianceIntersectionFusion(),
         tracker=tracker3d.BasicXyzTracker(),
     )

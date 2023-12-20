@@ -26,7 +26,7 @@ from .tracks import BasicBoxTrack2D, XyFromRazTrack, XyFromXyTrack
 @ALGORITHMS.register_module()
 class PassthroughTracker2D(_TrackingAlgorithm):
     def __init__(self, **kwargs):
-        super().__init__("PassthroughTracker")
+        super().__init__("PassthroughTracker", **kwargs)
 
     def track(self, t, frame, detections, platform, **kwargs):
         tracks = []

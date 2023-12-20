@@ -6,8 +6,8 @@ from ..base import BaseModule
 
 
 class _LocalizationAlgorithm(BaseModule):
-    def __init__(self, t_init, ego_init, rate=100):
-        super().__init__()
+    def __init__(self, t_init, ego_init, rate=100, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.t_last_exec = -np.inf
         self.rate = rate
         self._interval = 1 / rate
@@ -99,8 +99,8 @@ class _LocalizationAlgorithm(BaseModule):
 
 
 class GroundTruthLocalizer(_LocalizationAlgorithm):
-    def __init__(self, rate, t_init, ego_init):
-        super().__init__(t_init, ego_init, rate)
+    def __init__(self, rate, t_init, ego_init, *args, **kwargs):
+        super().__init__(t_init, ego_init, rate, *args, **kwargs)
 
     def execute(self, t, ground_truth, *args, **kwargs):
         assert t == ground_truth.timestamp, (t, ground_truth.timestamp)

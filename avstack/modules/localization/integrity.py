@@ -15,9 +15,9 @@ class _SensorIntegrity(BaseModule):
     Base class for all integrity monitoring algorithms
     """
 
-    def __init__(self, name):
+    def __init__(self, name, *args, **kwargs):
         """Inits defined in the subclasses"""
-        super().__init__()
+        super().__init__(*args, **kwargs)
         self.name = name
         self.test_pass = True
 
@@ -43,7 +43,7 @@ class Chi2Integrity(_SensorIntegrity):
     Has options to perform instantaneous or windowed chi square detection
     """
 
-    def __init__(self, p_thresh=0.95):
+    def __init__(self, p_thresh=0.95, *args, **kwargs):
         """
         Initialize an anomaly detection module
 
@@ -51,11 +51,12 @@ class Chi2Integrity(_SensorIntegrity):
         df - degrees of freedom of the distribution
         p_thresh - probability threshold for the chi-square statistic
         """
-        super().__init__(name="Chi2")
+        super().__init__(name="Chi2", *args, **kwargs)
         # Set up the threshold values beforehand (expensive to do real time)
         from scipy.stats.distributions import chi2
 
         # Compute a threshold mapping
+        self.p_thresh = p_thresh
         self.thresh = {i: chi2.ppf(p_thresh, i) for i in range(6)}
         self.g = 0.0
         self.test_pass = True
@@ -68,7 +69,7 @@ class Chi2Integrity(_SensorIntegrity):
         if df not in self.thresh:
             from scipy.stats.distributions import chi2
 
-            self.thresh[df] = chi2.ppf(p_thresh, df)
+            self.thresh[df] = chi2.ppf(self.p_thresh, df)
 
         # Compute chi square statistic
         self.g = float(np.transpose(y) @ np.linalg.inv(S) @ y)

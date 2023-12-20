@@ -48,7 +48,8 @@ class InfrastructureCameraTo3d(_PerceptionAlgorithm):
 
     MODE = "object_3d"
 
-    def __init__(self, detector, algorithm="range_from_ground"):
+    def __init__(self, detector, algorithm="range_from_ground", **kwargs):
+        super().__init__(**kwargs)
         self.detector = detector
         self.algorithm = algorithm
 

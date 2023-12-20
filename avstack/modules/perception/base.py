@@ -11,8 +11,8 @@ from ..base import BaseModule
 class _PerceptionAlgorithm(BaseModule):
     next_id = itertools.count()
 
-    def __init__(self, save_output=False, save_folder="", **kwargs):
-        super().__init__()
+    def __init__(self, save_output=False, save_folder="", *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.ID = next(self.next_id)
         self.save = save_output
         # TODO: self.MODE is not the best way to do this
@@ -63,9 +63,10 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         epoch="latest",
         threshold=None,
         deploy_runtime="tensorrt",
+        *args,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
         self.dataset = dataset.lower()
         self.model_name = model
 
