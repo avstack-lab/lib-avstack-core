@@ -5,8 +5,12 @@ from avstack.config import HOOKS, ConfigDict
 
 class BaseModule:
     def __init__(
-        self, pre_hooks: List[ConfigDict] = [], post_hooks: List[ConfigDict] = []
+        self,
+        name: str,
+        pre_hooks: List[ConfigDict] = [],
+        post_hooks: List[ConfigDict] = [],
     ) -> None:
+        self.name = name
         self.pre_hooks = [HOOKS.build(hook) for hook in pre_hooks]
         self.post_hooks = [HOOKS.build(hook) for hook in post_hooks]
 

@@ -42,13 +42,14 @@ class _TrackingAlgorithm(BaseModule):
         save_folder="",
         check_reference=True,
         ID=None,
+        name="tracking",
         **kwargs,
     ):
         """Base class for tracking algorithm
 
         Cost threshold means any cost higher than this value is rejected
         """
-        super().__init__(**kwargs)
+        super().__init__(name=name, **kwargs)
 
         self.ID = ID
         self.tracks = []

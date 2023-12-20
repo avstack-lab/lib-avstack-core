@@ -52,8 +52,13 @@ def ci_fusion(x: List[np.ndarray], P: List[np.ndarray], w_method="naive_bayes"):
     return x_f, P_f
 
 
+class _BaseFusion(BaseModule):
+    def __init__(self, name="fusion", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
+
 @ALGORITHMS.register_module()
-class NoFusion(BaseModule):
+class NoFusion(_BaseFusion):
     """Only returns the first set of tracks"""
 
     @apply_hooks
@@ -77,7 +82,7 @@ class NoFusion(BaseModule):
 
 
 @ALGORITHMS.register_module()
-class AggregatorFusion(BaseModule):
+class AggregatorFusion(_BaseFusion):
     """Simply appends all tracks together not worrying about duplicates"""
 
     @apply_hooks
@@ -97,7 +102,7 @@ class AggregatorFusion(BaseModule):
 
 
 @ALGORITHMS.register_module()
-class CovarianceIntersectionFusion(BaseModule):
+class CovarianceIntersectionFusion(_BaseFusion):
     """Covariance intersection to build a track from a cluster"""
 
     @apply_hooks
@@ -115,7 +120,7 @@ class CovarianceIntersectionFusion(BaseModule):
 
 
 @ALGORITHMS.register_module()
-class CovarianceIntersectionFusionToBox(BaseModule):
+class CovarianceIntersectionFusionToBox(_BaseFusion):
     """Performs CI fusion for box tracks and outputs a track"""
 
     @apply_hooks

@@ -14,8 +14,10 @@ n_procs_max = max(1, os.cpu_count() // 2)
 
 
 class _PredictionAlgorithm(BaseModule):
-    def __init__(self, save_output=False, save_folder="", *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self, save_output=False, save_folder="", name="prediction", *args, **kwargs
+    ):
+        super().__init__(name=name, *args, **kwargs)
         self.save = save_output
         self.save_folder = os.path.join(save_folder, "prediction")
         if save_output:

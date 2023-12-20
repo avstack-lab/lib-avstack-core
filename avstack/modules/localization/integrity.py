@@ -17,8 +17,7 @@ class _SensorIntegrity(BaseModule):
 
     def __init__(self, name, *args, **kwargs):
         """Inits defined in the subclasses"""
-        super().__init__(*args, **kwargs)
-        self.name = name
+        super().__init__(name=name, *args, **kwargs)
         self.test_pass = True
 
     @apply_hooks
@@ -51,7 +50,7 @@ class Chi2Integrity(_SensorIntegrity):
         df - degrees of freedom of the distribution
         p_thresh - probability threshold for the chi-square statistic
         """
-        super().__init__(name="Chi2", *args, **kwargs)
+        super().__init__(name="chi2integrity", *args, **kwargs)
         # Set up the threshold values beforehand (expensive to do real time)
         from scipy.stats.distributions import chi2
 

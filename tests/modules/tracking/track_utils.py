@@ -116,7 +116,6 @@ def run_tracker(tracker, det_type, dt=0.25):
             frame=frame,
             detections=dets,
             platform=platform,
-            identifier="tracker-1",
         )
     assert len(tracks) == len(dets_all[-1])
     for i, trk in enumerate(tracks):

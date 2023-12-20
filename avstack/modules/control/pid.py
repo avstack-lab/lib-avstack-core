@@ -16,8 +16,8 @@ TODO:
 
 
 class PIDBase(BaseModule):
-    def __init__(self, K_P, K_D, K_I, buffer_len=10, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, K_P, K_D, K_I, buffer_len=10, name="pid", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
         self._k_p = K_P
         self._k_d = K_D
         self._k_i = K_I
@@ -59,8 +59,10 @@ class PIDBase(BaseModule):
 
 
 class _PIDController(BaseModule):
-    def __init__(self, K_P, K_D, K_I, buffer_len, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self, K_P, K_D, K_I, buffer_len, name="pidcontroller", *args, **kwargs
+    ):
+        super().__init__(name=name, *args, **kwargs)
         self.controller = PIDBase(K_P, K_D, K_I, buffer_len)
 
     def update_coefficients(self, K_P, K_D, K_I, buffer_len=None):

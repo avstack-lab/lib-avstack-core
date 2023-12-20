@@ -16,12 +16,15 @@ from utilities import get_object_global
 
 @ALGORITHMS.register_module()
 class MyTestModule(BaseModule):
+    def __init__(self, *args, **kwargs):
+        super().__init__(name="test", *args, **kwargs)
+
     @apply_hooks
     def __call__(self, frame, n_objects):
         objs = DataContainer(
             frame=frame,
             timestamp=0,
-            source_identifier="",
+            source_identifier=self.name,
             data=[get_object_global(i) for i in range(n_objects)],
         )
         return objs

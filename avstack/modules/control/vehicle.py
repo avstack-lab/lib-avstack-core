@@ -14,6 +14,8 @@ class VehiclePIDController(BaseModule):
         max_throttle=0.75,
         max_brake=1.0,
         max_steering=0.8,
+        name="vehiclepid",
+        *args,
         **kwargs,
     ):
         """
@@ -30,7 +32,7 @@ class VehiclePIDController(BaseModule):
             K_D -- Differential term
             K_I -- Integral term
         """
-        super().__init__()
+        super().__init__(name=name, *args, **kwargs)
 
         self.max_brake = max_brake
         self.max_throt = max_throttle

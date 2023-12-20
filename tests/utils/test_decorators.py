@@ -35,8 +35,8 @@ def test_iterationmonitor():
 def test_apply_hooks():
     class TestClass(BaseModule):
         def __init__(self):
+            super().__init__(name="test")
             self.a = 0
-            super().__init__()
 
         @decorators.apply_hooks
         def __call__(self, increment):

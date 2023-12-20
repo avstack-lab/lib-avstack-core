@@ -11,8 +11,10 @@ from ..base import BaseModule
 class _PerceptionAlgorithm(BaseModule):
     next_id = itertools.count()
 
-    def __init__(self, save_output=False, save_folder="", *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self, save_output=False, save_folder="", name="perception", *args, **kwargs
+    ):
+        super().__init__(name=name, *args, **kwargs)
         self.ID = next(self.next_id)
         self.save = save_output
         # TODO: self.MODE is not the best way to do this
@@ -24,13 +26,13 @@ class _PerceptionAlgorithm(BaseModule):
         self.iframe = -1
 
     @apply_hooks
-    def __call__(self, data, frame=-1, identifier="", *args, **kwargs):
+    def __call__(self, data, frame=-1, *args, **kwargs):
         self.iframe += 1
         if data is None:
             return None
         else:
             detections = self._execute(
-                data, frame=frame, identifier=identifier, *args, **kwargs
+                data, frame=frame, identifier=self.name, *args, **kwargs
             )
             if self.save:
                 fname = os.path.join(self.save_folder, "%06i.txt" % frame)

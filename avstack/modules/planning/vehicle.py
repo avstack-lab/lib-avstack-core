@@ -22,7 +22,8 @@ from .types import Waypoint
 
 
 class _PlanningAlgorithm(BaseModule):
-    pass
+    def __init__(self, name="planning", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
 
 
 class GoStraightPlanner(_PlanningAlgorithm):

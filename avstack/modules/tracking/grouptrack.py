@@ -14,8 +14,8 @@ from ..base import BaseModule
 
 @ALGORITHMS.register_module()
 class GroupTracker(BaseModule):
-    def __init__(self, fusion, tracker, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, fusion, tracker, name="grouptracker", **kwargs):
+        super().__init__(name=name, **kwargs)
         self.fusion = (
             ALGORITHMS.build(fusion) if isinstance(fusion, ConfigDict) else fusion
         )
