@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-27
-# @Last Modified by:   spencer@primus
-# @Last Modified date: 2022-08-25
-# @Description:
-"""
-
-"""
 import json
 from typing import List
 

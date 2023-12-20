@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-21
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-07-27
-# @Description:
-"""
-
-"""
-
 import numpy as np
+
+from avstack.utils.decorators import apply_hooks
+
+from ..base import BaseModule
 
 
 # ============================================================
@@ -16,16 +10,18 @@ import numpy as np
 # ============================================================
 
 
-class _SensorIntegrity:
+class _SensorIntegrity(BaseModule):
     """
     Base class for all integrity monitoring algorithms
     """
 
     def __init__(self, name):
         """Inits defined in the subclasses"""
+        super().__init__()
         self.name = name
         self.test_pass = True
 
+    @apply_hooks
     def __call__(self, *args, **kwargs):
         return self.test(*args, **kwargs)
 

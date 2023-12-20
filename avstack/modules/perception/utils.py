@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: spencer@primus
-# @Date:   2022-06-07
-# @Last Modified by:   spencer@primus
-# @Last Modified time: 2022-09-14
-
-
 import numpy as np
 
 from avstack.geometry import Attitude, GlobalOrigin3D, Position, q_cam_to_stan

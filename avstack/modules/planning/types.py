@@ -1,19 +1,4 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-06
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-07-29
-# @Description:
-"""
-
-"""
-
 from avstack.datastructs import PriorityQueue
-
-
-class _PlanningAlgorithm:
-    def __init__(self):
-        pass
 
 
 class WaypointPlan(PriorityQueue):

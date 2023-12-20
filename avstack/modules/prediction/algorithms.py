@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-12
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-07-29
-# @Description:
-"""
-
-"""
 import os
 import shutil
 from functools import partial
@@ -14,12 +5,17 @@ from multiprocessing import Pool
 
 import numpy as np
 
+from avstack.utils.decorators import apply_hooks
+
+from ..base import BaseModule
+
 
 n_procs_max = max(1, os.cpu_count() // 2)
 
 
-class _PredictionAlgorithm:
+class _PredictionAlgorithm(BaseModule):
     def __init__(self, save_output=False, save_folder="", **kwargs):
+        super().__init__()
         self.save = save_output
         self.save_folder = os.path.join(save_folder, "prediction")
         if save_output:
@@ -27,6 +23,7 @@ class _PredictionAlgorithm:
                 shutil.rmtree(self.save_folder)
             os.makedirs(self.save_folder)
 
+    @apply_hooks
     def __call__(self, objects, frame, *args, **kwargs):
         """
         TODO: could make saving faster with multiproc too
@@ -45,10 +42,10 @@ class _PredictionAlgorithm:
 
 class KinematicPrediction(_PredictionAlgorithm):
     def __init__(self, dt_pred, t_pred_forward, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.t_forward = t_pred_forward
         self.dt = dt_pred
         self.dt_predicts = np.arange(0 + self.dt, self.t_forward + self.dt, self.dt)
-        super().__init__(*args, **kwargs)
 
     def _predict_objects(self, objects, *args, use_pool=False, **kwargs):
         pred_objs = {}

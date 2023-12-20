@@ -1,10 +1,3 @@
-# @Author: Spencer Hallyburton <spencer>
-# @Date:   2021-02-24
-# @Filename: __init__.py
-# @Last modified by:   spencer
-# @Last modified time: 2021-02-24
-
-
 import avstack.modules.perception.detections
 import avstack.modules.perception.lanelines
 import avstack.modules.perception.monoculardepth

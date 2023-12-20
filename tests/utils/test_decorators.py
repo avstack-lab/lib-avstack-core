@@ -4,6 +4,7 @@ import time
 
 import numpy as np
 
+from avstack.modules.base import BaseModule
 from avstack.utils import decorators
 
 
@@ -29,3 +30,30 @@ def test_iterationmonitor():
 
     for _ in range(20):
         func_to_test()
+
+
+def test_apply_hooks():
+    class TestClass(BaseModule):
+        def __init__(self):
+            self.a = 0
+            super().__init__()
+
+        @decorators.apply_hooks
+        def __call__(self):
+            self.a += 1
+
+    def pre_hook(aclass, *args, **kwargs):
+        aclass.a += 10
+        return args, kwargs
+
+    def post_hook(aclass, *args):
+        aclass.a += 100
+        return args
+
+    atest = TestClass()
+    atest.register_pre_hook(pre_hook)
+    atest.register_post_hook(post_hook)
+
+    assert atest.a == 0
+    atest()
+    assert atest.a == 111

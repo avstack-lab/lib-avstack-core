@@ -1,24 +1,18 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-28
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-07-28
-# @Description:
-"""
-
-"""
-
 import itertools
 import os
 import shutil
 
 from avstack import __file__ as avfile
+from avstack.utils.decorators import apply_hooks
+
+from ..base import BaseModule
 
 
-class _PerceptionAlgorithm:
+class _PerceptionAlgorithm(BaseModule):
     next_id = itertools.count()
 
     def __init__(self, save_output=False, save_folder="", **kwargs):
+        super().__init__()
         self.ID = next(self.next_id)
         self.save = save_output
         # TODO: self.MODE is not the best way to do this
@@ -29,6 +23,7 @@ class _PerceptionAlgorithm:
             os.makedirs(self.save_folder)
         self.iframe = -1
 
+    @apply_hooks
     def __call__(self, data, frame=-1, identifier="", *args, **kwargs):
         self.iframe += 1
         if data is None:

@@ -23,11 +23,13 @@ from avstack.modules.perception.detections import (
     RazelDetection,
     RazelRrtDetection,
 )
+from avstack.utils.decorators import apply_hooks
 
 from ..assignment import gnn_single_frame_assign
+from ..base import BaseModule
 
 
-class _TrackingAlgorithm:
+class _TrackingAlgorithm(BaseModule):
     def __init__(
         self,
         assign_metric="IoU",
@@ -46,6 +48,8 @@ class _TrackingAlgorithm:
 
         Cost threshold means any cost higher than this value is rejected
         """
+        super().__init__()
+
         self.ID = ID
         self.tracks = []
         self.iframe = -1
@@ -96,6 +100,7 @@ class _TrackingAlgorithm:
     def tracks_active(self):
         return [trk for trk in self.tracks if trk.active]
 
+    @apply_hooks
     def __call__(
         self, t: float, frame: int, detections, platform: ReferenceFrame, **kwargs
     ):
