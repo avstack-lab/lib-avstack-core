@@ -14,13 +14,27 @@ class Logger:
         raise NotImplementedError
 
 
-@HOOKS.register_module()
-class ObjectLogger(Logger):
+class _DataContainerLogger(Logger):
     def __call__(self, objects: DataContainer, *args, **kwargs):
         file = os.path.join(
             self.save_folder,
-            f"objects-{objects.frame:010d}-{objects.timestamp:012.2f}.txt",
+            f"{self.prefix}-{objects.source_identifier}-{objects.frame:010d}-{objects.timestamp:012.2f}.txt",
         )
         with open(file, "w") as f:
             f.write(objects.encode())
         return objects
+
+
+@HOOKS.register_module()
+class ObjectStateLogger(_DataContainerLogger):
+    prefix = "objectstate"
+
+
+@HOOKS.register_module()
+class DetectionsLogger(_DataContainerLogger):
+    prefix = "detections"
+
+
+@HOOKS.register_module()
+class TracksLogger(_DataContainerLogger):
+    prefix = "tracks"

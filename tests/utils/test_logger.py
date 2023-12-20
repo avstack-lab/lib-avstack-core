@@ -7,7 +7,7 @@ from avstack.config import ALGORITHMS, Config
 from avstack.datastructs import DataContainer
 from avstack.modules.base import BaseModule
 from avstack.utils.decorators import apply_hooks
-from avstack.utils.logging import ObjectLogger
+from avstack.utils.logging import ObjectStateLogger
 
 
 sys.path.append("tests/")
@@ -31,7 +31,7 @@ def test_object_logger():
     n_files = 10
     n_objects = 4
     with tempfile.TemporaryDirectory() as tmpdir:
-        logger = ObjectLogger(save_folder=tmpdir)
+        logger = ObjectStateLogger(save_folder=tmpdir)
         for i in range(n_files):
             objs = DataContainer(
                 frame=i,
@@ -49,7 +49,7 @@ def test_object_logger_as_hook():
     n_files = 10
     n_objects = 8
     with tempfile.TemporaryDirectory() as tmpdir:
-        module.register_post_hook(ObjectLogger(save_folder=tmpdir))
+        module.register_post_hook(ObjectStateLogger(save_folder=tmpdir))
         for i in range(n_files):
             module(frame=i, n_objects=n_objects)
         _, _, files = next(os.walk(tmpdir))
