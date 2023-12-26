@@ -1,5 +1,4 @@
 import os
-import shutil
 from functools import partial
 from multiprocessing import Pool
 
@@ -14,16 +13,8 @@ n_procs_max = max(1, os.cpu_count() // 2)
 
 
 class _PredictionAlgorithm(BaseModule):
-    def __init__(
-        self, save_output=False, save_folder="", name="prediction", *args, **kwargs
-    ):
+    def __init__(self, name="prediction", *args, **kwargs):
         super().__init__(name=name, *args, **kwargs)
-        self.save = save_output
-        self.save_folder = os.path.join(save_folder, "prediction")
-        if save_output:
-            if os.path.exists(self.save_folder):
-                shutil.rmtree(self.save_folder)
-            os.makedirs(self.save_folder)
 
     @apply_hooks
     def __call__(self, objects, frame, *args, **kwargs):
@@ -31,14 +22,6 @@ class _PredictionAlgorithm(BaseModule):
         TODO: could make saving faster with multiproc too
         """
         predictions = self._predict_objects(objects, *args, **kwargs)
-        if self.save:
-            preds = []
-            for obj_ID in predictions:
-                for dt in predictions[obj_ID]:
-                    preds.append(predictions[obj_ID][dt].encode())
-            fname = os.path.join(self.save_folder, "%06i.txt" % frame)
-            with open(fname, "w") as f:
-                f.write("\n".join(preds))
         return predictions
 
 

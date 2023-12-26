@@ -1,16 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-28
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-08-11
-# @Description:
-"""
-
-"""
-
-import os
-import shutil
-
 import numpy as np
 
 from avstack.datastructs import DataContainer
@@ -38,8 +25,6 @@ class _TrackingAlgorithm(BaseModule):
         threshold_coast=3,
         cost_threshold=-0.10,
         v_max=None,
-        save_output=False,
-        save_folder="",
         check_reference=True,
         ID=None,
         name="tracking",
@@ -72,14 +57,6 @@ class _TrackingAlgorithm(BaseModule):
         self.threshold_coast = threshold_coast
         self.check_reference = check_reference
         self.v_max = v_max
-        self.save = save_output
-        self.save_folder = save_folder
-        self.save = save_output
-        self.save_folder = os.path.join(save_folder, "tracking")
-        if save_output:
-            if os.path.exists(self.save_folder):
-                shutil.rmtree(self.save_folder)
-            os.makedirs(self.save_folder)
 
     @property
     def tracks(self):
@@ -109,11 +86,7 @@ class _TrackingAlgorithm(BaseModule):
         self.frame = int(frame)
         self.iframe += 1
         tracks = self.track(self.t, self.frame, detections, platform, **kwargs)
-        track_data = DataContainer(self.frame, self.t, tracks, "tracker")
-        if self.save:
-            fname = os.path.join(self.save_folder, "%06i.txt" % frame)
-            with open(fname, "w") as f:
-                f.write(track_data.encode())
+        track_data = DataContainer(self.frame, self.t, tracks, self.name)
         return track_data
 
     def get_assignment_matrix(self, dets, tracks):

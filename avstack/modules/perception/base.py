@@ -1,6 +1,5 @@
 import itertools
 import os
-import shutil
 
 from avstack import __file__ as avfile
 from avstack.utils.decorators import apply_hooks
@@ -11,18 +10,9 @@ from ..base import BaseModule
 class _PerceptionAlgorithm(BaseModule):
     next_id = itertools.count()
 
-    def __init__(
-        self, save_output=False, save_folder="", name="perception", *args, **kwargs
-    ):
+    def __init__(self, name="perception", *args, **kwargs):
         super().__init__(name=name, *args, **kwargs)
         self.ID = next(self.next_id)
-        self.save = save_output
-        # TODO: self.MODE is not the best way to do this
-        self.save_folder = os.path.join(save_folder, "perception", self.MODE)
-        if save_output:
-            if os.path.exists(self.save_folder):
-                shutil.rmtree(self.save_folder)
-            os.makedirs(self.save_folder)
         self.iframe = -1
 
     @apply_hooks
@@ -34,10 +24,6 @@ class _PerceptionAlgorithm(BaseModule):
             detections = self._execute(
                 data, frame=frame, identifier=self.name, *args, **kwargs
             )
-            if self.save:
-                fname = os.path.join(self.save_folder, "%06i.txt" % frame)
-                with open(fname, "w") as f:
-                    f.write(detections.encode())
             return detections
 
 
