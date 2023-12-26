@@ -76,7 +76,9 @@ class ReferenceDecoder(json.JSONDecoder):
                             q=np.quaternion(json_object["qw"], *json_object["qv"]),
                             v=np.array(json_object["v"]),
                             acc=np.array(json_object["acc"]),
-                            ang=np.quaternion(json_object["angw"], *json_object["angv"]),
+                            ang=np.quaternion(
+                                json_object["angw"], *json_object["angv"]
+                            ),
                             reference=reference,
                             handedness=json_object["handedness"],
                             n_prec=json_object["n_prec"],
@@ -84,7 +86,8 @@ class ReferenceDecoder(json.JSONDecoder):
                     else:
                         json_object = json_object["reference"]
                         return PassiveReferenceFrame(
-                            frame_id=json_object["frame_id"], timestamp=json_object["timestamp"]
+                            frame_id=json_object["frame_id"],
+                            timestamp=json_object["timestamp"],
                         )
         else:
             return json_object

@@ -77,7 +77,7 @@ class GroupTracker(BaseModule):
             frame=frame,
             timestamp=timestamp,
             data=[],
-            source_identifier="cluster-groups",
+            source_identifier=self.name,
         )
         for i, ct in enumerate(cluster_tracks):
             if i in self.tracker.last_assignment.unassigned_cols:

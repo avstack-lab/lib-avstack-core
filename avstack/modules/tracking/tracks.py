@@ -1,4 +1,5 @@
 import json
+from typing import List
 
 import numpy as np
 
@@ -30,6 +31,7 @@ eye3 = np.eye(3)
 
 std_tracks = ["xyfromraztrack", "xyzfromrazeltrack", "xyzfromrazelrrttrack"]
 box_tracks = ["basicboxtrack2d", "basicboxtrack3d", "basicjointboxtrack"]
+group_tracks = ["grouptrack"]
 
 
 class TrackEncoder(json.JSONEncoder):
@@ -46,6 +48,11 @@ class TrackEncoder(json.JSONEncoder):
                 "x": o.x.tolist(),
                 "P": o.P.tolist(),
                 "reference": o.reference.encode(),
+            }
+        elif isinstance(o, GroupTrack):
+            t_dict = {
+                "state": o.state.encode(),
+                "members": [mem.encode() for mem in o.members],
             }
         else:
             raise NotImplementedError(f"{type(o)}, {o}")
@@ -119,6 +126,18 @@ class TrackDecoder(json.JSONDecoder):
                 coast=json_object["coast"],
                 n_updates=json_object["n_updates"],
                 age=json_object["age"],
+            )
+        elif any([gt in json_object for gt in group_tracks]):
+            if "grouptrack" in json_object:
+                json_object = json_object["grouptrack"]
+                factory = GroupTrack
+            else:
+                raise NotImplementedError(json_object)
+            out = factory(
+                state=json.loads(json_object["state"], cls=TrackDecoder),
+                members=[
+                    json.loads(obj, cls=TrackDecoder) for obj in json_object["members"]
+                ],
             )
         else:
             return json_object
@@ -1250,7 +1269,7 @@ class BasicJointBoxTrack(_TrackBase):
 
 
 class GroupTrack:
-    def __init__(self, state, members) -> None:
+    def __init__(self, state: _TrackBase, members: List[_TrackBase]) -> None:
         """Keep track on multiple tracks via a single state
 
         But maintain knowledge of the IDs of the members along the way
@@ -1258,14 +1277,17 @@ class GroupTrack:
         self.state = state
         self.members = members
 
+    def __getattr__(self, attr):
+        try:
+            return getattr(self, attr)
+        except:
+            return getattr(self.state, attr)
+
     def change_reference(self, other, inplace):
         if inplace:
             self.state.change_reference(other, inplace=True)
         else:
             raise
 
-    def __getattr__(self, attr):
-        try:
-            return getattr(self, attr)
-        except:
-            return getattr(self.state, attr)
+    def encode(self):
+        return json.dumps(self, cls=TrackEncoder)

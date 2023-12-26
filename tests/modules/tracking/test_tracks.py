@@ -60,6 +60,21 @@ def test_razelrrt_track():
     assert np.allclose(random_track_1.P, random_track_2.P)
 
 
+def random_razel_track(seed):
+    t0 = 1.25
+    random_object = get_object_global(seed)
+    box3d = random_object.box
+    obj_type = random_object.obj_type
+    razel = cartesian_to_spherical(box3d.t.x)
+    return tracks.XyzFromRazelTrack(t0, razel, GlobalOrigin3D, obj_type)
+
+
+def test_grouptrack_track():
+    state = random_razel_track(1)
+    members = [random_razel_track(i) for i in range(3)]
+    gt = tracks.GroupTrack(state=state, members=members)
+
+
 def test_boxtrack3d_encode_decode():
     random_object = get_object_global(1)
     t0 = 1.25
@@ -80,6 +95,15 @@ def test_boxtrack2d_encode_decode():
     random_track_2 = json.loads(random_track_1.encode(), cls=tracks.TrackDecoder)
     assert np.allclose(random_track_1.x, random_track_2.x)
     assert np.allclose(random_track_1.P, random_track_2.P)
+
+
+def test_grouptrack_encode_decode():
+    state = random_razel_track(1)
+    members = [random_razel_track(i) for i in range(3)]
+    gt_1 = tracks.GroupTrack(state=state, members=members)
+    gt_2 = json.loads(gt_1.encode(), cls=tracks.TrackDecoder)
+    assert np.allclose(gt_1.state.x, gt_2.state.x)
+    assert len(gt_1.members) == len(gt_2.members)
 
 
 def test_trackcontainer_encode_decode():
