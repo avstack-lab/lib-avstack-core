@@ -37,7 +37,11 @@ LOGGER = logging.getLogger(__name__)
 def run_mmdet2d(model, dataset, img, frame, deploy, deploy_runtime=None):
     try:
         detector = perception.object2dfv.MMDetObjectDetector2D(
-            model=model, dataset=dataset, deploy=deploy, deploy_runtime=deploy_runtime
+            model=model,
+            dataset=dataset,
+            deploy=deploy,
+            deploy_runtime=deploy_runtime,
+            name="camera_objects_2d",
         )
     except ModuleNotFoundError:
         print("Cannot run mmdet test without the module")
@@ -46,7 +50,7 @@ def run_mmdet2d(model, dataset, img, frame, deploy, deploy_runtime=None):
     except ImportError as e:
         LOGGER.warning(e)
     else:
-        dets = detector(img, frame=frame, identifier="camera_objects_2d")
+        dets = detector(img, frame=frame)
         if dataset != "coco-person":
             assert len(dets) > 0
 

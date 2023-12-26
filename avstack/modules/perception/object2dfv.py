@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-27
-# @Last Modified by:   spencer@primus
-# @Last Modified date: 2022-07-28
-# @Description:
-"""
-
-"""
 import os
 import tempfile
 
@@ -57,7 +48,8 @@ class InfrastructureCameraTo3d(_PerceptionAlgorithm):
 
     MODE = "object_3d"
 
-    def __init__(self, detector, algorithm="range_from_ground"):
+    def __init__(self, detector, algorithm="range_from_ground", **kwargs):
+        super().__init__(**kwargs)
         self.detector = detector
         self.algorithm = algorithm
 

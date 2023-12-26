@@ -26,7 +26,7 @@ from .tracks import BasicBoxTrack2D, XyFromRazTrack, XyFromXyTrack
 @ALGORITHMS.register_module()
 class PassthroughTracker2D(_TrackingAlgorithm):
     def __init__(self, **kwargs):
-        super().__init__("PassthroughTracker")
+        super().__init__("PassthroughTracker", **kwargs)
 
     def track(self, t, frame, detections, platform, **kwargs):
         tracks = []
@@ -135,15 +135,11 @@ class SortTracker2D(_TrackingAlgorithm):
         self,
         assign_metric="IoU",
         assign_radius=4,
-        save_output=False,
-        save_folder="",
         **kwargs,
     ):
         super().__init__(
             assign_metric=assign_metric,
             assign_radius=assign_radius,
-            save_output=save_output,
-            save_folder=save_folder,
             **kwargs,
         )
         self.sort_algorithm = Sort()

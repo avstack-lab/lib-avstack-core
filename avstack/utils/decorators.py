@@ -4,26 +4,38 @@ import os
 from .other import IterationMonitor
 
 
+def apply_hooks(func):
+    """A decorator to tell module to apply hooks
+
+    Use it on instance methods as:
+
+    class TestClass:
+        @apply_hooks
+        def func1(...):
+        ...
+    """
+
+    def _apply_hooks(self, *args, **kwargs):
+        args, kwargs = self._apply_pre_hooks(*args, **kwargs)
+        return self._apply_post_hooks(func(self, *args, **kwargs))
+
+    return _apply_hooks
+
+
 def profileit(name, folder="./"):
     """A decorator to profile a function
 
     Use it as:
 
     @profileit("profile_for_func1_001")
-    def func1(...)
+    def func1(...):
     ...
 
     """
     if not os.path.exists(folder):
         os.makedirs(folder)
     name = os.path.join(folder, name)
-    # if os.path.exists(name):
-    #     if '.' in name:
-    #         name_parts = name.split('.')
-    #         name_parts[-2] = name_parts[-2] + '_1'
-    #         name = '.'.join(name_parts)
-    #     else:
-    #         name = name + '_1'
+
     def inner(func):
         """Decorator wrapper that takes func as input"""
 

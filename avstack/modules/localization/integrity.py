@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-21
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-07-27
-# @Description:
-"""
-
-"""
-
 import numpy as np
+
+from avstack.utils.decorators import apply_hooks
+
+from ..base import BaseModule
 
 
 # ============================================================
@@ -16,16 +10,17 @@ import numpy as np
 # ============================================================
 
 
-class _SensorIntegrity:
+class _SensorIntegrity(BaseModule):
     """
     Base class for all integrity monitoring algorithms
     """
 
-    def __init__(self, name):
+    def __init__(self, name, *args, **kwargs):
         """Inits defined in the subclasses"""
-        self.name = name
+        super().__init__(name=name, *args, **kwargs)
         self.test_pass = True
 
+    @apply_hooks
     def __call__(self, *args, **kwargs):
         return self.test(*args, **kwargs)
 
@@ -47,7 +42,7 @@ class Chi2Integrity(_SensorIntegrity):
     Has options to perform instantaneous or windowed chi square detection
     """
 
-    def __init__(self, p_thresh=0.95):
+    def __init__(self, p_thresh=0.95, *args, **kwargs):
         """
         Initialize an anomaly detection module
 
@@ -55,11 +50,12 @@ class Chi2Integrity(_SensorIntegrity):
         df - degrees of freedom of the distribution
         p_thresh - probability threshold for the chi-square statistic
         """
-        super().__init__(name="Chi2")
+        super().__init__(name="chi2integrity", *args, **kwargs)
         # Set up the threshold values beforehand (expensive to do real time)
         from scipy.stats.distributions import chi2
 
         # Compute a threshold mapping
+        self.p_thresh = p_thresh
         self.thresh = {i: chi2.ppf(p_thresh, i) for i in range(6)}
         self.g = 0.0
         self.test_pass = True
@@ -72,7 +68,7 @@ class Chi2Integrity(_SensorIntegrity):
         if df not in self.thresh:
             from scipy.stats.distributions import chi2
 
-            self.thresh[df] = chi2.ppf(p_thresh, df)
+            self.thresh[df] = chi2.ppf(self.p_thresh, df)
 
         # Compute chi square statistic
         self.g = float(np.transpose(y) @ np.linalg.inv(S) @ y)

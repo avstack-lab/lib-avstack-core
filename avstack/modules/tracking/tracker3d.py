@@ -30,9 +30,9 @@ from .tracks import (
 
 @ALGORITHMS.register_module()
 class GroundTruthTracker(_TrackingAlgorithm):
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.is_ground_truth = True
-        super().__init__(**kwargs)
 
     def __call__(self, t, frame, detections, ground_truth, **kwargs):
         return ground_truth.objects

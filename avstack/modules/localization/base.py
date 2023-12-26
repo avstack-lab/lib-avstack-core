@@ -1,23 +1,22 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-04
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-28
-# @Description:
-"""
-
-"""
 import numpy as np
 
+from avstack.utils.decorators import apply_hooks
 
-class _LocalizationAlgorithm:
-    def __init__(self, t_init, ego_init, rate=100):
+from ..base import BaseModule
+
+
+class _LocalizationAlgorithm(BaseModule):
+    def __init__(
+        self, t_init, ego_init, rate=100, name="localization", *args, **kwargs
+    ):
+        super().__init__(name=name, *args, **kwargs)
         self.t_last_exec = -np.inf
         self.rate = rate
         self._interval = 1 / rate
         self._last_estimate = None
         self.assign_from_ego(t_init, ego_init)
 
+    @apply_hooks
     def __call__(self, t, *args, **kwargs):
         """main call for localization"""
         assert t > self.t_last_exec, (t, self.t_last_exec)
@@ -102,8 +101,8 @@ class _LocalizationAlgorithm:
 
 
 class GroundTruthLocalizer(_LocalizationAlgorithm):
-    def __init__(self, rate, t_init, ego_init):
-        super().__init__(t_init, ego_init, rate)
+    def __init__(self, rate, t_init, ego_init, *args, **kwargs):
+        super().__init__(t_init, ego_init, rate, *args, **kwargs)
 
     def execute(self, t, ground_truth, *args, **kwargs):
         assert t == ground_truth.timestamp, (t, ground_truth.timestamp)

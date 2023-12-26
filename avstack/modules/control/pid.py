@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-04
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-27
-# @Description:
-"""
-
-"""
 import math
 from collections import deque
 
 import numpy as np
 
 from avstack.geometry import Pose, Vector
+from avstack.utils.decorators import apply_hooks
+
+from ..base import BaseModule
 
 
 """
@@ -21,14 +15,16 @@ TODO:
 """
 
 
-class PIDBase:
-    def __init__(self, K_P, K_D, K_I, buffer_len=10):
+class PIDBase(BaseModule):
+    def __init__(self, K_P, K_D, K_I, buffer_len=10, name="pid", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
         self._k_p = K_P
         self._k_d = K_D
         self._k_i = K_I
         self.buffer_len = buffer_len
         self.reset_buffer()
 
+    @apply_hooks
     def __call__(self, t, error, clip_low=None, clip_high=None):
         if len(self._t_buffer) > 0:
             assert t >= self._t_buffer[-1], f"{t}, {self._t_buffer[-1]}"
@@ -62,8 +58,11 @@ class PIDBase:
         self._t_buffer = deque(maxlen=self.buffer_len)
 
 
-class _PIDController:
-    def __init__(self, K_P, K_D, K_I, buffer_len):
+class _PIDController(BaseModule):
+    def __init__(
+        self, K_P, K_D, K_I, buffer_len, name="pidcontroller", *args, **kwargs
+    ):
+        super().__init__(name=name, *args, **kwargs)
         self.controller = PIDBase(K_P, K_D, K_I, buffer_len)
 
     def update_coefficients(self, K_P, K_D, K_I, buffer_len=None):
@@ -76,19 +75,21 @@ class _PIDController:
 
 
 class PIDLongitudinalController(_PIDController):
-    def __init__(self, K_P=1.0, K_D=0.0, K_I=0.0, buffer_len=10):
-        super().__init__(K_P, K_D, K_I, buffer_len)
+    def __init__(self, K_P=1.0, K_D=0.0, K_I=0.0, buffer_len=10, *args, **kwargs):
+        super().__init__(K_P, K_D, K_I, buffer_len, *args, **kwargs)
 
+    @apply_hooks
     def __call__(self, t, current_speed: float, target_speed: float, debug=False):
         error = target_speed - current_speed
         return self.controller(t, error, clip_low=-1.0, clip_high=1.0)
 
 
 class PIDLateralController(_PIDController):
-    def __init__(self, K_P=1.95, K_D=0.2, K_I=0.05, buffer_len=10):
-        super().__init__(K_P, K_D, K_I, buffer_len)
+    def __init__(self, K_P=1.95, K_D=0.2, K_I=0.05, buffer_len=10, *args, **kwargs):
+        super().__init__(K_P, K_D, K_I, buffer_len, *args, **kwargs)
         self.last_error = None
 
+    @apply_hooks
     def __call__(self, t, current: Pose, target: Pose):
         """Run lateral control
 

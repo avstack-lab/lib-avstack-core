@@ -7,6 +7,7 @@
 
 
 import avstack.utils.decorators
+import avstack.utils.logging  # import for registration
 import avstack.utils.pools  # import to apply patch to multiprocess pool
 
 from .other import IterationMonitor, check_xor_for_none

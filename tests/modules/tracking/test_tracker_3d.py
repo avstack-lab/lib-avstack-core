@@ -57,7 +57,7 @@ def test_groundtruth_tracking():
     ground_truth = GroundTruthInformation(
         frame, timestamp, ego_state=ego, objects=[obj1]
     )
-    tracker = tracker3d.GroundTruthTracker()
+    tracker = tracker3d.GroundTruthTracker(name="tracker-1")
     platform = ego.as_reference()
     tracks = tracker(
         t=timestamp,
@@ -65,7 +65,6 @@ def test_groundtruth_tracking():
         detections=None,
         platform=platform,
         ground_truth=ground_truth,
-        identifier="tracker-1",
     )
     assert np.all(tracks[0].position == obj1.position)
     assert np.all(tracks[0].velocity == obj1.velocity)
@@ -129,7 +128,6 @@ def test_basic_joint_box_tracker():
             frame=frame,
             detections={"2d": dets_2d, "3d": dets_3d},
             platform=platform,
-            identifier="tracker-1",
         )
     assert len(tracks) == n_targs
 
@@ -292,7 +290,6 @@ def test_eagermot_associations():
             frame=frame,
             detections={"2d": dets_2d, "3d": dets_3d},
             platform=platform,
-            identifier="tracker-1",
         )
         if i == 1:
             assert (

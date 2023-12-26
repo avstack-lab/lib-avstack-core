@@ -7,11 +7,15 @@ from avstack.datastructs import DataContainer
 from avstack.geometry import ReferenceFrame
 from avstack.modules.perception.detections import BoxDetection, CentroidDetection
 from avstack.modules.tracking.tracks import BasicBoxTrack3D, GroupTrack
+from avstack.utils.decorators import apply_hooks
+
+from ..base import BaseModule
 
 
 @ALGORITHMS.register_module()
-class GroupTrackerWrapper:
-    def __init__(self, fusion, tracker):
+class GroupTracker(BaseModule):
+    def __init__(self, fusion, tracker, name="grouptracker", **kwargs):
+        super().__init__(name=name, **kwargs)
         self.fusion = (
             ALGORITHMS.build(fusion) if isinstance(fusion, ConfigDict) else fusion
         )
@@ -19,6 +23,7 @@ class GroupTrackerWrapper:
             ALGORITHMS.build(tracker) if isinstance(tracker, ConfigDict) else tracker
         )
 
+    @apply_hooks
     def __call__(
         self,
         clusters: Dict[int, DataContainer],

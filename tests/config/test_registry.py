@@ -12,9 +12,10 @@ class MyAlgorithm:
 
 @ALGORITHMS.register_module()
 class MyAlgorithmSecondaryBuild:
-    def __init__(self, arg_1: str, arg_2: ConfigDict) -> None:
+    def __init__(self, arg_1: str, arg_2: ConfigDict, arg_3: str = "default") -> None:
         self.arg_1 = arg_1
         self.arg_2 = ALGORITHMS.build(arg_2)
+        self.arg_3 = arg_3
 
 
 def test_registry_1():
@@ -39,3 +40,24 @@ def test_registry_two_level():
     assert isinstance(alg, MyAlgorithmSecondaryBuild)
     assert alg.arg_1 == "test"
     assert type(alg.arg_2).__name__ == "BasicXyTracker"
+
+
+def test_build_with_default():
+    alg_1 = ALGORITHMS.build(
+        dict(
+            type="MyAlgorithmSecondaryBuild",
+            arg_1="test",
+            arg_2=dict(type="BasicXyTracker"),
+        ),
+    )
+
+    alg_2 = ALGORITHMS.build(
+        dict(
+            type="MyAlgorithmSecondaryBuild",
+            arg_1="test",
+            arg_2=dict(type="BasicXyTracker"),
+        ),
+        default_args={"arg_3": "new value!"},
+    )
+    assert alg_1.arg_3 == "default"
+    assert alg_2.arg_3 == "new value!"

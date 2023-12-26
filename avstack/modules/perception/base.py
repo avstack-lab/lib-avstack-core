@@ -1,46 +1,29 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-28
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-07-28
-# @Description:
-"""
-
-"""
-
 import itertools
 import os
-import shutil
 
 from avstack import __file__ as avfile
+from avstack.utils.decorators import apply_hooks
+
+from ..base import BaseModule
 
 
-class _PerceptionAlgorithm:
+class _PerceptionAlgorithm(BaseModule):
     next_id = itertools.count()
 
-    def __init__(self, save_output=False, save_folder="", **kwargs):
+    def __init__(self, name="perception", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
         self.ID = next(self.next_id)
-        self.save = save_output
-        # TODO: self.MODE is not the best way to do this
-        self.save_folder = os.path.join(save_folder, "perception", self.MODE)
-        if save_output:
-            if os.path.exists(self.save_folder):
-                shutil.rmtree(self.save_folder)
-            os.makedirs(self.save_folder)
         self.iframe = -1
 
-    def __call__(self, data, frame=-1, identifier="", *args, **kwargs):
+    @apply_hooks
+    def __call__(self, data, frame=-1, *args, **kwargs):
         self.iframe += 1
         if data is None:
             return None
         else:
             detections = self._execute(
-                data, frame=frame, identifier=identifier, *args, **kwargs
+                data, frame=frame, identifier=self.name, *args, **kwargs
             )
-            if self.save:
-                fname = os.path.join(self.save_folder, "%06i.txt" % frame)
-                with open(fname, "w") as f:
-                    f.write(detections.encode())
             return detections
 
 
@@ -68,9 +51,10 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         epoch="latest",
         threshold=None,
         deploy_runtime="tensorrt",
+        *args,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
         self.dataset = dataset.lower()
         self.model_name = model
 

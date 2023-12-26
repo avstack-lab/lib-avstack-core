@@ -17,7 +17,9 @@ from avstack.datastructs import DataContainer
 from avstack.geometry import Box3D, Position, Velocity
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
 from avstack.modules.tracking.tracks import _TrackBase
+from avstack.utils.decorators import apply_hooks
 
+from ..base import BaseModule
 from ..clustering.clusterers import Cluster
 
 
@@ -50,10 +52,16 @@ def ci_fusion(x: List[np.ndarray], P: List[np.ndarray], w_method="naive_bayes"):
     return x_f, P_f
 
 
+class _BaseFusion(BaseModule):
+    def __init__(self, name="fusion", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
+
 @ALGORITHMS.register_module()
-class NoFusion:
+class NoFusion(_BaseFusion):
     """Only returns the first set of tracks"""
 
+    @apply_hooks
     def __call__(self, *args: Any, **kwds: Any) -> list:
         tracks_out = [] if len(args) == 0 else args[0]
         if isinstance(tracks_out, (DataContainer, list)):
@@ -74,9 +82,10 @@ class NoFusion:
 
 
 @ALGORITHMS.register_module()
-class AggregatorFusion:
+class AggregatorFusion(_BaseFusion):
     """Simply appends all tracks together not worrying about duplicates"""
 
+    @apply_hooks
     def __call__(self, *args: Any, **kwds: Any) -> list:
         tracks_out = []
         for arg in args:
@@ -93,9 +102,10 @@ class AggregatorFusion:
 
 
 @ALGORITHMS.register_module()
-class CovarianceIntersectionFusion:
+class CovarianceIntersectionFusion(_BaseFusion):
     """Covariance intersection to build a track from a cluster"""
 
+    @apply_hooks
     def __call__(self, tracks: Union[Cluster, List[_TrackBase]]):
         x_fuse = None
         P_fuse = None
@@ -110,9 +120,10 @@ class CovarianceIntersectionFusion:
 
 
 @ALGORITHMS.register_module()
-class CovarianceIntersectionFusionToBox:
+class CovarianceIntersectionFusionToBox(_BaseFusion):
     """Performs CI fusion for box tracks and outputs a track"""
 
+    @apply_hooks
     def __call__(
         self, tracks: Union[Cluster, List[BasicBoxTrack3D]]
     ) -> BasicBoxTrack3D:

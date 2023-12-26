@@ -37,9 +37,8 @@ def test_kinematic_prediction():
     objects_3d = tracker(
         t=0.10 * frame,
         frame=frame,
-        detections=detector(ground_truth, frame=frame, identifier="detector-1"),
+        detections=detector(ground_truth, frame=frame),
         platform=ego.as_reference(),
-        identifier="tracker-1",
     )
     objects_2d = []
     preds_3d = predictor(objects_3d, frame=frame)

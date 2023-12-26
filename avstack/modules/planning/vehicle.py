@@ -14,20 +14,29 @@ import numpy as np
 
 from avstack.geometry import Attitude, Pose
 from avstack.geometry import transformations as tforms
+from avstack.utils.decorators import apply_hooks
 
+from ..base import BaseModule
 from . import components
-from .base import Waypoint, _PlanningAlgorithm
+from .types import Waypoint
+
+
+class _PlanningAlgorithm(BaseModule):
+    def __init__(self, name="planning", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
 
 
 class GoStraightPlanner(_PlanningAlgorithm):
     """Moves forward"""
 
-    def __init__(self, *args, d_forward=3, target_speed=20, verbose=False, **kwargs):
+    def __init__(self, d_forward=3, target_speed=20, verbose=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.d_forward = d_forward
         self.target_speed = target_speed
         self.verbose = verbose
         self.i_waypoint = 0
 
+    @apply_hooks
     def __call__(self, plan, ego_state, **kwargs):
         plan.update(ego_state)
         if plan.needs_waypoint():
@@ -53,13 +62,17 @@ class RandomPlanner(_PlanningAlgorithm):
         max_forward_dist=10,
         max_speed=20,
         verbose=False,
+        *args,
+        **kwargs,
     ):
+        super().__init__(*args, **kwargs)
         self.min_forward_dist = min_forward_dist
         self.max_forward_dist = max_forward_dist
         self.max_lateral_dist = max_lateral_dist
         self.max_speed = max_speed
         self.verbose = verbose
 
+    @apply_hooks
     def __call__(self, plan, ego_state, **kwargs):
         plan.update(ego_state)
         if plan.needs_waypoint():
@@ -85,9 +98,11 @@ class StationaryPlanner(_PlanningAlgorithm):
     """Stays in the same spot"""
 
     def __init__(self, verbose=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.init_state = None
         self.verbose = verbose
 
+    @apply_hooks
     def __call__(self, plan, ego_state, **kwargs):
         if self.init_state is None:
             plan.push(*self._get_waypoint(ego_state))
@@ -103,7 +118,10 @@ class StationaryPlanner(_PlanningAlgorithm):
 class AdaptiveCruiseControl(_PlanningAlgorithm):
     """Follow an object in a lane within a suitable distance"""
 
-    def __init__(self, dt_target=3, dt_max=20, object_ID=1, verbose=False):
+    def __init__(
+        self, dt_target=3, dt_max=20, object_ID=1, verbose=False, *args, **kwargs
+    ):
+        super().__init__(*args, **kwargs)
         self.dt_target = dt_target
         self.dt_max = dt_max
         self.lane_keeping_planner = LaneKeepingPlanner()
@@ -111,6 +129,7 @@ class AdaptiveCruiseControl(_PlanningAlgorithm):
         self.verbose = verbose
         self.following = False
 
+    @apply_hooks
     def __call__(
         self, plan, ego_state, environment, objects_3d, objects_2d, lane_lines, **kwargs
     ):
@@ -170,9 +189,11 @@ class AdaptiveCruiseControl(_PlanningAlgorithm):
 class LaneKeepingPlanner(_PlanningAlgorithm):
     """Keep the lane and follow traffic signals"""
 
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.verbose = verbose
 
+    @apply_hooks
     def __call__(self, plan, ego_state, lane_lines, environment, **kwargs):
         """Execute planning logic to get next set of waypoints"""
         plan.update(ego_state)

@@ -4,14 +4,22 @@ import numpy as np
 
 from avstack.config import ALGORITHMS
 from avstack.datastructs import DataContainer
+from avstack.utils.decorators import apply_hooks
 
+from ..base import BaseModule
 from .types import Cluster, ClusterSet
 
 
+class _BaseClustering(BaseModule):
+    def __init__(self, name="clustering", *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+
+
 @ALGORITHMS.register_module()
-class NoClustering:
+class NoClustering(_BaseClustering):
     """Each track is its own cluster"""
 
+    @apply_hooks
     def __call__(
         self, objects: Dict[int, DataContainer], frame: int, timestamp: int
     ) -> ClusterSet:
@@ -25,15 +33,17 @@ class NoClustering:
 
 
 @ALGORITHMS.register_module()
-class SampledAssignmentClusterer:
+class SampledAssignmentClusterer(_BaseClustering):
     """Run assignment by sampling one object from a cluster
 
     Assumes each sublist does not contain duplicates
     """
 
-    def __init__(self, assign_radius: float = 8.0) -> None:
+    def __init__(self, assign_radius: float = 8.0, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.assign_radius = assign_radius
 
+    @apply_hooks
     def __call__(
         self,
         objects: Dict[int, DataContainer],
@@ -96,5 +106,5 @@ class SampledAssignmentClusterer:
 
 
 @ALGORITHMS.register_module()
-class HierarchicalAssignmentClustering:
+class HierarchicalAssignmentClustering(_BaseClustering):
     """Run assignment pairwise from binary tree for efficiency"""

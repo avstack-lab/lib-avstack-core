@@ -55,7 +55,7 @@ def test_groundtruth_perception():
 
     # -- test update
     percep = perception.object3d.GroundTruth3DObjectDetector()
-    detections = percep(ground_truth, frame=frame, identifier="percep-1")
+    detections = percep(ground_truth, frame=frame)
     assert np.allclose(detections[0].box.t.x, obj_local.position.x)
 
 
@@ -66,7 +66,7 @@ def test_passthrough_perception_box():
         frame=frame, timestamp=timestamp, data=objs, source_identifier="sensor-1"
     )
     percep = perception.object3d.Passthrough3DObjectDetector()
-    detections = percep(data, frame=frame, identifier="percep-1")
+    detections = percep(data, frame=frame)
     assert len(detections) == len(data)
 
 
@@ -77,7 +77,7 @@ def test_passthrough_perception_centroid():
         frame=frame, timestamp=timestamp, data=objs, source_identifier="sensor-1"
     )
     percep = perception.object3d.Passthrough3DObjectDetector()
-    detections = percep(data, frame=frame, identifier="percep-1")
+    detections = percep(data, frame=frame)
     assert len(detections) == len(data)
 
 
@@ -107,7 +107,7 @@ def run_mmdet3d(datatype, model, dataset, as_memoryview=False):
             data = img
         else:
             raise NotImplementedError(datatype)
-        _ = detector(data, frame=frame, identifier="lidar_objects_3d")
+        _ = detector(data, frame=frame)
 
 
 # def test_mmdet_3d_pgd_kitti():
