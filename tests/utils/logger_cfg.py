@@ -2,5 +2,7 @@
 
 alg = dict(
     type="MyTestModule",
-    post_hooks=[dict(type="ObjectStateLogger", save_folder="tests/utils/tmp_outputs")],
+    post_hooks=[
+        dict(type="ObjectStateLogger", output_folder="tests/utils/tmp_outputs")
+    ],
 )

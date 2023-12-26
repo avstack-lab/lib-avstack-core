@@ -7,12 +7,19 @@ class BaseModule:
     def __init__(
         self,
         name: str,
+        output_folder: str = "",
         pre_hooks: List[ConfigDict] = [],
         post_hooks: List[ConfigDict] = [],
     ) -> None:
         self.name = name
-        self.pre_hooks = [HOOKS.build(hook) for hook in pre_hooks]
-        self.post_hooks = [HOOKS.build(hook) for hook in post_hooks]
+        default_args = {}
+        default_args["output_folder"] = output_folder
+        self.pre_hooks = [
+            HOOKS.build(hook, default_args=default_args) for hook in pre_hooks
+        ]
+        self.post_hooks = [
+            HOOKS.build(hook, default_args=default_args) for hook in post_hooks
+        ]
 
     def _apply_pre_hooks(self, *args, **kwargs):
         for hook in self.pre_hooks:

@@ -34,7 +34,7 @@ def test_object_logger():
     n_files = 10
     n_objects = 4
     with tempfile.TemporaryDirectory() as tmpdir:
-        logger = ObjectStateLogger(save_folder=tmpdir)
+        logger = ObjectStateLogger(output_folder=tmpdir)
         for i in range(n_files):
             objs = DataContainer(
                 frame=i,
@@ -52,7 +52,7 @@ def test_object_logger_as_hook():
     n_files = 10
     n_objects = 8
     with tempfile.TemporaryDirectory() as tmpdir:
-        module.register_post_hook(ObjectStateLogger(save_folder=tmpdir))
+        module.register_post_hook(ObjectStateLogger(output_folder=tmpdir))
         for i in range(n_files):
             module(frame=i, n_objects=n_objects)
         _, _, files = next(os.walk(tmpdir))
@@ -63,7 +63,7 @@ def test_logger_form_config():
     try:
         fname = "tests/utils/logger_cfg.py"
         cfg = Config.fromfile(fname)
-        save_dir = cfg.alg.post_hooks[0].save_folder
+        save_dir = cfg.alg.post_hooks[0].output_folder
         module = ALGORITHMS.build(cfg.alg)
         module(frame=10, n_objects=4)
         _, _, files = next(os.walk(save_dir))
