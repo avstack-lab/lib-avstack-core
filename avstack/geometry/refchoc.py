@@ -66,24 +66,26 @@ class ReferenceDecoder(json.JSONDecoder):
             else:
                 if isinstance(json_object["reference"], ReferenceFrame):
                     return json_object["reference"]
-                if "x" in json_object:
-                    reference = json.loads(
-                        json_object["reference"], cls=ReferenceDecoder
-                    )
-                    return ReferenceFrame(
-                        x=np.array(json_object["x"]),
-                        q=np.quaternion(json_object["qw"], *json_object["qv"]),
-                        v=np.array(json_object["v"]),
-                        acc=np.array(json_object["acc"]),
-                        ang=np.quaternion(json_object["angw"], *json_object["angv"]),
-                        reference=reference,
-                        handedness=json_object["handedness"],
-                        n_prec=json_object["n_prec"],
-                    )
                 else:
-                    return PassiveReferenceFrame(
-                        frame_id=json_object["frame_id"], timestamp=json["timestamp"]
-                    )
+                    if "x" in json_object:
+                        reference = json.loads(
+                            json_object["reference"], cls=ReferenceDecoder
+                        )
+                        return ReferenceFrame(
+                            x=np.array(json_object["x"]),
+                            q=np.quaternion(json_object["qw"], *json_object["qv"]),
+                            v=np.array(json_object["v"]),
+                            acc=np.array(json_object["acc"]),
+                            ang=np.quaternion(json_object["angw"], *json_object["angv"]),
+                            reference=reference,
+                            handedness=json_object["handedness"],
+                            n_prec=json_object["n_prec"],
+                        )
+                    else:
+                        json_object = json_object["reference"]
+                        return PassiveReferenceFrame(
+                            frame_id=json_object["frame_id"], timestamp=json_object["timestamp"]
+                        )
         else:
             return json_object
 
