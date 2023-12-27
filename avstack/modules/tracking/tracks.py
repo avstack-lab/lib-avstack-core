@@ -1312,8 +1312,16 @@ class GroupTrack:
     def change_reference(self, other, inplace):
         if inplace:
             self.state.change_reference(other, inplace=True)
+            for member in self.members:
+                member.change_reference(other, inplace=True)
         else:
-            raise
+            return GroupTrack(
+                state=self.state.change_reference(other, inplace=False),
+                members=[
+                    member.change_reference(other, inplace=False)
+                    for member in self.members
+                ],
+            )
 
     def encode(self):
         return json.dumps(self, cls=TrackEncoder)
