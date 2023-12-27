@@ -115,7 +115,7 @@ class PassiveReferenceFrame:
             )
         else:
             raise NotImplementedError(
-                f"Cannot check equality between reference frame and {type(other)}"
+                f"Cannot check equality between passive reference frame and {type(other)}"
             )
 
     def encode(self):

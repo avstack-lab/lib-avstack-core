@@ -187,6 +187,7 @@ class _TrackBase:
         coast=0,
         n_updates=1,
         age=0,
+        score_force=None,
         check_reference=False,
     ) -> None:
         if ID_force is None:
@@ -207,7 +208,7 @@ class _TrackBase:
         self.n_updates = n_updates
         self.n_missed = 0  # TODO incorporate this
         self.dt_coast = 0.0
-        self.score = self.SCORE_INIT
+        self.score = score_force if score_force else self.SCORE_INIT
         self.active = True
         self.confirmed = False
         self.check_reference = check_reference
@@ -874,6 +875,7 @@ class BasicBoxTrack3D(_TrackBase):
         coast=0,
         n_updates=1,
         age=0,
+        score_force=None,
     ):
         """Box state is: [x, y, z, h, w, l, vx, vy, vz] w/ yaw as attribute"""
         if v is None:
@@ -898,7 +900,17 @@ class BasicBoxTrack3D(_TrackBase):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [6, 7, 8]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+            t0,
+            x,
+            P,
+            reference,
+            obj_type,
+            ID_force,
+            t,
+            coast,
+            n_updates,
+            age,
+            score_force,
         )
         self.where_is_t = box3d.where_is_t
         self.q = box3d.q
@@ -999,7 +1011,21 @@ class BasicBoxTrack3D(_TrackBase):
             self.P[self.P < 1e-5] = 0
             self.reference = reference
         else:
-            raise NotImplementedError("Need to implement this")
+            box3d = self.box3d.change_reference(reference, inplace=False)
+            return BasicBoxTrack3D(
+                t0=self.t0,
+                box3d=box3d,
+                reference=reference,
+                obj_type=self.obj_type,
+                ID_force=self.ID,
+                v=self.velocity,
+                P=self.P,
+                t=self.t,
+                coast=self.coast,
+                n_updates=self.n_updates,
+                age=self.age,
+                score_force=self.score,
+            )
 
 
 class BasicBoxTrack2D(_TrackBase):
