@@ -275,13 +275,13 @@ class Box2D:
     def encode(self):
         return json.dumps(self, cls=BoxEncoder)
 
-    def IoU(self, other, check_reference=True):
+    def IoU(self, other, check_reference=True, **kwargs):
         if isinstance(other, Box2D):
-            inter = box_intersection(self.box2d, other.box2d)
-            union = box_union(self.box2d, other.box2d)
+            inter = box_intersection(self.box2d, other.box2d, **kwargs)
+            union = box_union(self.box2d, other.box2d, **kwargs)
             iou = inter / union
         elif isinstance(other, Box3D):
-            iou = other.IoU(self, check_reference=check_reference)
+            iou = other.IoU(self, check_reference=check_reference, **kwargs)
         else:
             raise NotImplementedError(type(other))
         return iou
@@ -523,6 +523,8 @@ class Box3D:
         run_angle_check=True,
         error_on_angle_check=False,
         check_reference=True,
+        debug: bool = True,
+        **kwargs,
     ):
         """
         IMPORTANT NOTE: THIS METRIC ONLY WORKS WITH A YAW ANGLE
@@ -560,7 +562,8 @@ class Box3D:
                     if error_on_angle_check:
                         raise ValueError(msg)
                     else:
-                        logging.warning(msg)
+                        if debug:
+                            logging.warning(msg)
 
             if metric == "3D":
                 # c1 = self.corners_gloabal_without_pitch_roll
@@ -849,7 +852,7 @@ def _box_intersection_3d(corners1, corners2, up="+z"):
     return inter_area_bev * z_overlap
 
 
-def box_intersection(corners1, corners2, up="+z"):
+def box_intersection(corners1, corners2, up="+z", **kwargs):
     if len(corners1) != len(corners2):
         raise RuntimeError(f"{len(corners1)} vs {len(corners2)} corners")
     if len(corners1) == 4:
@@ -874,7 +877,7 @@ def _box_union_3d(corners1, corners2, up):
     )
 
 
-def box_union(corners1, corners2, up="+z"):
+def box_union(corners1, corners2, up="+z", **kwargs):
     if len(corners1) != len(corners2):
         raise RuntimeError(f"{len(corners1)} vs {len(corners2)} corners")
     if len(corners1) == 4:
