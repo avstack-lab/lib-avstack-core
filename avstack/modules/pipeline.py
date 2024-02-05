@@ -18,6 +18,10 @@ class SerialPipeline(BaseModule):
             data = module(data, *args, **kwargs)
         return data
 
+    def initialize(self, *args, **kwargs):
+        for module in self.modules:
+            module.initialize(*args, **kwargs)
+
 
 @PIPELINE.register_module()
 class MappedPipeline(BaseModule):
@@ -58,6 +62,10 @@ class MappedPipeline(BaseModule):
             data[name] = last_data
         return last_data  # only return last module data?
 
+    def initialize(self, *args, **kwargs):
+        for module in self.modules.items():
+            module.initialize(*args, **kwargs)
+
 
 @PIPELINE.register_module()
 class CustomPipeline(BaseModule):
@@ -68,3 +76,7 @@ class CustomPipeline(BaseModule):
     @apply_hooks
     def __call__(self):
         raise NotImplementedError("Implement a custom pipeline in a subclass")
+
+    def initialize(self, *args, **kwargs):
+        for module in self.modules:
+            module.initialize(*args, **kwargs)
