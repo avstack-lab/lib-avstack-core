@@ -1,9 +1,3 @@
-# @Author: Spencer Hallyburton <spencer>
-# @Date:   2021-02-18
-# @Filename: my_tforms.py
-# @Last modified by:   spencer
-# @Last modified time: 2021-03-20
-
 import math
 
 import numpy as np

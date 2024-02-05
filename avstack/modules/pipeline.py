@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from avstack.config import ConfigDict, MODELS, PIPELINE
+from avstack.config import MODELS, PIPELINE, ConfigDict
 from avstack.utils.decorators import apply_hooks
 
 from .base import BaseModule
@@ -9,7 +9,7 @@ from .base import BaseModule
 @PIPELINE.register_module()
 class SerialPipeline(BaseModule):
     def __init__(self, modules: List[ConfigDict], *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(name="pipeline", *args, **kwargs)
         self.modules = [MODELS.build(mod) for mod in modules]
 
     @apply_hooks
@@ -29,10 +29,10 @@ class MappedPipeline(BaseModule):
         **kwargs: Any,
     ) -> None:
         """A non-serial pipeline of modules mapping data to algorithms
-        
+
         Can support routing data between multiple modules
         Gets tricky if the ordering of inputs to modules is important
-        
+
         Arguments:
         :modules - dictionary of names to algorithms
         :mapping - dictionary of names of algorithms to names of algorithms whose outputs form inputs
@@ -45,7 +45,7 @@ class MappedPipeline(BaseModule):
         data_in = {"sensor1": DATA1, "sensor2": DATA2}
         tracks = pipeline(data_in)
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(name="pipeline", *args, **kwargs)
         self.modules = {name: MODELS.build(mod) for name, mod in modules.items()}
         self.mapping = mapping
 

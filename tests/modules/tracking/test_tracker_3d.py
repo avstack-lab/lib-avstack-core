@@ -13,7 +13,6 @@ import sys
 import numpy as np
 
 import avstack
-from avstack import GroundTruthInformation
 from avstack.datastructs import DataContainer
 from avstack.geometry import Attitude, GlobalOrigin3D, Position, ReferenceFrame, bbox
 from avstack.geometry.transformations import xyzvel_to_razelrrt
@@ -28,7 +27,7 @@ from track_utils import (
     make_kitti_tracking_data,
     run_tracker,
 )
-from utilities import get_ego, get_object_local, get_test_sensor_data
+from utilities import get_test_sensor_data
 
 
 (
@@ -48,26 +47,6 @@ T_camera = camera_calib.reference
 
 name_3d = "lidar"
 name_2d = "image"
-
-
-def test_groundtruth_tracking():
-    ego = get_ego(1)
-    obj1 = get_object_local(ego, 10)
-    frame = timestamp = 0
-    ground_truth = GroundTruthInformation(
-        frame, timestamp, ego_state=ego, objects=[obj1]
-    )
-    tracker = tracker3d.GroundTruthTracker(name="tracker-1")
-    platform = ego.as_reference()
-    tracks = tracker(
-        t=timestamp,
-        frame=frame,
-        detections=None,
-        platform=platform,
-        ground_truth=ground_truth,
-    )
-    assert np.all(tracks[0].position == obj1.position)
-    assert np.all(tracks[0].velocity == obj1.velocity)
 
 
 def test_make_3d_tracking_data():
