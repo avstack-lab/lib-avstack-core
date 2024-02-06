@@ -1,7 +1,9 @@
 import numpy as np
 
 
-def kalman_linear_predict(x, P, F, Q):
+def kalman_linear_predict(x, P, F_func, Q_func, dt):
+    F = F_func(dt)
+    Q = Q_func(dt)
     return F @ x, F @ P @ F.T + Q
 
 
@@ -12,8 +14,9 @@ def kalman_linear_update(xp, Pp, z, H, R):
     return xp + K @ y, (np.eye(Pp.shape[0]) - K @ H) @ Pp
 
 
-def kalman_extended_predict(x, P, f_func, F_func, Q, dt):
+def kalman_extended_predict(x, P, f_func, F_func, Q_func, dt):
     F = F_func(x, dt)
+    Q = Q_func(dt)
     return f_func(x, dt), F @ P @ F.T + Q
 
 
@@ -53,18 +56,18 @@ def unscented_transform(x_sigma, Wm_sigma, Wc_sigma):
     return x, P
 
 
-def kalman_unscented_predict(x_sigma, Wm_sigma, Wc_sigma, f_func, Q, dt):
+def kalman_unscented_predict(x, P, f_func, Q_func, dt):
+    x_sigma, Wm_sigma, Wc_sigma = compute_sigma_points(x, P)
     xp_sigma = [f_func(x_sigma_, dt) for x_sigma_ in x_sigma]
     xp, Pp = unscented_transform(xp_sigma, Wm_sigma, Wc_sigma)
-    return xp, Pp + Q, xp_sigma
+    Q = Q_func(dt)
+    return xp, Pp + Q
 
 
-def kalman_unscented_update(xp, Pp, z, xp_sigma, Wm_sigma, Wc_sigma, h_func, R):
+def kalman_unscented_update(xp, Pp, z, h_func, R):
+    xp_sigma, Wm_sigma, Wc_sigma = compute_sigma_points(xp, Pp)
     z_sigma = [h_func(xp_sigma_) for xp_sigma_ in xp_sigma]
     mz, Pz = unscented_transform(z_sigma, Wm_sigma, Wc_sigma)
-    import pdb
-
-    pdb.set_trace()
     Pz = Pz + R
     y = z - mz
     Pxz = np.sum(
@@ -77,4 +80,4 @@ def kalman_unscented_update(xp, Pp, z, xp_sigma, Wm_sigma, Wc_sigma, h_func, R):
     K = Pxz @ np.linalg.inv(Pz)
     x = xp + K @ y
     P = Pp - K @ Pz @ K.T
-    return x, P, z_sigma
+    return x, P
