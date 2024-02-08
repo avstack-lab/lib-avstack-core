@@ -7,6 +7,8 @@ import numpy as np
 from . import transformations as tforms
 from .base import fastround, q_mult_vec
 
+from avstack.config import REFERENCE
+
 
 class VectorEncoder(json.JSONEncoder):
     def default(self, o):
@@ -93,6 +95,7 @@ class ReferenceDecoder(json.JSONDecoder):
             return json_object
 
 
+@REFERENCE.register_module()
 class PassiveReferenceFrame:
     def __init__(
         self,
@@ -122,6 +125,7 @@ class PassiveReferenceFrame:
         return json.dumps(self, cls=ReferenceEncoder)
 
 
+@REFERENCE.register_module()
 class ReferenceFrame:
     def __init__(
         self,
