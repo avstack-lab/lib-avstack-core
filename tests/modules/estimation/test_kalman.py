@@ -142,11 +142,6 @@ def test_all_kalmans_on_linear_problem():
     f_func_ut = lambda x, dt: F_func(dt) @ x
     h_func_ut = lambda x: H @ x
     for i in range(n_steps):
-        if not np.all(np.linalg.eigvals(P) > 0):
-            import pdb
-
-            pdb.set_trace()
-
         xp, Pp = estimation.kalman_unscented_predict(x, P, f_func_ut, Q_func, dt)
         x, P = estimation.kalman_unscented_update(xp, Pp, zs[i], h_func_ut, R)
     x_unscented, P_unscented = x, P
@@ -155,7 +150,5 @@ def test_all_kalmans_on_linear_problem():
     # -- extended reduces exactly
     assert np.allclose(x_linear, x_extended)
     assert np.allclose(P_linear, P_extended)
-
-    import pdb
-
-    pdb.set_trace()
+    assert np.allclose(x_linear, x_unscented)
+    assert np.allclose(P_linear, P_unscented)

@@ -33,8 +33,8 @@ def compute_sigma_points(x, P, alpha=1e-3, kappa=0, beta=2):
     lam = alpha**2 * (L + kappa) - L
     LlPsqrt = np.linalg.cholesky((L + lam) * P)
     x_sigma = [x]
-    x_sigma.extend([x + LlPsqrt[i, :] for i in range(L)])
-    x_sigma.extend([x - LlPsqrt[i, :] for i in range(L)])
+    x_sigma.extend([x + LlPsqrt[:, i] for i in range(L)])
+    x_sigma.extend([x - LlPsqrt[:, i] for i in range(L)])
     Wm_sigma = [lam / (L + lam)]
     Wm_sigma.extend([1 / (2 * (L + lam)) for _ in range(2 * L)])
     Wc_sigma = [lam / (L + lam) + 1 - alpha**2 + beta]
@@ -67,8 +67,8 @@ def kalman_unscented_predict(x, P, f_func, Q_func, dt):
 def kalman_unscented_update(xp, Pp, z, h_func, R):
     xp_sigma, Wm_sigma, Wc_sigma = compute_sigma_points(xp, Pp)
     z_sigma = [h_func(xp_sigma_) for xp_sigma_ in xp_sigma]
-    mz, Pz = unscented_transform(z_sigma, Wm_sigma, Wc_sigma)
-    Pz = Pz + R
+    mz, Pzz = unscented_transform(z_sigma, Wm_sigma, Wc_sigma)
+    Pzz = Pzz + R
     y = z - mz
     Pxz = np.sum(
         [
@@ -77,7 +77,9 @@ def kalman_unscented_update(xp, Pp, z, h_func, R):
         ],
         axis=0,
     )
-    K = Pxz @ np.linalg.inv(Pz)
+    # import pdb; pdb.set_trace()
+    # K = np.linalg.solve(Pzz, Pxz)
+    K = Pxz @ np.linalg.inv(Pzz)
     x = xp + K @ y
-    P = Pp - K @ Pz @ K.T
+    P = Pp - K @ Pzz @ K.T
     return x, P
