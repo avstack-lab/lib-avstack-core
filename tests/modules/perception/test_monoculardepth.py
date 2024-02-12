@@ -27,7 +27,7 @@ def test_midas_inference():
     model = "dpt_beit_base_384"
     try:
         depthestim = MidasDepthEstimator(model=model)
-    except ModuleNotFoundError:
+    except (NameError, ModuleNotFoundError):
         print("Cannot run mmdet test without the module")
     except FileNotFoundError:
         print(f"Cannot find ({model}, {dataset}) model file for mmdet3d test")

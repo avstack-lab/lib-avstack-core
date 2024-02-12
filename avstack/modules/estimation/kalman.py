@@ -4,10 +4,13 @@ import numpy as np
 def kalman_linear_predict(x, P, F_func, Q_func, dt):
     F = F_func(dt)
     Q = Q_func(dt)
+    assert Q.shape == P.shape
     return F @ x, F @ P @ F.T + Q
 
 
 def kalman_linear_update(xp, Pp, z, H, R):
+    assert R.shape == (len(z), len(z))
+    assert H.shape == (len(z), len(xp))
     y = z - H @ xp
     S = H @ Pp @ H.T + R
     K = Pp @ H.T @ np.linalg.inv(S)
