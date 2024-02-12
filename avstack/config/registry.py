@@ -218,6 +218,7 @@ class Registry:
         module: Type,
         module_name: Optional[Union[str, List[str]]] = None,
         force: bool = False,
+        duplicate_warning: bool = True,
     ) -> None:
         """Register a module.
 
@@ -240,10 +241,14 @@ class Registry:
         for name in module_name:
             if not force and name in self._module_dict:
                 existed_module = self.module_dict[name]
-                raise KeyError(
+                msg = (
                     f"{name} is already registered in {self.name} "
                     f"at {existed_module.__module__}"
                 )
+                if duplicate_warning:
+                    logging.warning(msg)
+                else:
+                    raise KeyError(msg)
             self._module_dict[name] = module
 
     def register_module(

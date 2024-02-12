@@ -9,6 +9,7 @@ def kalman_linear_predict(x, P, F_func, Q_func, dt):
 
 
 def kalman_linear_update(xp, Pp, z, H, R):
+    z = np.squeeze(z)
     assert R.shape == (len(z), len(z))
     assert H.shape == (len(z), len(xp))
     y = z - H @ xp
