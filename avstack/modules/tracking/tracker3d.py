@@ -10,7 +10,7 @@
 
 import numpy as np
 
-from avstack.config import ALGORITHMS
+from avstack.config import MODELS
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
 from avstack.geometry import Attitude, Box3D, Position, Velocity
@@ -28,7 +28,7 @@ from .tracks import (
 )
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class GroundTruthTracker(_TrackingAlgorithm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,7 +38,7 @@ class GroundTruthTracker(_TrackingAlgorithm):
         return ground_truth.objects
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class BasicBoxTracker3D(_TrackingAlgorithm):
     dimensions = 3
 
@@ -71,7 +71,7 @@ class BasicBoxTracker3D(_TrackingAlgorithm):
         )
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
     dimensions = 3
 
@@ -315,7 +315,7 @@ class _BaseCenterTracker(_TrackingAlgorithm):
         raise NotImplementedError
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class BasicXyzTracker(_BaseCenterTracker):
     dimensions = 3
 
@@ -328,7 +328,7 @@ class BasicXyzTracker(_BaseCenterTracker):
         )
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class BasicRazelTracker(_BaseCenterTracker):
     dimensions = 3
 
@@ -341,7 +341,7 @@ class BasicRazelTracker(_BaseCenterTracker):
         )
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class BasicRazelRrtTracker(_BaseCenterTracker):
     dimensions = 3
 
@@ -359,7 +359,7 @@ class BasicRazelRrtTracker(_BaseCenterTracker):
 # ==============================================================
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class Ab3dmotTracker(_TrackingAlgorithm):
     dimensions = 3
 
@@ -472,7 +472,7 @@ class Ab3dmotTracker(_TrackingAlgorithm):
         return tracks_format
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class EagermotTracker(_TrackingAlgorithm):
     dimensions = 3
 

@@ -4,7 +4,7 @@ import numpy as np
 import scipy.spatial.distance
 
 from avstack import maskfilters
-from avstack.config import ALGORITHMS
+from avstack.config import MODELS
 
 from .base import _PerceptionAlgorithm
 from .detections import CentroidDetection
@@ -17,7 +17,7 @@ except ModuleNotFoundError as e:
     print("Cannot use sklearn methods")
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class Lidar2dCentroidDetector(_PerceptionAlgorithm):
     """Detects object centroids from 2D lidar data"""
 

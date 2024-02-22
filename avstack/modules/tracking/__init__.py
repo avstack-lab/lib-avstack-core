@@ -1,3 +1,4 @@
-import avstack.modules.tracking.grouptrack
-import avstack.modules.tracking.tracker2d
-import avstack.modules.tracking.tracker3d
+from avstack.modules.tracking.tracker3d import BasicBoxTracker3D, BasicXyzTracker
+
+
+__all__ = ["BasicBoxTracker3D", "BasicXyzTracker"]

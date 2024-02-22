@@ -32,14 +32,14 @@ class MappedPipeline(BaseModule):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        """A non-serial pipeline of modules mapping data to algorithms
+        """A non-serial pipeline of modules mapping data to MODELS
 
         Can support routing data between multiple modules
         Gets tricky if the ordering of inputs to modules is important
 
         Arguments:
-        :modules - dictionary of names to algorithms
-        :mapping - dictionary of names of algorithms to names of algorithms whose outputs form inputs
+        :modules - dictionary of names to MODELS
+        :mapping - dictionary of names of MODELS to names of MODELS whose outputs form inputs
 
         Example:
         ---

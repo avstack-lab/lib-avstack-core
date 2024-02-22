@@ -4,7 +4,7 @@ import tempfile
 
 from cv2 import imwrite
 
-from avstack.config import ALGORITHMS
+from avstack.config import MODELS
 from avstack.datastructs import DataContainer
 from avstack.geometry import Box3D
 from avstack.modules.perception import detections, utils
@@ -16,7 +16,7 @@ from avstack.modules.perception.base import _MMObjectDetector, _PerceptionAlgori
 # ===========================================================================
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class GroundTruth3DObjectDetector(_PerceptionAlgorithm):
     MODE = "object_3d"
 
@@ -43,7 +43,7 @@ class GroundTruth3DObjectDetector(_PerceptionAlgorithm):
         )
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class Passthrough3DObjectDetector(_PerceptionAlgorithm):
     MODE = "object_3d"
 
@@ -82,7 +82,7 @@ class Passthrough3DObjectDetector(_PerceptionAlgorithm):
 # ===========================================================================
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class MMDetObjectDetector3D(_MMObjectDetector):
     MODE = "object_3d"
 

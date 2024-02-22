@@ -4,10 +4,10 @@ import json
 
 import numpy as np
 
+from avstack.config import REFERENCE
+
 from . import transformations as tforms
 from .base import fastround, q_mult_vec
-
-from avstack.config import REFERENCE
 
 
 class VectorEncoder(json.JSONEncoder):

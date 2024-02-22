@@ -12,7 +12,7 @@ from ..base import BaseModule
 
 class _SensorIntegrity(BaseModule):
     """
-    Base class for all integrity monitoring algorithms
+    Base class for all integrity monitoring MODELS
     """
 
     def __init__(self, name, *args, **kwargs):
