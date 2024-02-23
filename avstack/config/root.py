@@ -3,6 +3,7 @@ from .registry import Registry
 
 # data-related
 DATASETS = Registry("datasets")
+GEOMETRY = Registry("geometry")
 REFERENCE = Registry("reference")
 
 # algorithm-related

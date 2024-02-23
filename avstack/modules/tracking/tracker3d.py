@@ -64,7 +64,7 @@ class BasicBoxTracker3D(_TrackingAlgorithm):
 
     def spawn_track_from_detection(self, detection):
         return BasicBoxTrack3D(
-            self.t,
+            self.timestamp,
             box3d=detection.box3d,
             reference=detection.box3d.reference,
             obj_type=detection.obj_type,
@@ -105,7 +105,7 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
             and (trk.n_updates_2d >= self.threshold_confirmed_2d)
         ]
 
-    def track(self, t, frame, detections, platform, **kwargs):
+    def track(self, detections, platform, **kwargs):
         """
         :detections_2d
         :detections_3d
@@ -114,6 +114,7 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
 
         ASSUMPTION: only 1 camera used for now
         """
+        t = detections.timestamp
         for trk in self.tracks:
             trk.change_reference(platform, inplace=True)
             trk.predict(t)
@@ -260,7 +261,7 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
                         lone_3d_to_det_map[i_det - len(fused_detections)]
                     ]
                     self.tracks.append(
-                        BasicJointBoxTrack(self.t, None, d3d, platform, o3d)
+                        BasicJointBoxTrack(self.timestamp, None, d3d, platform, o3d)
                     )
             # ----- unassigned from the 2D to 2D step
             for i_det in assign_sol_3.unassigned_rows:
@@ -271,13 +272,13 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
                         obj_types_3d[lone_fused_to_det_map[i_det][1]],
                     )
                     self.tracks.append(
-                        BasicJointBoxTrack(self.t, d2d, d3d, platform, o2d)
+                        BasicJointBoxTrack(self.timestamp, d2d, d3d, platform, o2d)
                     )
                 else:
                     d2d = lone_2d[i_det - len(lone_fused)]
                     o2d = obj_types_2d[lone_2d_to_det_map[i_det - len(lone_fused)]]
                     self.tracks.append(
-                        BasicJointBoxTrack(self.t, d2d, None, platform, o2d)
+                        BasicJointBoxTrack(self.timestamp, d2d, None, platform, o2d)
                     )
 
             # -- prune dead tracks
@@ -321,7 +322,7 @@ class BasicXyzTracker(_BaseCenterTracker):
 
     def spawn_track_from_detection(self, detection):
         return XyzFromXyzTrack(
-            t0=self.t,
+            t0=self.timestamp,
             xyz=detection.xyz,
             reference=detection.reference,
             obj_type=detection.obj_type,
@@ -334,7 +335,7 @@ class BasicRazelTracker(_BaseCenterTracker):
 
     def spawn_track_from_detection(self, detection):
         return XyzFromRazelTrack(
-            t0=self.t,
+            t0=self.timestamp,
             razel=detection.razel,
             reference=detection.reference,
             obj_type=detection.obj_type,
@@ -347,7 +348,7 @@ class BasicRazelRrtTracker(_BaseCenterTracker):
 
     def spawn_track_from_detection(self, detection):
         return XyzFromRazelRrtTrack(
-            t0=self.t,
+            t0=self.timestamp,
             razelrrt=detection.razelrrt,
             reference=detection.reference,
             obj_type=detection.obj_type,
@@ -388,12 +389,13 @@ class Ab3dmotTracker(_TrackingAlgorithm):
     def tracks(self, tracks):
         self.tracker.trackers = tracks
 
-    def track(self, t, frame, detections, platform, **kwargs):
+    def track(self, detections, platform, **kwargs):
         """
         :detections - list of class Detection
 
         AB3DMOT expects detections in camera coordinates, so do conversion
         """
+        t = detections.timestamp
         if detections is None:
             raise NotImplementedError("Need to implement prediction only")
 

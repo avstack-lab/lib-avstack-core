@@ -28,19 +28,17 @@ class PassthroughTracker2D(_TrackingAlgorithm):
     def __init__(self, **kwargs):
         super().__init__("PassthroughTracker", **kwargs)
 
-    def track(self, t, frame, detections, platform, **kwargs):
+    def track(self, detections, platform, **kwargs):
         tracks = []
-        t = detections.timestamp
-        # frame = detections_2d.frame
         for det in detections:
             trk = BasicBoxTrack2D(
-                t0=t,
+                t0=detections.timestamp,
                 box2d=det.box2d,
                 obj_type=det.obj_type,
                 ID_force=None,
                 v=None,
                 P=np.eye(6),  # fake this
-                t=t,
+                t=detections.timestamp,
                 coast=0,
                 n_updates=1,
                 age=1,
@@ -76,7 +74,7 @@ class BasicXyTracker(_BaseCenterTracker):
 
     def spawn_track_from_detection(self, detection):
         return XyFromXyTrack(
-            t0=self.t,
+            t0=self.timestamp,
             xy=detection.xy,
             reference=detection.reference,
             obj_type=detection.obj_type,
@@ -89,7 +87,7 @@ class BasicRazTracker(_BaseCenterTracker):
 
     def spawn_track_from_detection(self, detection):
         return XyFromRazTrack(
-            t0=self.t,
+            t0=self.timestamp,
             raz=detection.raz,
             reference=detection.reference,
             obj_type=detection.obj_type,
@@ -122,7 +120,7 @@ class BasicBoxTracker2D(_BaseBoxTracker2D):
 
     def spawn_track_from_detection(self, detection):
         return BasicBoxTrack2D(
-            t0=self.t,
+            t0=self.timestamp,
             box2d=detection.box2d,
             reference=detection.reference,
             obj_type=detection.obj_type,
@@ -144,7 +142,7 @@ class SortTracker2D(_TrackingAlgorithm):
         )
         self.sort_algorithm = Sort()
 
-    def track(self, t, frame, detections, platform, **kwargs):
+    def track(self, detections, platform, **kwargs):
         """Just a wrapping to the sort algorithm
 
         sort inputs: [xmin, ymin, xmax, ymax, score]
