@@ -58,7 +58,7 @@ class MappedPipeline(BaseModule):
         """Runs modules one-by-one in order mapping data between them"""
         for name, module in self.modules.items():
             this_in = [data[in_name] for in_name in self.mapping[name]]
-            last_data = module(*this_in)
+            last_data = module(*this_in, *args, **kwargs)
             data[name] = last_data
         return last_data  # only return last module data?
 

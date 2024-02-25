@@ -463,7 +463,19 @@ class _XYZVxVyVzTrack(_TrackBase):
             self.P = P
             self.reference = reference
         else:
-            raise NotImplementedError("Need to implement this")
+            return self.__class__(
+                self.t0,
+                None,
+                reference=reference,
+                obj_type=self.obj_type,
+                ID_force=self.ID,
+                x=np.concatenate((position.x, velocity.x)),
+                P=P,
+                t=self.t,
+                coast=self.coast,
+                n_updates=self.n_updates,
+                age=self.age,
+            )
 
 
 # ================================================

@@ -50,6 +50,8 @@ class SampledAssignmentClusterer(_BaseClustering):
         frame: int,
         timestamp: float,
         check_reference: bool = True,
+        *args,
+        **kwargs,
     ) -> ClusterSet:
         """Perform clustering
 

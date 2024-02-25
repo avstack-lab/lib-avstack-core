@@ -321,6 +321,14 @@ def get_R_ecef_to_lla():
     raise NotImplementedError
 
 
+@jit(nopython=True, fastmath=True)
+def _make_euler(R):
+    roll = np.arctan2(R[1, 2], R[2, 2])
+    pitch = -np.arcsin(R[0, 2])
+    yaw = np.arctan2(R[0, 1], R[0, 0])
+    return np.array([roll, pitch, yaw], dtype=np.float64)
+
+
 def R_to_euler(R):
     """
     Convert direction cosine matrix to euler angles
@@ -331,23 +339,40 @@ def R_to_euler(R):
           - theta on [-pi/2, pi/2] (pitch)
           - psi on [-pi, pi] (yaw/heading)
     """
-
-    def make_euler(R):
-        roll = np.arctan2(R[1, 2], R[2, 2])
-        pitch = -np.arcsin(R[0, 2])
-        yaw = np.arctan2(R[0, 1], R[0, 0])
-        return np.array([float(roll), float(pitch), float(yaw)])
-
     if len(R.shape) == 2:
-        euler = make_euler(R)
+        euler = _make_euler(R)
     else:
         euler = np.zeros((3, R.shape[2]))
         for i in range(R.shape[2]):
-            euler[:, i] = make_euler(R[:, :, i])
+            euler[:, i] = _make_euler(R[:, :, i])
     return euler
 
 
-def euler_to_R(euler):
+@jit(nopython=True, fastmath=True)
+def _make_DCM(euler):
+    R = float(euler[0])
+    P = float(euler[1])
+    Y = float(euler[2])
+    # This is DCM of global level --> body
+    DCM = np.array(
+        [
+            [
+                np.cos(P) * np.cos(Y),
+                np.sin(R) * np.sin(P) * np.cos(Y) - np.cos(R) * np.sin(Y),
+                np.cos(R) * np.sin(P) * np.cos(Y) + np.sin(R) * np.sin(Y),
+            ],
+            [
+                np.cos(P) * np.sin(Y),
+                np.sin(R) * np.sin(P) * np.sin(Y) + np.cos(R) * np.cos(Y),
+                np.cos(R) * np.sin(P) * np.sin(Y) - np.sin(R) * np.cos(Y),
+            ],
+            [-np.sin(P), np.sin(R) * np.cos(P), np.cos(R) * np.cos(P)],
+        ]
+    )
+    return DCM.T
+
+
+def euler_to_R(euler: np.ndarray):
     """
     Convert angles to direction cosine matrix
 
@@ -363,35 +388,12 @@ def euler_to_R(euler):
     could also get this by composing individual axis rotations in sequence, but
     explicitly writing it out is more efficient
     """
-
-    def make_DCM(euler):
-        R = float(euler[0])
-        P = float(euler[1])
-        Y = float(euler[2])
-        # This is DCM of global level --> body
-        DCM = np.array(
-            [
-                [
-                    np.cos(P) * np.cos(Y),
-                    np.sin(R) * np.sin(P) * np.cos(Y) - np.cos(R) * np.sin(Y),
-                    np.cos(R) * np.sin(P) * np.cos(Y) + np.sin(R) * np.sin(Y),
-                ],
-                [
-                    np.cos(P) * np.sin(Y),
-                    np.sin(R) * np.sin(P) * np.sin(Y) + np.cos(R) * np.cos(Y),
-                    np.cos(R) * np.sin(P) * np.sin(Y) - np.sin(R) * np.cos(Y),
-                ],
-                [-np.sin(P), np.sin(R) * np.cos(P), np.cos(R) * np.cos(P)],
-            ]
-        )
-        return DCM.T
-
     if len(euler.shape) == 1:
-        DCM = make_DCM(euler)
+        DCM = _make_DCM(euler)
     else:
-        DCM = np.zeros((3, 3, euler.shape[1]))
+        DCM = np.zeros((3, 3, euler.shape[1]), dtype=float)
         for i in range(euler.shape[1]):
-            DCM[:, :, i] = make_DCM(euler[:, i])
+            DCM[:, :, i] = _make_DCM(euler[:, i])
 
     return DCM
 
