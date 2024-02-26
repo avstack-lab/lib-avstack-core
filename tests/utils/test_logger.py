@@ -3,7 +3,7 @@ import shutil
 import sys
 import tempfile
 
-from avstack.config import ALGORITHMS, Config
+from avstack.config import MODELS, Config
 from avstack.datastructs import DataContainer
 from avstack.modules.base import BaseModule
 from avstack.utils.decorators import apply_hooks
@@ -14,7 +14,7 @@ sys.path.append("tests/")
 from utilities import get_object_global
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class MyTestModule(BaseModule):
     def __init__(self, *args, **kwargs):
         super().__init__(name="test", *args, **kwargs)
@@ -64,7 +64,7 @@ def test_logger_form_config():
         fname = "tests/utils/logger_cfg.py"
         cfg = Config.fromfile(fname)
         save_dir = cfg.alg.post_hooks[0].output_folder
-        module = ALGORITHMS.build(cfg.alg)
+        module = MODELS.build(cfg.alg)
         module(frame=10, n_objects=4)
         _, _, files = next(os.walk(save_dir))
         assert len(files) == 1

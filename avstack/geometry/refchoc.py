@@ -4,6 +4,8 @@ import json
 
 import numpy as np
 
+from avstack.config import REFERENCE
+
 from . import transformations as tforms
 from .base import fastround, q_mult_vec
 
@@ -93,6 +95,7 @@ class ReferenceDecoder(json.JSONDecoder):
             return json_object
 
 
+@REFERENCE.register_module()
 class PassiveReferenceFrame:
     def __init__(
         self,
@@ -122,15 +125,16 @@ class PassiveReferenceFrame:
         return json.dumps(self, cls=ReferenceEncoder)
 
 
+@REFERENCE.register_module()
 class ReferenceFrame:
     def __init__(
         self,
         x: np.ndarray,
         q: np.quaternion,
         reference: ReferenceFrame,
-        v: np.ndarray = np.zeros((3,), dtype=float),
-        acc: np.ndarray = np.zeros((3,), dtype=float),
-        ang: np.quaternion = np.quaternion(1),
+        v: np.ndarray = None,
+        acc: np.ndarray = None,
+        ang: np.quaternion = None,
         handedness="right",
         n_prec=8,
         from_frame="",
@@ -138,6 +142,13 @@ class ReferenceFrame:
         timestamp=0.0,
     ) -> None:
         self.n_prec = n_prec
+        self.dim = len(x)
+        if v is None:
+            v = np.zeros((self.dim,), dtype=float)
+        if acc is None:
+            acc = np.zeros((self.dim,), dtype=float)
+        if ang is None:
+            ang = np.quaternion(1)
 
         # -- add double linkage
         self._point_from = []
@@ -182,9 +193,9 @@ class ReferenceFrame:
     def fixed(self):
         if self._fixed is None:
             self._fixed = (
-                np.allclose(self.v, np.zeros((3,)))
-                and np.allclose(self.acc, np.zeros((3,)))
-                and np.allclose(self.ang.vec, np.zeros((3,)))
+                np.allclose(self.v, np.zeros((self.dim,)))
+                and np.allclose(self.acc, np.zeros((self.dim,)))
+                and np.allclose(self.ang.vec, np.zeros((self.dim,)))
             )
         return self._fixed
 
@@ -315,31 +326,31 @@ class ReferenceFrame:
                 np.allclose(
                     diff.x,
                     np.zeros(
-                        3,
+                        self.dim,
                     ),
                 )
                 and np.allclose(
                     diff.q.vec,
                     np.zeros(
-                        3,
+                        self.dim,
                     ),
                 )
                 and np.allclose(
                     diff.v,
                     np.zeros(
-                        3,
+                        self.dim,
                     ),
                 )
                 and np.allclose(
                     diff.acc,
                     np.zeros(
-                        3,
+                        self.dim,
                     ),
                 )
                 and np.allclose(
                     diff.ang.vec,
                     np.zeros(
-                        3,
+                        self.dim,
                     ),
                 )
             )
@@ -375,10 +386,10 @@ class ReferenceFrame:
             for anc in reversed(ancestors):
                 if not started:
                     if anc == start_at:
-                        x_tot = np.zeros((3,))
+                        x_tot = np.zeros((self.dim,))
                         q_tot = np.quaternion(1)
-                        v_tot = np.zeros((3,))
-                        acc_tot = np.zeros((3,))
+                        v_tot = np.zeros((self.dim,))
+                        acc_tot = np.zeros((self.dim,))
                         ang_tot = np.quaternion(1)
                         started = True
                 else:
@@ -484,7 +495,7 @@ class ReferenceFrame:
         """Incorporate the frame shift as the former reference"""
         return ReferenceFrame(
             x=np.zeros(
-                3,
+                self.dim,
             ),
             q=np.quaternion(1),
             reference=self,
@@ -500,6 +511,18 @@ GlobalOrigin3D = ReferenceFrame(
     q=np.quaternion(1),
     v=np.zeros((3,)),
     acc=np.zeros((3,)),
+    ang=np.quaternion(1),
+    reference=None,
+    handedness="right",
+    to_frame="world",
+    from_frame="world",
+)
+
+GlobalOrigin2D = ReferenceFrame(
+    x=np.zeros((2,)),
+    q=np.quaternion(1),
+    v=np.zeros((2,)),
+    acc=np.zeros((2,)),
     ang=np.quaternion(1),
     reference=None,
     handedness="right",
@@ -768,10 +791,10 @@ class Rotation:
         self.n_prec = n_prec
         if isinstance(q, np.quaternion):
             pass
-        elif isinstance(q, np.ndarray) and q.shape == (3, 3):
+        elif isinstance(q, np.ndarray) and ((q.shape == (3, 3)) or (q.shape == (2, 2))):
             q = tforms.transform_orientation(q, "dcm", "quat")
         else:
-            raise ValueError(f"{type(q)} must be quaternion or 3x3")
+            raise ValueError(f"{type(q)} must be quaternion or 3x3 or 2x2")
         self.q = q
         self.reference = reference
 

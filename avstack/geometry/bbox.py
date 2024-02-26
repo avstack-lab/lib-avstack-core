@@ -1,10 +1,3 @@
-# @Author: Spencer Hallyburton <spencer>
-# @Date:   2021-02-04
-# @Filename: bbox_util.py
-# @Last modified by:   spencer
-# @Last modified time: 2021-08-11
-
-
 from __future__ import annotations
 
 import json
@@ -21,7 +14,6 @@ from scipy.spatial import ConvexHull, QhullError
 from avstack import exceptions
 from avstack.geometry import transformations as tforms
 
-from ..calibration import CalibrationDecoder
 from .base import _q_mult_vec, q_mult_vec
 from .coordinates import CameraCoordinates, LidarCoordinates, StandardCoordinates
 from .datastructs import (
@@ -90,6 +82,8 @@ class BoxDecoder(json.JSONDecoder):
 
     @staticmethod
     def object_hook(json_object):
+        from ..calibration import CalibrationDecoder
+
         if "box2d" in json_object:
             json_object = json_object["box2d"]
             calibration = json.loads(json_object["calibration"], cls=CalibrationDecoder)

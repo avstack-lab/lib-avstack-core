@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-04-19
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-08
-# @Description:
-"""
-
-"""
 import numpy as np
 import quaternion
 

@@ -112,8 +112,6 @@ def run_tracker(tracker, det_type, dt=0.25):
     )
     for frame, dets in enumerate(dets_all):
         tracks = tracker(
-            t=frame * dt,
-            frame=frame,
             detections=dets,
             platform=platform,
         )

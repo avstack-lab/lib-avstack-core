@@ -2,7 +2,7 @@ from typing import Dict
 
 import numpy as np
 
-from avstack.config import ALGORITHMS
+from avstack.config import MODELS
 from avstack.datastructs import DataContainer
 from avstack.utils.decorators import apply_hooks
 
@@ -15,7 +15,7 @@ class _BaseClustering(BaseModule):
         super().__init__(name=name, *args, **kwargs)
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class NoClustering(_BaseClustering):
     """Each track is its own cluster"""
 
@@ -32,7 +32,7 @@ class NoClustering(_BaseClustering):
         return clusters
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class SampledAssignmentClusterer(_BaseClustering):
     """Run assignment by sampling one object from a cluster
 
@@ -50,6 +50,8 @@ class SampledAssignmentClusterer(_BaseClustering):
         frame: int,
         timestamp: float,
         check_reference: bool = True,
+        *args,
+        **kwargs,
     ) -> ClusterSet:
         """Perform clustering
 
@@ -105,6 +107,6 @@ class SampledAssignmentClusterer(_BaseClustering):
         return clusters
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class HierarchicalAssignmentClustering(_BaseClustering):
     """Run assignment pairwise from binary tree for efficiency"""

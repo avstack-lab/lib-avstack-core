@@ -2,7 +2,7 @@ from typing import Dict
 
 import numpy as np
 
-from avstack.config import ALGORITHMS, ConfigDict
+from avstack.config import MODELS, ConfigDict
 from avstack.datastructs import DataContainer
 from avstack.geometry import ReferenceFrame
 from avstack.modules.perception.detections import BoxDetection, CentroidDetection
@@ -12,15 +12,13 @@ from avstack.utils.decorators import apply_hooks
 from ..base import BaseModule
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class GroupTracker(BaseModule):
     def __init__(self, fusion, tracker, name="grouptracker", **kwargs):
         super().__init__(name=name, **kwargs)
-        self.fusion = (
-            ALGORITHMS.build(fusion) if isinstance(fusion, ConfigDict) else fusion
-        )
+        self.fusion = MODELS.build(fusion) if isinstance(fusion, ConfigDict) else fusion
         self.tracker = (
-            ALGORITHMS.build(tracker) if isinstance(tracker, ConfigDict) else tracker
+            MODELS.build(tracker) if isinstance(tracker, ConfigDict) else tracker
         )
 
     @apply_hooks

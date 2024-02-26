@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-04-03
-# @Last Modified by:   spencer@primus
-# @Last Modified date: 2022-08-07
-# @Description:
-"""
-
-"""
-
 import numpy as np
 
 import avstack.geometry

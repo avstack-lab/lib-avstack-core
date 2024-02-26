@@ -40,7 +40,7 @@ class _TrackingAlgorithm(BaseModule):
         self.tracks = []
         self.iframe = -1
         self.frame = 0
-        self.t = 0
+        self.timestamp = 0
         self.assign_metric = assign_metric
         self.assign_radius = assign_radius
         if assign_metric == "center_dist":
@@ -79,14 +79,12 @@ class _TrackingAlgorithm(BaseModule):
         return [trk for trk in self.tracks if trk.active]
 
     @apply_hooks
-    def __call__(
-        self, t: float, frame: int, detections, platform: ReferenceFrame, **kwargs
-    ):
-        self.t = float(t)
-        self.frame = int(frame)
+    def __call__(self, detections, platform: ReferenceFrame, **kwargs):
+        self.timestamp = float(detections.timestamp)
+        self.frame = int(detections.frame)
         self.iframe += 1
-        tracks = self.track(self.t, self.frame, detections, platform, **kwargs)
-        track_data = DataContainer(self.frame, self.t, tracks, self.name)
+        tracks = self.track(detections, platform, **kwargs)
+        track_data = DataContainer(self.frame, self.timestamp, tracks, self.name)
         return track_data
 
     def get_assignment_matrix(self, dets, tracks):
@@ -188,9 +186,7 @@ class _TrackingAlgorithm(BaseModule):
 
     def track(
         self,
-        t: float,
-        frame: int,
-        detections,
+        detections: DataContainer,
         platform: ReferenceFrame,
         change_in_place=False,
         *args,
@@ -200,6 +196,8 @@ class _TrackingAlgorithm(BaseModule):
 
         Note: detections being None means only do a prediction but don't penalize misses
         """
+        t = detections.timestamp
+
         # -- propagation
         for trk in self.tracks_active:
             if platform:

@@ -23,8 +23,8 @@ class Registry:
             Defaults to None.
 
     Example of hierarchical registry
-    ALGORITHMS = Registry('algorithms')
-    TRACKERS = Registry('trackers', parent=ALGORITHMS)
+    MODELS = Registry('MODELS')
+    TRACKERS = Registry('trackers', parent=MODELS)
 
     # register model
     @TRACKERS.register_module()

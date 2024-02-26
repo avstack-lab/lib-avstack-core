@@ -1,8 +1,8 @@
-from avstack.config import ALGORITHMS
+from avstack.config import MODELS
 from avstack.modules.perception.object2dfv import MMDetObjectDetector2D
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class MMInstanceSegmentation(MMDetObjectDetector2D):
     MODE = "instance_segmentation"
 

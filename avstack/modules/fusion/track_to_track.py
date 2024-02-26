@@ -12,7 +12,7 @@ from typing import Any, List, Union
 
 import numpy as np
 
-from avstack.config import ALGORITHMS
+from avstack.config import MODELS
 from avstack.datastructs import DataContainer
 from avstack.geometry import Box3D, Position, Velocity
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
@@ -57,7 +57,7 @@ class _BaseFusion(BaseModule):
         super().__init__(name=name, *args, **kwargs)
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class NoFusion(_BaseFusion):
     """Only returns the first set of tracks"""
 
@@ -81,7 +81,7 @@ class NoFusion(_BaseFusion):
         return tracks_out
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class AggregatorFusion(_BaseFusion):
     """Simply appends all tracks together not worrying about duplicates"""
 
@@ -101,7 +101,7 @@ class AggregatorFusion(_BaseFusion):
         return tracks_out
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class CovarianceIntersectionFusion(_BaseFusion):
     """Covariance intersection to build a track from a cluster"""
 
@@ -119,7 +119,7 @@ class CovarianceIntersectionFusion(_BaseFusion):
         return x_fuse, P_fuse
 
 
-@ALGORITHMS.register_module()
+@MODELS.register_module()
 class CovarianceIntersectionFusionToBox(_BaseFusion):
     """Performs CI fusion for box tracks and outputs a track"""
 
