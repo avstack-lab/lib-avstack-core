@@ -1,4 +1,5 @@
 from .grouptrack import GroupTracker
+from .multisensor import MeasurementBasedMultiTracker
 from .tracker2d import BasicBoxTrack2D, BasicRazTracker, BasicXyTracker
 from .tracker3d import (
     BasicBoxTracker3D,
@@ -17,4 +18,5 @@ __all__ = [
     "BasicXyTracker",
     "BasicXyzTracker",
     "GroupTracker",
+    "MeasurementBasedMultiTracker",
 ]

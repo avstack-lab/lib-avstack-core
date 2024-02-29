@@ -9,6 +9,7 @@ from avstack.geometry import (
     Box2D,
     Box3D,
     PassiveReferenceFrame,
+    Position,
     ReferenceDecoder,
     ReferenceFrame,
     SegMask2D,
@@ -197,6 +198,10 @@ class CentroidDetection(Detection_):
     @property
     def xy(self):
         return self.centroid[:2]
+
+    @property
+    def position(self):
+        return Position(self.xyz, self.reference)
 
     @centroid.setter
     def centroid(self, centroid):
