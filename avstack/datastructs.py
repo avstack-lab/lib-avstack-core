@@ -77,6 +77,9 @@ class _Priority:
         priority, item = sorted(self.heap)[idx]
         return self.mult * priority, item
 
+    def elements(self):
+        return [h[1] for h in self.heap]
+
     def clear(self):
         self.heap = []
 
