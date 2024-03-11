@@ -1,15 +1,6 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-09
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-10-22
-# @Description:
-"""
-Custom sensor data structures to standardize interfaces to data
-and provide maximal forward, backward compatibility.
-"""
 from __future__ import annotations
 
+import json
 import os
 
 import cv2
@@ -123,6 +114,10 @@ class ImuData(SensorData):
     def __init__(self, *args, source_name="imu", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
+    def save_to_file(self, filename):
+        with open(filename, "w") as f:
+            f.write(json.dumps(self.data))
+
 
 class GpsData(SensorData):
     """GPS datastructure
@@ -153,6 +148,10 @@ class GpsData(SensorData):
     ):
         super().__init__(*args, **kwargs, source_name=source_name)
         self.levar = levar
+
+    def save_to_file(self, filename):
+        with open(filename, "w") as f:
+            f.write("{} {} {}".format(*self.data))
 
 
 class ImageData(SensorData):

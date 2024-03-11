@@ -2,6 +2,10 @@ import os
 
 from avstack.config import HOOKS
 from avstack.datastructs import DataContainer
+from avstack.sensors import SensorData
+
+
+# TODO: put this on its own thread
 
 
 class Logger:
@@ -12,6 +16,11 @@ class Logger:
     def __call__(self, *args, **kwargs):
         """Log objects to a folder, then return them"""
         raise NotImplementedError
+
+
+####################################################
+# things in DataContainers
+####################################################
 
 
 class _DataContainerLogger(Logger):
@@ -38,3 +47,15 @@ class DetectionsLogger(_DataContainerLogger):
 @HOOKS.register_module()
 class TracksLogger(_DataContainerLogger):
     prefix = "tracks"
+
+
+####################################################
+# others
+####################################################
+
+
+@HOOKS.register_module()
+class SensorDataLogger(Logger):
+    def __call__(self, data: SensorData, *args, **kwargs):
+        data.save_to_folder(self.output_folder)
+        return [data]  # need this based on the extraction in post-hooks for now...
