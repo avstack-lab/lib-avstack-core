@@ -75,6 +75,10 @@ def get_disjoint_fov_subsets(fovs: Dict[int, "Shape"]) -> Dict[FrozenSet[int], "
 
 
 class Shape:
+    @property
+    def area(self):
+        raise NotImplementedError
+
     def check_point(self, point: np.ndarray) -> bool:
         raise NotImplementedError
 
@@ -91,23 +95,24 @@ class Wedge(Shape):
             (0,-1) is at -pi/2
         """
         self.radius = radius
-        self.angle_range = [angle_start, angle_stop]
+        self.angle_start = angle_start
+        self.angle_stop = angle_stop
 
     @property
-    def angle_start(self):
-        return self.angle_range[0]
+    def angle_range(self):
+        return (self.angle_stop % (2 * np.pi)) - (self.angle_start % (2 * np.pi))
 
     @property
-    def angle_stop(self):
-        return self.angle_range[1]
+    def area(self):
+        return self.radius**2 * self.angle_range / 2
 
     def check_point(self, point: np.ndarray):
         if len(point.shape) == 1:
             point = point[:, None]
         flag_rng = np.linalg.norm(point, axis=0) <= self.radius
         az = np.arctan2(point[1, :], point[0, :])
-        flag_az_1 = self.angle_range[0] <= az
-        flag_az_2 = az <= self.angle_range[1]
+        flag_az_1 = self.angle_start <= az
+        flag_az_2 = az <= self.angle_stop
         return flag_rng & flag_az_1 & flag_az_2
 
 
