@@ -26,7 +26,10 @@ class Cluster:
                 raise TypeError("Input arguments must be tuples")
             else:
                 self.agent_IDs.append(arg[0])
-                self.track_IDs.append(arg[1].ID)
+                try:
+                    self.track_IDs.append(arg[1].ID)
+                except AttributeError:
+                    pass
                 self.tracks.append(arg[1])
                 if self.reference is None:
                     self.reference = arg[1].reference
@@ -53,7 +56,10 @@ class Cluster:
             raise TypeError("Input arguments must be tuples")
         else:
             self.agent_IDs.append(atrack[0])
-            self.track_IDs.append(atrack[1].ID)
+            try:
+                self.track_IDs.append(atrack[1].ID)
+            except AttributeError:
+                pass
             self.tracks.append(atrack[1])
             if self.reference is None:
                 self.reference = atrack[1].reference
@@ -69,9 +75,12 @@ class Cluster:
         return Position(x_mean, reference=self.reference)
 
     def contains(self, agent_ID, track) -> bool:
-        a_idxs = [i for i, ID in enumerate(self.agent_IDs) if i == agent_ID]
-        t_idxs = [i for i, trk in enumerate(self.tracks) if trk.ID == track.ID]
-        return any([t_idx in a_idxs for t_idx in t_idxs])
+        try:
+            a_idxs = [i for i, ID in enumerate(self.agent_IDs) if i == agent_ID]
+            t_idxs = [i for i, trk in enumerate(self.tracks) if trk.ID == track.ID]
+            return any([t_idx in a_idxs for t_idx in t_idxs])
+        except AttributeError:
+            return False
 
     def distance(self, track, check_reference: bool = True) -> float:
         return track.distance(self.centroid(), check_reference=check_reference)
