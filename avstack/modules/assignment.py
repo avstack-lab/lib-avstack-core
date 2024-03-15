@@ -1,9 +1,3 @@
-# @Author: Spencer Hallyburton <spencer>
-# @Date:   2021-07-25
-# @Filename: assignment.py
-# @Last modified by:   spencer
-# @Last modified time: 2021-08-13
-
 import itertools
 from functools import partial
 
@@ -26,6 +20,18 @@ assignments ahead of calling linear sum algorithm
 
 - clean up assignment after refactor was made to bipartite graph data structure
 """
+
+def build_A_from_distance(objs1, objs2, **kwargs):
+    A = np.zeros((len(objs1), len(objs2)))
+    for i, o1 in enumerate(objs1):
+        for j, o2 in enumerate(objs2):
+            try:
+                dist = o1.distance(o2)
+            except AttributeError:
+                dist = np.linalg.norm(o1 - o2)
+            A[i, j] = dist
+    A += 1e-8
+    return A
 
 
 def build_A_from_iou(boxes1, boxes2, **kwargs):

@@ -405,6 +405,12 @@ class BipartiteGraph:
             return self._row_to_col
         else:
             raise NotImplementedError
+        
+    def has_assign(self, row=None, col=None):
+        if row is not None:
+            return row in self._row_to_col
+        else:
+            return col in self._col_to_row
 
     def same(self, other):
         """Check if two graphs are the same via hashing"""
@@ -414,10 +420,16 @@ class BipartiteGraph:
             return False
 
     def assigns_by_row(self, row):
-        return tuple([c for c in self._row_to_col[row]])
+        try:
+            return tuple([c for c in self._row_to_col[row]])
+        except KeyError:
+            return ()
 
     def assigns_by_col(self, col):
-        return tuple([r for r in self._col_to_row[col]])
+        try:
+            return tuple([r for r in self._col_to_row[col]])
+        except KeyError:
+            return ()
 
     def assign_probability(self, row, col):
         return self._row_to_col[row][col]
