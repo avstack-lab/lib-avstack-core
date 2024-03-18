@@ -21,6 +21,7 @@ assignments ahead of calling linear sum algorithm
 - clean up assignment after refactor was made to bipartite graph data structure
 """
 
+
 def build_A_from_distance(objs1, objs2, **kwargs):
     A = np.zeros((len(objs1), len(objs2)))
     for i, o1 in enumerate(objs1):

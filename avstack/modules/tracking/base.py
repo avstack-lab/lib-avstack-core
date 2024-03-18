@@ -192,6 +192,7 @@ class _TrackingAlgorithm(BaseModule):
         platform: ReferenceFrame,
         change_in_place=False,
         trks_observable: List = None,
+        check_reference: bool = True,
         *args,
         **kwargs,
     ):
@@ -205,7 +206,7 @@ class _TrackingAlgorithm(BaseModule):
 
         # -- propagation
         for trk in self.tracks_active:
-            if platform:
+            if platform and check_reference:
                 trk.change_reference(platform, inplace=True)
             trk.predict(t)
             if self.v_max is not None:
@@ -218,7 +219,7 @@ class _TrackingAlgorithm(BaseModule):
                 detections = {"sensor_1": detections}
             for sensor, dets in detections.items():
                 # -- change to platform reference
-                if platform is not None:
+                if platform and check_reference:
                     if not change_in_place:
                         dets = [
                             det.change_reference(platform, inplace=False)

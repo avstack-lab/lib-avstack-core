@@ -83,27 +83,26 @@ class SampledAssignmentClusterer(_BaseClustering):
         )
 
         # check out other objects
-        for agent_ID, tracks in objects.items():
-            for track in tracks:
-                if not clusters.contains(agent_ID, track):
-                    distances = np.array(
-                        [
-                            clust.distance(track, check_reference=check_reference)
-                            for clust in clusters
-                        ]
-                    )
-                    try:
-                        if any(distances <= self.assign_radius):
-                            idx_min = np.argmin(distances)
-                            clusters[idx_min].append((agent_ID, track))
-                        else:
-                            clusters.append(Cluster((agent_ID, track)))
-                    except ValueError:
-                        import pdb
+        for agent_ID, objs in objects.items():
+            for obj in objs:
+                # if not clusters.contains(agent_ID, obj):
+                distances = np.array(
+                    [
+                        clust.distance(obj, check_reference=check_reference)
+                        for clust in clusters
+                    ]
+                )
+                try:
+                    if any(distances <= self.assign_radius):
+                        idx_min = np.argmin(distances)
+                        clusters[idx_min].append((agent_ID, obj))
+                    else:
+                        clusters.append(Cluster((agent_ID, obj)))
+                except ValueError:
+                    import pdb
 
-                        pdb.set_trace()
-                        raise
-
+                    pdb.set_trace()
+                    raise
         return clusters
 
 

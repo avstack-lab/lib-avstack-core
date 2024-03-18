@@ -19,6 +19,7 @@ from .datastructs import (
 from .fov import Circle, Shape, Sphere, Vesica, Wedge
 from .planes import GroundPlane, plane_2_transform
 from .refchoc import (
+    GlobalOrigin2D,
     GlobalOrigin3D,
     PassiveReferenceFrame,
     ReferenceDecoder,
@@ -46,6 +47,7 @@ __all__ = [
     "Box3D",
     "BoxDecoder",
     "Circle",
+    "GlobalOrigin2D",
     "GlobalOrigin3D",
     "GroundPlane",
     "plane_2_transform",

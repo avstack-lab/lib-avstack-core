@@ -398,14 +398,17 @@ class BipartiteGraph:
     def __len__(self):
         return len(self._row_to_col)
 
-    def iterate_over(self, over):
+    def iterate_over(self, over, with_cost: bool = False):
         if over.lower() in ["col", "cols"]:
-            return self._col_to_row
+            d = self._col_to_row
         elif over.lower() in ["row", "rows"]:
-            return self._row_to_col
+            d = self._row_to_col
         else:
             raise NotImplementedError
-        
+        if not with_cost:
+            d = {k: [v for v in vs] for k, vs in d.items()}
+        return d
+
     def has_assign(self, row=None, col=None):
         if row is not None:
             return row in self._row_to_col

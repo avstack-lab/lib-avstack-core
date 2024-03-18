@@ -200,6 +200,10 @@ class CentroidDetection(Detection_):
         return self.centroid[:2]
 
     @property
+    def x(self):
+        return self.centroid
+
+    @property
     def position(self):
         return Position(self.xyz, self.reference)
 
@@ -214,6 +218,9 @@ class CentroidDetection(Detection_):
     @staticmethod
     def factory():
         return CentroidDetection
+
+    def distance(self, other, **kwargs):
+        return self.position.distance(other, **kwargs)
 
     def _change_reference(self, reference, inplace: bool):
         if len(self.centroid) == 3:

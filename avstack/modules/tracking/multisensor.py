@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 
 if TYPE_CHECKING:
@@ -26,32 +26,45 @@ class MeasurementBasedMultiTracker(BaseModule):
         )
         self.platform = platform
 
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.tracker, name)
+
     @apply_hooks
     def __call__(
         self,
         detections: Dict[int, DataContainer],
         fovs: Dict[int, "Shape"],
         platforms: Dict[int, "ReferenceFrame"],
+        check_reference: bool = True,
         *args,
         **kwargs,
     ) -> DataContainer:
 
         for ID in detections:
+            # align reference frame for checking observables
+            pts_ref = [
+                trk.position.change_reference(platforms[ID], inplace=False)
+                if check_reference
+                else trk.position
+                for trk in self.tracker.tracks_active
+            ]
+
             # use the FOV model to filter for observable tracks
             if detections[ID] is None:
                 continue
             trks_observable = [
                 trk
-                for trk in self.tracker.tracks_active
-                if fovs[ID].check_point(
-                    trk.position.change_reference(platforms[ID], inplace=False).x
-                )
+                for trk, pos in zip(self.tracker.tracks_active, pts_ref)
+                if fovs[ID].check_point(pos.x)
             ]
             # update the tracks with the new detections
             self.tracker(
                 detections=detections[ID],
                 platform=self.platform,
                 trks_observable=trks_observable,
+                check_reference=check_reference,
+                *args,
+                **kwargs,
             )
 
         # format as data container
