@@ -27,7 +27,7 @@ def build_A_from_distance(objs1, objs2, **kwargs):
     for i, o1 in enumerate(objs1):
         for j, o2 in enumerate(objs2):
             try:
-                dist = o1.distance(o2)
+                dist = o1.distance(o2, **kwargs)
             except AttributeError:
                 dist = np.linalg.norm(o1 - o2)
             A[i, j] = dist
