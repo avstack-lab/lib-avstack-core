@@ -115,6 +115,8 @@ class ImuData(SensorData):
         super().__init__(*args, **kwargs, source_name=source_name)
 
     def save_to_file(self, filename):
+        if not filename.endswith('.txt'):
+            filename = filename + '.txt'
         with open(filename, "w") as f:
             f.write(json.dumps(self.data))
 
@@ -150,6 +152,8 @@ class GpsData(SensorData):
         self.levar = levar
 
     def save_to_file(self, filename):
+        if not filename.endswith('.txt'):
+            filename = filename + '.txt'
         with open(filename, "w") as f:
             f.write("{} {} {}".format(*self.data))
 
@@ -324,9 +328,10 @@ class LidarData(SensorData):
             Number of features for the LiDAR data (e.g., (X, Y, Z, Int))
     """
 
-    def __init__(self, *args, source_name="lidar", n_features=4, **kwargs):
+    def __init__(self, *args, source_name="lidar", n_features=4, flipy=False, **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
         self.n_features = n_features
+        self.flipy = flipy
 
     def __len__(self):
         return self.data.shape[0]
@@ -395,7 +400,7 @@ class LidarData(SensorData):
         calib_new = LidarCalibration(reference=ref_new)
         return self.project(calib_new)
 
-    def save_to_file(self, filepath: str, flipy: bool = False, as_ply: bool = False):
+    def save_to_file(self, filepath: str, as_ply: bool = False):
         if isinstance(self.data, (PointMatrix3D, np.ndarray)):
             data = self.data if isinstance(self.data, np.ndarray) else self.data.x
             data = data.astype(np.float32)
@@ -417,30 +422,21 @@ class LidarData(SensorData):
                 if isinstance(self.data.raw_data, memoryview):
                     if as_ply:
                         raise NotImplementedError
-                    #     if filepath.endswith(".bin"):
-                    #         filepath = filepath.replace(".bin", ".ply")
-                    #     elif not filepath.endswith(".ply"):
-                    #         filepath = filepath + ".ply"
-                    # filepath = filepath.replace(".ply", ".bin")
                     if not filepath.endswith(".bin"):
                         filepath += ".bin"
                     data = np.frombuffer(self.data.raw_data, dtype=np.float32).reshape(
                         [-1, self.n_features]
                     )
-                    if flipy:
+                    if self.flipy:
                         try:
                             data[:, 1] *= -1
                         except ValueError as e:
                             data = np.copy(data)
                             data[:, 1] *= -1
                     with open(filepath, "wb") as f:
-                        data.tofile(filepath)
-                    # else:
-                    # self.data.save_to_disk(filepath) # later we'll figure out this way
-                    return
+                        data.tofile(f, sep="")
             except AttributeError as e:
-                pass
-            raise NotImplementedError(self.data)
+                raise e
 
     def as_spherical_matrix(self, rate: float, sensor: str):
         """Converts cartesian point cloud data to spherical matrix"""

@@ -241,7 +241,7 @@ def filter_points_in_box(
     if coarse_filters:
         box_dist = np.linalg.norm(np.mean(box_corners, axis=0))
         if box_dist > max_range:
-            return np.zeros((pc.shape[0],), dtype=np.bool)
+            return np.zeros((pc.shape[0],), dtype=bool)
     # run tests -- first coarse, then fine
     box_filter = _check_pts_boundary_coarse(pc, box_corners.x)
     box_filter[box_filter] = _check_pts_boundary_fine(

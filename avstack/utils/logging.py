@@ -57,5 +57,5 @@ class TracksLogger(_DataContainerLogger):
 @HOOKS.register_module()
 class SensorDataLogger(Logger):
     def __call__(self, data: SensorData, *args, **kwargs):
-        data.save_to_folder(self.output_folder)
+        data.save_to_folder(self.output_folder, *args, **kwargs)
         return [data]  # need this based on the extraction in post-hooks for now...
