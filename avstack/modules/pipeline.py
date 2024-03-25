@@ -10,7 +10,9 @@ from .base import BaseModule
 class SerialPipeline(BaseModule):
     def __init__(self, modules: List[ConfigDict], *args: Any, **kwargs: Any) -> None:
         super().__init__(name="pipeline", *args, **kwargs)
-        self.modules = [MODELS.build(mod) for mod in modules]
+        self.modules = [
+            MODELS.build(mod) if isinstance(mod, dict) else mod for mod in modules
+        ]
 
     @apply_hooks
     def __call__(self, data: Any, *args: Any, **kwargs: Any) -> Any:
@@ -50,7 +52,10 @@ class MappedPipeline(BaseModule):
         tracks = pipeline(data_in)
         """
         super().__init__(name="pipeline", *args, **kwargs)
-        self.modules = {name: MODELS.build(mod) for name, mod in modules.items()}
+        self.modules = {
+            name: MODELS.build(mod) if isinstance(mod, dict) else mod
+            for name, mod in modules.items()
+        }
         self.mapping = mapping
 
     @apply_hooks

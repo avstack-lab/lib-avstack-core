@@ -98,7 +98,7 @@ def test_pda_assignment():
     assert set(assign_sol.iterate_over("cols").keys()) == set(
         range(A.shape[1])
     ).difference({4})
-    for c, rs in assign_sol.iterate_over("cols").items():
+    for c, rs in assign_sol.iterate_over("cols", with_cost=True).items():
         assert 0 < sum([w for w in rs.values()]) <= 1.0
 
 
@@ -143,7 +143,7 @@ def test_jpda_combinatorics_assignment():
         ncols=ncols,
         method="combinatorial",
     )
-    col_to_row = assign_sol.iterate_over("col")
+    col_to_row = assign_sol.iterate_over("col", with_cost=True)
     assert np.isclose(col_to_row[0][0], 0.631, atol=1e-2)
     assert np.isclose(col_to_row[0][1], 0.198, atol=1e-2)
     assert np.isclose(col_to_row[0][2], 0.087, atol=1e-2)

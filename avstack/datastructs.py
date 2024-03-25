@@ -77,6 +77,9 @@ class _Priority:
         priority, item = sorted(self.heap)[idx]
         return self.mult * priority, item
 
+    def elements(self):
+        return [h[1] for h in self.heap]
+
     def clear(self):
         self.heap = []
 
@@ -395,13 +398,22 @@ class BipartiteGraph:
     def __len__(self):
         return len(self._row_to_col)
 
-    def iterate_over(self, over):
+    def iterate_over(self, over, with_cost: bool = False):
         if over.lower() in ["col", "cols"]:
-            return self._col_to_row
+            d = self._col_to_row
         elif over.lower() in ["row", "rows"]:
-            return self._row_to_col
+            d = self._row_to_col
         else:
             raise NotImplementedError
+        if not with_cost:
+            d = {k: [v for v in vs] for k, vs in d.items()}
+        return d
+
+    def has_assign(self, row=None, col=None):
+        if row is not None:
+            return row in self._row_to_col
+        else:
+            return col in self._col_to_row
 
     def same(self, other):
         """Check if two graphs are the same via hashing"""
@@ -411,10 +423,16 @@ class BipartiteGraph:
             return False
 
     def assigns_by_row(self, row):
-        return tuple([c for c in self._row_to_col[row]])
+        try:
+            return tuple([c for c in self._row_to_col[row]])
+        except KeyError:
+            return ()
 
     def assigns_by_col(self, col):
-        return tuple([r for r in self._col_to_row[col]])
+        try:
+            return tuple([r for r in self._col_to_row[col]])
+        except KeyError:
+            return ()
 
     def assign_probability(self, row, col):
         return self._row_to_col[row][col]

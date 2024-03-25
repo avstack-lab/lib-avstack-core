@@ -16,8 +16,10 @@ from .datastructs import (
     VectorDecoder,
     Velocity,
 )
+from .fov import Circle, Shape, Sphere, Vesica, Wedge
 from .planes import GroundPlane, plane_2_transform
 from .refchoc import (
+    GlobalOrigin2D,
     GlobalOrigin3D,
     PassiveReferenceFrame,
     ReferenceDecoder,
@@ -44,6 +46,8 @@ __all__ = [
     "Box2D",
     "Box3D",
     "BoxDecoder",
+    "Circle",
+    "GlobalOrigin2D",
     "GlobalOrigin3D",
     "GroundPlane",
     "plane_2_transform",
@@ -59,6 +63,8 @@ __all__ = [
     "RotationDecoder",
     "RotationEncoder",
     "SegMask2D",
+    "Shape",
+    "Sphere",
     "transform_orientation",
     "Twist",
     "Vector",
@@ -66,4 +72,6 @@ __all__ = [
     "VectorEncoder",
     "VectorHeadTail",
     "Velocity",
+    "Vesica",
+    "Wedge",
 ]

@@ -9,6 +9,7 @@ from avstack.geometry import (
     Box2D,
     Box3D,
     PassiveReferenceFrame,
+    Position,
     ReferenceDecoder,
     ReferenceFrame,
     SegMask2D,
@@ -198,6 +199,14 @@ class CentroidDetection(Detection_):
     def xy(self):
         return self.centroid[:2]
 
+    @property
+    def x(self):
+        return self.centroid
+
+    @property
+    def position(self):
+        return Position(self.xyz, self.reference)
+
     @centroid.setter
     def centroid(self, centroid):
         if not isinstance(centroid, (np.ndarray)):
@@ -209,6 +218,9 @@ class CentroidDetection(Detection_):
     @staticmethod
     def factory():
         return CentroidDetection
+
+    def distance(self, other, **kwargs):
+        return self.position.distance(other, **kwargs)
 
     def _change_reference(self, reference, inplace: bool):
         if len(self.centroid) == 3:

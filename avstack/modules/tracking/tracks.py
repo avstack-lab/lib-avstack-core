@@ -26,6 +26,7 @@ from avstack.modules.perception.detections import BoxDetection
 from avstack.modules.tracking import gate_and_score
 
 
+EPS = 1e-8
 zero3 = np.zeros((3, 3))
 eye3 = np.eye(3)
 
@@ -42,9 +43,8 @@ class TrackEncoder(json.JSONEncoder):
                 "t0": o.t0,
                 "t": o.t,
                 "ID": o.ID,
-                "coast": o.coast,
+                "dt_coast": o.dt_coast,
                 "n_updates": o.n_updates,
-                "age": o.age,
                 "x": o.x.tolist(),
                 "P": o.P.tolist(),
                 "reference": o.reference.encode(),
@@ -97,9 +97,8 @@ class TrackDecoder(json.JSONDecoder):
                 x=np.array(json_object["x"]),
                 P=np.array(json_object["P"]),
                 t=json_object["t"],
-                coast=json_object["coast"],
+                dt_coast=json_object["dt_coast"],
                 n_updates=json_object["n_updates"],
-                age=json_object["age"],
             )
         elif any([bt in json_object for bt in box_tracks]):
             if "basicboxtrack2d" in json_object:
@@ -123,9 +122,8 @@ class TrackDecoder(json.JSONDecoder):
                 v=np.array(json_object["v"]),
                 P=np.array(json_object["P"]),
                 t=json_object["t"],
-                coast=json_object["coast"],
+                dt_coast=json_object["dt_coast"],
                 n_updates=json_object["n_updates"],
-                age=json_object["age"],
             )
         elif any([gt in json_object for gt in group_tracks]):
             if "grouptrack" in json_object:
@@ -164,7 +162,7 @@ class _TrackBase:
     BETA_C = 1e-2
     SCORE_CONFIRM_THRESH = -np.log((1 - BETA_C) / ALPHA_C) + SCORE_INIT
     SCORE_DELETE_THRESH = -np.log(BETA_C / (1 - ALPHA_C))
-    MAX_COAST = 5.0  # seconds for time without measurement
+    MAX_dt_coast = 5.0  # seconds for time without measurement
     MAX_MISS = 6  # number of measurements missed before delete
 
     # technically these actually belong at the tracker level NOT at the track level
@@ -184,9 +182,8 @@ class _TrackBase:
         obj_type,
         ID_force=None,
         t=None,
-        coast=0,
+        dt_coast=0,
         n_updates=1,
-        age=0,
         score_force=None,
         check_reference=False,
     ) -> None:
@@ -196,8 +193,7 @@ class _TrackBase:
         else:
             ID = ID_force
         self.obj_type = obj_type
-        self.coast = coast
-        self.age = age
+        self.dt_coast = dt_coast
         self.ID = int(ID)
         self.t0 = t0
         self.t = t0 if t is None else t
@@ -207,7 +203,6 @@ class _TrackBase:
         self.reference = reference
         self.n_updates = n_updates
         self.n_missed = 0  # TODO incorporate this
-        self.dt_coast = 0.0
         self.score = score_force if score_force else self.SCORE_INIT
         self.active = True
         self.confirmed = False
@@ -272,7 +267,7 @@ class _TrackBase:
     def active(self):
         if (
             (self.score > self.SCORE_DELETE_THRESH)
-            or (self.dt_coast > self.MAX_COAST)
+            or (self.dt_coast > self.MAX_dt_coast)
             or (self.n_missed > self.MAX_MISS)
         ):
             self.active = False
@@ -286,7 +281,7 @@ class _TrackBase:
     def confirmed(self):
         if (
             (self.score > self.SCORE_DELETE_THRESH)
-            or (self.dt_coast > self.MAX_COAST)
+            or (self.dt_coast > self.MAX_dt_coast)
             or (self.n_missed > self.MAX_MISS)
         ):
             self.confirmed = False
@@ -330,13 +325,12 @@ class _TrackBase:
 
     def _predict(self, t):
         dt = t - self.t_last_predict
-        self.x = self.f(self.x, dt)
-        F = self.F(self.x, dt)
-        self.P = F @ self.P @ F.T + self.Q(dt)
-        self.t_last_predict = t
-        self.age += 1
-        self.coast += 1
-        self.dt_coast += dt
+        if dt > EPS:  # only predict if substantial time
+            self.x = self.f(self.x, dt)
+            F = self.F(self.x, dt)
+            self.P = F @ self.P @ F.T + self.Q(dt)
+            self.t_last_predict = t
+            self.dt_coast += dt
 
     def _update(self, z, R):
         y = z - self.h(self.x)
@@ -346,9 +340,9 @@ class _TrackBase:
         K = self.P @ H.T @ Sinv
         self.x = self.x + K @ y
         self.P = (np.eye(self.P.shape[0]) - K @ H) @ self.P
-        self.coast = 0
         self.dt_coast = 0.0
         self.n_updates += 1
+        self.n_missed = 0  # reset to 0
         d2 = y.T @ Sinv @ y
         self.score += gate_and_score.get_score(d2, S, PD=self.PD, BETA_FT=self.BETA_FT)
 
@@ -361,7 +355,7 @@ class _TrackBase:
         self._update(z, R)
 
     def missed(self):
-        """Assume that dt_coast is updated during predict step"""
+        """Assume that dt_dt_coast is updated during predict step"""
         self.n_missed += 1
         self.score += self.MISSED_DET_SCORE
 
@@ -472,9 +466,8 @@ class _XYZVxVyVzTrack(_TrackBase):
                 x=np.concatenate((position.x, velocity.x)),
                 P=P,
                 t=self.t,
-                coast=self.coast,
+                dt_coast=self.dt_coast,
                 n_updates=self.n_updates,
-                age=self.age,
             )
 
 
@@ -498,9 +491,8 @@ class XyFromXyTrack(_XYVxVyTrack):
         x=None,
         P=None,
         t=None,
-        coast=0,
+        dt_coast=0,
         n_updates=1,
-        age=0,
         *args,
         **kwargs,
     ):
@@ -519,7 +511,7 @@ class XyFromXyTrack(_XYVxVyTrack):
         self.idx_pos = [0, 1]
         self.idx_vel = [2, 3]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
         )
 
     @staticmethod
@@ -558,9 +550,8 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
         x=None,
         P=None,
         t=None,
-        coast=0,
+        dt_coast=0,
         n_updates=1,
-        age=0,
         *args,
         **kwargs,
     ):
@@ -579,7 +570,7 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
         )
 
     @staticmethod
@@ -625,9 +616,8 @@ class XyFromRazTrack(_XYVxVyTrack):
         x=None,
         P=None,
         t=None,
-        coast=0,
+        dt_coast=0,
         n_updates=1,
-        age=0,
         *args,
         **kwargs,
     ):
@@ -646,7 +636,7 @@ class XyFromRazTrack(_XYVxVyTrack):
         self.idx_pos = [0, 1]
         self.idx_vel = [2, 3]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
         )
 
     @staticmethod
@@ -696,9 +686,8 @@ class XyzFromRazelTrack(_XYZVxVyVzTrack):
         x=None,
         P=None,
         t=None,
-        coast=0,
+        dt_coast=0,
         n_updates=1,
-        age=0,
         *args,
         **kwargs,
     ):
@@ -717,7 +706,7 @@ class XyzFromRazelTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
         )
 
     @staticmethod
@@ -783,9 +772,8 @@ class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
         x=None,
         P=None,
         t=None,
-        coast=0,
+        dt_coast=0,
         n_updates=1,
-        age=0,
         *args,
         **kwargs,
     ):
@@ -818,7 +806,7 @@ class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
         )
 
     @property
@@ -884,9 +872,8 @@ class BasicBoxTrack3D(_TrackBase):
         v=None,
         P=None,
         t=None,
-        coast=0,
+        dt_coast=0,
         n_updates=1,
-        age=0,
         score_force=None,
     ):
         """Box state is: [x, y, z, h, w, l, vx, vy, vz] w/ yaw as attribute"""
@@ -919,9 +906,8 @@ class BasicBoxTrack3D(_TrackBase):
             obj_type,
             ID_force,
             t,
-            coast,
+            dt_coast,
             n_updates,
-            age,
             score_force,
         )
         self.where_is_t = box3d.where_is_t
@@ -1033,9 +1019,8 @@ class BasicBoxTrack3D(_TrackBase):
                 v=self.velocity,
                 P=self.P,
                 t=self.t,
-                coast=self.coast,
+                dt_coast=self.dt_coast,
                 n_updates=self.n_updates,
-                age=self.age,
                 score_force=self.score,
             )
 
@@ -1053,9 +1038,8 @@ class BasicBoxTrack2D(_TrackBase):
         v=None,
         P=None,
         t=None,
-        coast=0,
+        dt_coast=0,
         n_updates=1,
-        age=0,
     ):
         """Box state is: [x, y, w, h, vx, vy]"""
         if v is None:
@@ -1075,7 +1059,7 @@ class BasicBoxTrack2D(_TrackBase):
         self.idx_pos = [0, 1]
         self.idx_vel = [4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, coast, n_updates, age
+            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
         )
         self.calibration = box2d.calibration
 
@@ -1203,19 +1187,12 @@ class BasicJointBoxTrack(_TrackBase):
         return self.track_3d.t
 
     @property
-    def coast(self):
-        return self.track_3d.coast
+    def dt_coast(self):
+        return self.track_3d.dt_coast
 
     @property
     def n_updates(self):
         return self.track_3d.n_updates
-
-    @property
-    def age(self):
-        try:
-            return max(self.track_2d.age, self.track_3d.age)
-        except Exception:
-            return self.track_3d.age
 
     @property
     def box2d(self):
@@ -1238,12 +1215,12 @@ class BasicJointBoxTrack(_TrackBase):
         return self.track_3d.n_updates if self.track_3d is not None else 0
 
     @property
-    def coast_2d(self):
-        return self.track_2d.coast if self.track_2d is not None else 0
+    def dt_coast_2d(self):
+        return self.track_2d.dt_coast if self.track_2d is not None else 0
 
     @property
-    def coast_3d(self):
-        return self.track_3d.coast if self.track_3d is not None else 0
+    def dt_coast_3d(self):
+        return self.track_3d.dt_coast if self.track_3d is not None else 0
 
     @property
     def reference(self):

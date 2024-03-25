@@ -1,9 +1,3 @@
-# @Author: Spencer Hallyburton <spencer>
-# @Date:   2021-07-25
-# @Filename: assignment.py
-# @Last modified by:   spencer
-# @Last modified time: 2021-08-13
-
 import itertools
 from functools import partial
 
@@ -26,6 +20,19 @@ assignments ahead of calling linear sum algorithm
 
 - clean up assignment after refactor was made to bipartite graph data structure
 """
+
+
+def build_A_from_distance(objs1, objs2, **kwargs):
+    A = np.zeros((len(objs1), len(objs2)))
+    for i, o1 in enumerate(objs1):
+        for j, o2 in enumerate(objs2):
+            try:
+                dist = o1.distance(o2, **kwargs)
+            except AttributeError:
+                dist = np.linalg.norm(o1 - o2)
+            A[i, j] = dist
+    A += 1e-8
+    return A
 
 
 def build_A_from_iou(boxes1, boxes2, **kwargs):
@@ -349,8 +356,8 @@ def jpda_single_frame_assign(
     assignments = {}
     cost = 0
     for sol, p in zip(best_sols, probs):
-        for i, j_w in sol.iterate_over("row").items():
-            j = list(j_w.keys())[0]
+        for i, j in sol.iterate_over("row").items():
+            j = j[0]
             if i not in assignments:
                 assignments[i] = {j: p}
             elif j not in assignments[i]:
@@ -381,10 +388,7 @@ def _jpda_via_combinatorics(gate_map, p_H_partial, nrows, ncols):
     ]
     likelihoods = [
         np.prod(
-            [
-                p_H_partial(i, list(j.keys())[0])
-                for i, j in sol.iterate_over("row").items()
-            ]
+            [p_H_partial(i, j[0]) for i, j in sol.iterate_over("row").items()]
             + [p_H_partial(-1, j) for j in sol.unassigned_cols]
         )
         for sol in best_sols

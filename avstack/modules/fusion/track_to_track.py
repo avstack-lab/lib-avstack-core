@@ -145,9 +145,8 @@ class CovarianceIntersectionFusionToBox(_BaseFusion):
             t = max([track.t for track in tracks])
             reference = tracks[0].reference
             obj_type = tracks[0].obj_type
-            coast = min([track.coast for track in tracks])
+            dt_coast = min([track.dt_coast for track in tracks])
             n_updates = max([track.n_updates for track in tracks])
-            age = max([track.age for track in tracks])
             attitude = tracks[0].attitude  # APPROXIMATION
 
             # wrap into expected attributes
@@ -164,9 +163,8 @@ class CovarianceIntersectionFusionToBox(_BaseFusion):
                 v=v,
                 P=P_fuse,
                 t=t,
-                coast=coast,
+                dt_coast=dt_coast,
                 n_updates=n_updates,
-                age=age,
             )
         else:
             return None

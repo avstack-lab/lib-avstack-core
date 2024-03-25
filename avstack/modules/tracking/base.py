@@ -1,3 +1,5 @@
+from typing import List
+
 import numpy as np
 
 from avstack.datastructs import DataContainer
@@ -189,6 +191,8 @@ class _TrackingAlgorithm(BaseModule):
         detections: DataContainer,
         platform: ReferenceFrame,
         change_in_place=False,
+        trks_observable: List = None,
+        check_reference: bool = True,
         *args,
         **kwargs,
     ):
@@ -197,10 +201,12 @@ class _TrackingAlgorithm(BaseModule):
         Note: detections being None means only do a prediction but don't penalize misses
         """
         t = detections.timestamp
+        if not trks_observable:
+            trks_observable = self.tracks_active
 
         # -- propagation
         for trk in self.tracks_active:
-            if platform:
+            if platform and check_reference:
                 trk.change_reference(platform, inplace=True)
             trk.predict(t)
             if self.v_max is not None:
@@ -213,7 +219,7 @@ class _TrackingAlgorithm(BaseModule):
                 detections = {"sensor_1": detections}
             for sensor, dets in detections.items():
                 # -- change to platform reference
-                if platform is not None:
+                if platform and check_reference:
                     if not change_in_place:
                         dets = [
                             det.change_reference(platform, inplace=False)
@@ -223,9 +229,8 @@ class _TrackingAlgorithm(BaseModule):
                         for det in dets:
                             det.change_reference(platform, inplace=True)
 
-                # -- assignment with active tracks
-                trks_active = self.tracks_active
-                A = self.get_assignment_matrix(dets, trks_active)
+                # -- assignment with active and observable tracks
+                A = self.get_assignment_matrix(dets, trks_observable)
                 assign_sol = gnn_single_frame_assign(
                     A, cost_threshold=self.cost_threshold
                 )
@@ -233,21 +238,21 @@ class _TrackingAlgorithm(BaseModule):
 
                 # -- update tracks with associations
                 for i_det, j_trk in assign_sol.assignment_tuples:
-                    trks_active[j_trk].update(dets[i_det].z)
+                    trks_observable[j_trk].update(dets[i_det].z)
 
                 # -- unassigned dets for new tracks
                 for i_det in assign_sol.unassigned_rows:
                     self.tracks.append(self.spawn_track_from_detection(dets[i_det]))
 
-                # -- tell unassigned tracks we missed them
+                # -- tell unassigned tracks we missed them UNLESS they're whitelisted
                 for j_trk in assign_sol.unassigned_cols:
-                    trks_active[j_trk].missed()
+                    trks_observable[j_trk].missed()
 
             # -- prune dead tracks -- only in a non-predict_only state
             self.tracks = [
                 trk
                 for trk in self.tracks
-                if (trk.coast < self.threshold_coast) and trk.active
+                if (trk.dt_coast < self.threshold_coast) and trk.active
             ]
 
         return self.tracks_confirmed
