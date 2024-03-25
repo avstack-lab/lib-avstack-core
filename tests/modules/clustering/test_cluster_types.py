@@ -23,4 +23,4 @@ def test_cluster_data_structure():
     )
     assert len(cluster) == n_objects
     assert len(set(cluster.agent_IDs)) == 1
-    assert len(cluster.get_tracks_by_agent_ID(agent_ID)) == n_objects
+    assert len(cluster.get_objects_by_agent_ID(agent_ID)) == n_objects

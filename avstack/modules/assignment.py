@@ -356,8 +356,8 @@ def jpda_single_frame_assign(
     assignments = {}
     cost = 0
     for sol, p in zip(best_sols, probs):
-        for i, j_w in sol.iterate_over("row").items():
-            j = list(j_w.keys())[0]
+        for i, j in sol.iterate_over("row").items():
+            j = j[0]
             if i not in assignments:
                 assignments[i] = {j: p}
             elif j not in assignments[i]:
@@ -388,10 +388,7 @@ def _jpda_via_combinatorics(gate_map, p_H_partial, nrows, ncols):
     ]
     likelihoods = [
         np.prod(
-            [
-                p_H_partial(i, list(j.keys())[0])
-                for i, j in sol.iterate_over("row").items()
-            ]
+            [p_H_partial(i, j[0]) for i, j in sol.iterate_over("row").items()]
             + [p_H_partial(-1, j) for j in sol.unassigned_cols]
         )
         for sol in best_sols
