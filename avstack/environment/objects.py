@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-28
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-27
-# @Description:
-"""
-
-"""
 from __future__ import annotations
 
 import itertools
@@ -22,8 +13,6 @@ from avstack.geometry import (
     Attitude,
     Box2D,
     Box3D,
-    GlobalOrigin3D,
-    PassiveReferenceFrame,
     Position,
     ReferenceFrame,
     RotationDecoder,

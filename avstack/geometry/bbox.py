@@ -20,10 +20,11 @@ from .datastructs import (
     Attitude,
     PointMatrix3D,
     Position,
+    Rotation,
     RotationDecoder,
+    Vector,
     VectorDecoder,
 )
-from .refchoc import GlobalOrigin3D, Rotation, Vector
 
 
 R_stan_to_cam = StandardCoordinates.get_conversion_matrix(CameraCoordinates)
@@ -434,13 +435,6 @@ class Box3D:
             raise NotImplementedError("Need to do this")
 
     @property
-    def center_global(self):
-        t_glob = self.t.change_reference(GlobalOrigin3D, inplace=False)
-        if self.where_is_t == "bottom":
-            t_glob.x[2] += self.h / 2  # to convert to center
-        return t_glob
-
-    @property
     def yaw(self):
         """Here, yaw is 0 forward which is NOT the KITTI standard"""
         yaw = tforms.transform_orientation(self.q.q, "quat", "euler")[2]
@@ -454,17 +448,6 @@ class Box3D:
     @property
     def corners(self):
         return compute_box_3d_corners(box3d=self)
-
-    @property
-    def corners_global(self):
-        """Compute global corners by inverting the reference"""
-        corners = self.corners
-        corners.change_reference(GlobalOrigin3D, inplace=True)
-        return corners
-
-    @property
-    def corners_global_without_pitch_roll(self):
-        raise NotImplementedError
 
     def add_noise(self, noise_variance):
         """Add noise to each component
@@ -483,16 +466,6 @@ class Box3D:
         self.w += noisy_vals[1]
         self.l += noisy_vals[2]
         self.t += np.array(noisy_vals[3:6])
-
-    def center_box(self, inplace=True):
-        assert inplace, "Only doing inplace for now"
-        if self.where_is_t == "center":
-            pass
-        else:
-            self.t.change_reference(GlobalOrigin3D, inplace=True)
-            self.t += np.array([0, 0, self.h / 2])
-            self.t.change_reference(self.reference, inplace=True)
-            self.where_is_t = "center"
 
     def change_reference(self, reference_new, inplace=True):
         if inplace:
@@ -543,10 +516,7 @@ class Box3D:
 
             if run_angle_check:
                 eps = 0.05
-                q_stand_to_box = (
-                    self.q.q * self.reference.integrate(start_at=GlobalOrigin3D).q
-                )
-                # q_stand_to_box = self.q * self.reference.q
+                q_stand_to_box = self.q.q * self.reference.integrate(start_at="world").q
                 if (abs(q_stand_to_box.x) > eps) or (abs(q_stand_to_box.y) > eps):
                     msg = (
                         f"Not a good idea to run this IoU equation"

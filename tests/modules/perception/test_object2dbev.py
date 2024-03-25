@@ -9,7 +9,7 @@
 """
 import sys
 
-from avstack.geometry import GlobalOrigin3D
+from avstack.geometry import WorldFrame
 from avstack.modules.perception import object2dbev
 from avstack.modules.perception.detections import CentroidDetection
 from avstack.sensors import LidarData
@@ -39,7 +39,7 @@ alg_name = "detector-1"
 
 def test_lidar_2d_centroid_detector():
     try:
-        platform = GlobalOrigin3D
+        platform = WorldFrame
         D = object2dbev.Lidar2dCentroidDetector()
         dets = D(pc_bev, platform, alg_name)
         assert isinstance(dets, list)

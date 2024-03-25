@@ -2,7 +2,7 @@ import numpy as np
 import quaternion
 
 from avstack.config import MODELS
-from avstack.geometry import Attitude, GlobalOrigin3D, Position, Velocity
+from avstack.geometry import Attitude, Position, Velocity, WorldFrame
 from avstack.geometry import transformations as tforms
 from avstack.sensors import DataBuffer, ImuBuffer
 
@@ -50,7 +50,7 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
         predict_model="cv",
         sigma_m=1,
         tau_m=5,
-        reference=GlobalOrigin3D,
+        reference=WorldFrame,
         *args,
         **kwargs,
     ):

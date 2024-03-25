@@ -1,7 +1,7 @@
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import GlobalOrigin3D, ReferenceFrame, Sphere
+from avstack.geometry import ReferenceFrame, Sphere, WorldFrame
 from avstack.modules.perception import detections
 from avstack.modules.tracking import MeasurementBasedMultiTracker, tracker3d
 
@@ -14,7 +14,7 @@ def test_msmt_based_multitracker():
     for i in range(n_platforms):
         platforms.append(
             ReferenceFrame(
-                x=np.array([i, 0, 0]), q=np.quaternion(1), reference=GlobalOrigin3D
+                x=np.array([i, 0, 0]), q=np.quaternion(1), reference=WorldFrame
             )
         )
         fovs.append(Sphere(radius=1))

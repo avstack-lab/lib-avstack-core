@@ -15,9 +15,9 @@ from avstack.calibration import CameraCalibration
 from avstack.geometry import (
     Attitude,
     Box3D,
-    GlobalOrigin3D,
     Position,
     ReferenceFrame,
+    WorldFrame,
     q_stan_to_cam,
 )
 
@@ -126,7 +126,7 @@ def test_object_in_fov():
 
 def test_object_in_fov_long():
     rf_ego = ReferenceFrame(
-        x=np.array([22, -10, 2]), q=np.quaternion(1), reference=GlobalOrigin3D
+        x=np.array([22, -10, 2]), q=np.quaternion(1), reference=WorldFrame
     )
     rf_cam = ReferenceFrame(x=np.array([2, 0, 0]), q=q_stan_to_cam, reference=rf_ego)
     pos = Position(x=np.array([20, 0, 0]), reference=rf_ego)

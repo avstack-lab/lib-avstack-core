@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-08-07
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-29
-# @Description:
-"""
-
-"""
 from __future__ import annotations
 
 import json
 
 import numpy as np
 
-from avstack.geometry.refchoc import ReferenceDecoder
+from avstack.geometry import ReferenceFrameDecoder
 
 
 class CalibrationEncoder(json.JSONEncoder):
@@ -52,7 +43,7 @@ class CalibrationDecoder(json.JSONDecoder):
     def object_hook(json_object):
         if "calibration" in json_object:
             json_object = json_object["calibration"]
-            reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
+            reference = json.loads(json_object["reference"], cls=ReferenceFrameDecoder)
             if json_object["version"] in (
                 "CameraCalibration",
                 "DepthCameraCalibration",

@@ -12,13 +12,11 @@ import json
 import numpy as np
 
 from avstack import calibration
-from avstack.geometry.refchoc import GlobalOrigin3D, ReferenceFrame
+from avstack.geometry import WorldFrame
 
 
 def test_encode_decode_calibation():
-    ref = ReferenceFrame(
-        x=np.random.rand(3), q=np.quaternion(1), reference=GlobalOrigin3D
-    )
+    ref = WorldFrame
     calib_1 = calibration.Calibration(ref)
     calib_2 = json.loads(calib_1.encode(), cls=calibration.CalibrationDecoder)
     assert isinstance(calib_2, type(calib_1))
@@ -26,9 +24,7 @@ def test_encode_decode_calibation():
 
 
 def test_encode_decode_camera_calibation():
-    ref = ReferenceFrame(
-        x=np.random.rand(3), q=np.quaternion(1), reference=GlobalOrigin3D
-    )
+    ref = WorldFrame
     calib_1 = calibration.CameraCalibration(
         ref, P=np.random.rand(3, 4), img_shape=(400, 500)
     )
@@ -38,9 +34,7 @@ def test_encode_decode_camera_calibation():
 
 
 def test_encode_decode_semseg_calibation():
-    ref = ReferenceFrame(
-        x=np.random.rand(3), q=np.quaternion(1), reference=GlobalOrigin3D
-    )
+    ref = WorldFrame
     calib_1 = calibration.SemanticSegmentationCalibration(
         ref,
         P=np.random.rand(3, 4),
@@ -53,9 +47,7 @@ def test_encode_decode_semseg_calibation():
 
 
 def test_encode_decode_radar_calibration():
-    ref = ReferenceFrame(
-        x=np.random.rand(3), q=np.quaternion(1), reference=GlobalOrigin3D
-    )
+    ref = WorldFrame
     calib_1 = calibration.RadarCalibration(
         ref, fov_horizontal=np.pi, fov_vertical=np.pi / 2
     )

@@ -1,6 +1,6 @@
 import sys
 
-from avstack.geometry import GlobalOrigin3D
+from avstack.geometry import WorldFrame
 from avstack.modules.clustering import Cluster, ClusterSet
 from avstack.modules.fusion import CovarianceIntersectionFusion
 from avstack.modules.tracking import grouptrack, tracker3d, tracks
@@ -22,7 +22,7 @@ def make_longitudinal_cluster_data(n_objects=4, n_agents=3, dt=0.1, n_frames=10)
                         tracks.XyzFromXyzTrack(
                             t0=timestamp,
                             xyz=get_object_global(seed=i_object).position.x,
-                            reference=GlobalOrigin3D,
+                            reference=WorldFrame,
                             obj_type=None,
                         ),
                     )
@@ -57,7 +57,7 @@ def test_grouptracking_clusters():
             clusters,
             frame=clusters.frame,
             timestamp=clusters.timestamp,
-            platform=GlobalOrigin3D,
+            platform=WorldFrame,
         )
     assert len(group_tracks) == n_objects
     for gtracks in group_tracks:

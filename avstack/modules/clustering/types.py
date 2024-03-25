@@ -4,7 +4,7 @@ from typing import List, Union
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import PassiveReferenceFrame, Position
+from avstack.geometry import Position
 
 
 class Cluster:
@@ -31,13 +31,14 @@ class Cluster:
                 except AttributeError:
                     pass
                 self.objects.append(arg[1])
-                if self.reference is None:
-                    self.reference = arg[1].reference
-                else:
-                    if isinstance(self.reference, PassiveReferenceFrame):
-                        assert self.reference == args[1].reference
-                    else:
-                        assert self.reference.allclose(arg[1].reference)
+                raise
+                # if self.reference is None:
+                #     self.reference = arg[1].reference
+                # else:
+                #     if isinstance(self.reference, ReferenceFrame):
+                #         assert self.reference == args[1].reference
+                #     else:
+                #         assert self.reference.allclose(arg[1].reference)
 
     def __str__(self) -> str:
         return "Cluster ({}, {} elements)".format(self.ID, len(self.objects))
@@ -61,13 +62,14 @@ class Cluster:
             except AttributeError:
                 pass
             self.objects.append(an_obj[1])
-            if self.reference is None:
-                self.reference = an_obj[1].reference
-            else:
-                if isinstance(self.reference, PassiveReferenceFrame):
-                    assert self.reference == an_obj[1].reference
-                else:
-                    assert self.reference.allclose(an_obj[1].reference)
+            raise
+            # if self.reference is None:
+            #     self.reference = an_obj[1].reference
+            # else:
+            #     if isinstance(self.reference, PassiveReferenceFrame):
+            #         assert self.reference == an_obj[1].reference
+            #     else:
+            #         assert self.reference.allclose(an_obj[1].reference)
 
     def centroid(self):
         """Ensure all are of the same reference"""

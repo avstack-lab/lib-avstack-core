@@ -4,7 +4,7 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
-from avstack.geometry import Box2D, Box3D, PassiveReferenceFrame, ReferenceFrame
+from avstack.geometry import Box2D, Box3D, ReferenceFrame
 from avstack.modules.perception.detections import (
     BoxDetection,
     CentroidDetection,
@@ -144,10 +144,7 @@ class _TrackingAlgorithm(BaseModule):
                     if self.check_reference:
                         err = False
                         if isinstance(det.reference, ReferenceFrame):
-                            if det.reference != trk.reference:
-                                err = True
-                        elif isinstance(det.reference, PassiveReferenceFrame):
-                            if det.reference.frame_id != trk.reference.frame_id:
+                            if det.reference.frame != trk.reference.frame:
                                 err = True
                         else:
                             raise NotImplementedError(

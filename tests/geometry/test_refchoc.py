@@ -3,13 +3,15 @@ import json
 import numpy as np
 import quaternion
 
-from avstack.geometry import q_mult_vec, q_stan_to_cam, transform_orientation
-from avstack.geometry.refchoc import (
-    GlobalOrigin3D,
+from avstack.geometry import (
     ReferenceDecoder,
     ReferenceFrame,
     Rotation,
     Vector,
+    WorldFrame,
+    q_mult_vec,
+    q_stan_to_cam,
+    transform_orientation,
 )
 
 
@@ -27,20 +29,20 @@ def q_rand():
 
 
 def test_encode_decode_reference():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf2_1 = ReferenceFrame(x_rand(), q_rand(), cf1)
     cf2_2 = json.loads(cf2_1.encode(), cls=ReferenceDecoder)
     assert cf2_1.allclose(cf2_2)
 
 
 def test_one_level_coordinate_frame():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     assert not cf1.is_global_origin
     assert cf1.level == 1
 
 
 def test_two_level_coordinate_frame():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf2 = ReferenceFrame(x_rand(), q_rand(), cf1)
     assert cf1.level == 1
     assert cf2.level == 2
@@ -56,7 +58,7 @@ def test_bad_coordinate_frame():
 
 
 def test_common_ancestor():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf2 = ReferenceFrame(x_rand(), q_rand(), cf1)
     cf3 = ReferenceFrame(x_rand(), q_rand(), cf1)
     assert cf2.common_ancestor(cf1) == cf1
@@ -64,29 +66,29 @@ def test_common_ancestor():
 
 
 def test_no_common_ancestor():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf2 = ReferenceFrame(x_rand(), q_rand(), cf1)
-    cf3 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf3 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf4 = ReferenceFrame(x_rand(), q_rand(), cf3)
-    assert cf2.common_ancestor(cf4) == GlobalOrigin3D
+    assert cf2.common_ancestor(cf4) == WorldFrame
 
 
 def test_integrate_1():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
-    cf_int = cf1.integrate(start_at=GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
+    cf_int = cf1.integrate(start_at=WorldFrame)
     assert np.allclose(cf1.x, cf_int.x)
     assert quaternion.allclose(cf1.q, cf_int.q)
 
 
 def test_integrate_2():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf2 = ReferenceFrame(x_rand(), q_rand(), cf1)
     # -- back one level
     cf_int = cf2.integrate(start_at=cf1)
     assert np.allclose(cf2.x, cf_int.x)
     assert quaternion.allclose(cf2.q, cf_int.q)
     # -- back two levels
-    cf_int = cf2.integrate(start_at=GlobalOrigin3D)
+    cf_int = cf2.integrate(start_at=WorldFrame)
     x_manual = cf1.x + q_mult_vec(cf1.q.conjugate(), cf2.x)
     q_manual = cf2.q * cf1.q
     assert np.allclose(x_manual, cf_int.x)
@@ -94,7 +96,7 @@ def test_integrate_2():
 
 
 def test_differential_1():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf2 = ReferenceFrame(x_rand(), q_rand(), cf1)
     cf_d = cf1.differential(cf2, in_self=True)
     assert np.allclose(cf2.x, cf_d.x)
@@ -102,7 +104,7 @@ def test_differential_1():
 
 
 def test_differential_2():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf2 = ReferenceFrame(x_rand(), q_rand(), cf1)
     cf3 = ReferenceFrame(x_rand(), q_rand(), cf2)
     cf_d = cf1.differential(cf3)
@@ -113,16 +115,16 @@ def test_differential_2():
 
 def test_differential_moving_frame():
     cf1 = ReferenceFrame(
-        np.array([2, 0, 0]), np.quaternion(1), GlobalOrigin3D, v=np.array([1, 0, 0])
+        np.array([2, 0, 0]), np.quaternion(1), WorldFrame, v=np.array([1, 0, 0])
     )
     cf2 = ReferenceFrame(
-        np.array([0, 2, 0]), np.quaternion(1), GlobalOrigin3D, v=np.array([0, 1, 0])
+        np.array([0, 2, 0]), np.quaternion(1), WorldFrame, v=np.array([0, 1, 0])
     )
     assert not cf1.allclose(cf2)
     cf_int = cf1.differential(cf2)
     assert np.allclose(cf_int.x, np.array([-2, 2, 0]))
     assert np.allclose(cf_int.v, np.array([-1, 1, 0]))
-    cf_int_int = cf_int.integrate(start_at=GlobalOrigin3D)
+    cf_int_int = cf_int.integrate(start_at=WorldFrame)
     assert cf_int_int.allclose(cf2)
     assert not cf_int_int.allclose(cf1)
 
@@ -133,15 +135,15 @@ def test_differential_moving_frame():
 
 
 def test_change_vector_frame():
-    v1 = Vector(x_rand(), GlobalOrigin3D)
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    v1 = Vector(x_rand(), WorldFrame)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     v1_cf1 = v1.change_reference(cf1, inplace=False)
     v1_cf1_m = q_mult_vec(cf1.q, v1.x - cf1.x)
     assert np.allclose(v1_cf1.x, v1_cf1_m)
 
 
 def test_add_vectors_same():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     v1 = Vector(x_rand(), cf1)
     v2 = Vector(x_rand(), cf1)
     v_add = v1 + v2
@@ -149,7 +151,7 @@ def test_add_vectors_same():
 
 
 def test_add_vectors_same_long():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     cf2 = ReferenceFrame(np.zeros((3,)), np.quaternion(1), cf1)
     v1 = Vector(x_rand(), cf1)
     v2 = Vector(x_rand(), cf2)
@@ -158,8 +160,8 @@ def test_add_vectors_same_long():
 
 
 def test_add_vectors_diff():
-    cf2 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
-    v1 = Vector(x_rand(), GlobalOrigin3D)
+    cf2 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
+    v1 = Vector(x_rand(), WorldFrame)
     v2 = Vector(x_rand(), cf2)
     v_add = v2 + v1  # always in the frame of the first
     v_manual = v2.x + (q_mult_vec(cf2.q, v1.x - cf2.x))
@@ -167,23 +169,23 @@ def test_add_vectors_diff():
 
 
 def test_vector_distance():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     v1 = Vector(x_rand(), cf1)
     v2 = Vector(x_rand(), cf1)
     assert np.isclose(v1.distance(v2), np.linalg.norm(v1.x - v2.x))
 
 
 def test_vector_known_frame():
-    cf1 = ReferenceFrame(np.zeros((3,)), np.quaternion(1), GlobalOrigin3D)
-    cf2 = ReferenceFrame(np.zeros((3,)), q_stan_to_cam, GlobalOrigin3D)
+    cf1 = ReferenceFrame(np.zeros((3,)), np.quaternion(1), WorldFrame)
+    cf2 = ReferenceFrame(np.zeros((3,)), q_stan_to_cam, WorldFrame)
     v1 = Vector(np.array([100.0, 0, 0]), cf1)
     v2 = v1.change_reference(cf2, inplace=False)
     assert np.allclose(v2.x, q_mult_vec(q_stan_to_cam, v1.x))
 
 
 def test_vector_reference_distance():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
-    cf2 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
+    cf2 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     v1 = Vector(x_rand(), cf1)
     d1 = v1.distance(cf1)
     assert d1 == v1.norm()
@@ -198,22 +200,20 @@ def test_vector_reference_distance():
 
 
 def test_forward_vector():
-    q1 = Rotation(
-        transform_orientation([0, 0, np.pi / 2], "euler", "quat"), GlobalOrigin3D
-    )
+    q1 = Rotation(transform_orientation([0, 0, np.pi / 2], "euler", "quat"), WorldFrame)
     assert np.allclose(q1.forward_vector, np.array([0, 1, 0]))
     assert np.allclose(q1.yaw, np.pi / 2)
 
 
 def change_rotation_frame():
-    q1 = Rotation(q_rand(), GlobalOrigin3D)
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    q1 = Rotation(q_rand(), WorldFrame)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     q1_cf1 = q1.change_reference(cf1, inplace=False)
     assert np.allclose((cf1.q * q1.q).vec, q1_cf1.vec)
 
 
 def test_compose_rotations_same():
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     q1 = Rotation(q_rand(), cf1)
     q2 = Rotation(q_rand(), cf1)
     q_comp = q2 * q1
@@ -226,7 +226,7 @@ def test_angle_between():
         e2 = [0] * 3
         e1[idx] = np.pi / 2
         e2[idx] = np.pi / 6
-        q1 = Rotation(transform_orientation(e1, "euler", "quat"), GlobalOrigin3D)
-        q2 = Rotation(transform_orientation(e2, "euler", "quat"), GlobalOrigin3D)
+        q1 = Rotation(transform_orientation(e1, "euler", "quat"), WorldFrame)
+        q2 = Rotation(transform_orientation(e2, "euler", "quat"), WorldFrame)
         assert np.isclose(q1.angle_between(q2), np.pi / 2 - np.pi / 6)
         assert np.isclose(q2.angle_between(q1), np.pi / 2 - np.pi / 6)

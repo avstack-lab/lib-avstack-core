@@ -5,8 +5,29 @@ import numpy as np
 import avstack
 
 from . import transformations as tforms
-from .base import q_mult_vec
-from .refchoc import ReferenceDecoder, ReferenceFrame, Rotation, Vector
+from .base import fastround, q_mult_vec
+from .frame import ReferenceFrame, ReferenceFrameDecoder, TransformManager
+
+
+class VectorEncoder(json.JSONEncoder):
+    def default(self, o):
+        v_dict = {
+            "x": o.x.tolist(),
+            "reference": o.reference.encode(),
+            "n_prec": o.n_prec,
+        }
+        return {type(o).__name__.lower(): v_dict}
+
+
+class RotationEncoder(json.JSONEncoder):
+    def default(self, o):
+        q_dict = {
+            "qw": o.q.w,
+            "qv": o.q.vec.tolist(),
+            "reference": o.reference.encode(),
+            "n_prec": o.n_prec,
+        }
+        return {type(o).__name__.lower(): q_dict}
 
 
 class VectorDecoder(json.JSONDecoder):
@@ -31,7 +52,7 @@ class VectorDecoder(json.JSONDecoder):
             return json_object
         if json_object is None:
             return None
-        reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
+        reference = json.loads(json_object["reference"], cls=ReferenceFrameDecoder)
         return factory(
             x=np.array(json_object["x"]),
             reference=reference,
@@ -61,12 +82,401 @@ class RotationDecoder(json.JSONDecoder):
             return json_object
         if json_object is None:
             return None
-        reference = json.loads(json_object["reference"], cls=ReferenceDecoder)
+        reference = json.loads(json_object["reference"], cls=ReferenceFrameDecoder)
         return factory(
             q=np.quaternion(json_object["qw"], *json_object["qv"]),
             reference=reference,
             n_prec=json_object["n_prec"],
         )
+
+
+class Vector:
+    def __init__(
+        self, x: np.ndarray, reference: ReferenceFrame, n_prec: int = 8
+    ) -> None:
+        self.n_prec = n_prec
+        self.x = np.asarray(x, dtype=float)
+        self.reference = reference
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        y = np.empty_like(x)
+        self._x = fastround(x, self.n_prec, y)
+
+    @property
+    def finite(self):
+        return np.all(np.isfinite(self.x))
+
+    @property
+    def reference(self):
+        return self._reference
+
+    @reference.setter
+    def reference(self, reference):
+        assert isinstance(reference, ReferenceFrame)
+        self._reference = reference
+
+    def __str__(self):
+        return f"{type(self)} - {self.x}, {self.reference}"
+
+    def __repr__(self):
+        return str(self)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __iter__(self):
+        return self.x
+
+    def __getitem__(self, key: int):
+        return self.x[key]
+
+    def __setitem__(self, key: int, value: float):
+        self.x[key] = np.round(value, self.n_prec)
+
+    def __neg__(self):
+        return self.factory()(-self.x, self.reference, n_prec=self.n_prec)
+
+    def __add__(self, other: "Vector", inplace: bool = False):
+        # Perform wrapping
+        if isinstance(other, Vector):
+            if self.reference != other.reference:
+                raise RuntimeError(
+                    f"Reference frames are not equivalent - {self.reference} vs {other.reference}"
+                )
+            other = other.x
+        elif isinstance(other, (int, np.ndarray, float)):
+            pass
+        else:
+            raise NotImplementedError(type(other))
+
+        # Perform addition
+        if inplace:
+            self.x = self.x + other
+        else:
+            return self.factory()(self.x + other, self.reference, self.n_prec)
+
+    def __sub__(self, other: "Vector"):
+        return -(-self + other)  # have to do this weird order!!
+
+    def __mul__(self, other: "Vector", inplace: bool = False):
+        # Perform wrapping
+        if isinstance(other, Vector):
+            if self.reference != other.reference:
+                raise RuntimeError(
+                    f"Reference frames are not equivalent - {self.reference} vs {other.reference}"
+                )
+            other = other.x
+        elif isinstance(other, (int, np.ndarray, float)):
+            pass
+        else:
+            raise NotImplementedError(type(other))
+
+        # Perform multiplication
+        if inplace:
+            self.x = self.x * other
+        else:
+            return self.factory()(self.x * other, self.reference, self.n_prec)
+
+    def __truediv__(self, other, inplace: bool = False):
+        # Wrapping
+        if isinstance(other, (int, np.ndarray, float)):
+            pass
+        else:
+            raise NotImplementedError(type(other))
+
+        # Perform division
+        if inplace:
+            self.x = self.x / other
+        else:
+            return self.factory()(self.x / other, self.reference, self.n_prec)
+
+    def __matmul__(self, other):
+        # Perform wrapping
+        if isinstance(other, Vector):
+            if self.reference != other.reference:
+                other = other.change_reference(self.reference, inplace=False)
+            other = other.x
+        elif isinstance(other, (np.ndarray)):
+            pass
+        else:
+            raise NotImplementedError(type(other))
+
+        # Perform dot product
+        return self.x @ other
+
+    def encode(self):
+        return json.dumps(self, cls=VectorEncoder)
+
+    def allclose(self, other: "Vector"):
+        if self.reference == other.reference:
+            return np.allclose(self.x, other.x)
+        else:
+            other = other.change_reference(self.reference, inplace=False)
+            return np.allclose(self.x, other.x)
+
+    def change_reference(
+        self,
+        tm: TransformManager,
+        reference: ReferenceFrame,
+        inplace: bool,
+        angle_only: bool = False,
+    ):
+        """Change of reference frame of a vector
+
+        Step 1: compute the differential (self to other)
+        Step 2: apply the differential to this object
+
+        self.x : x_ref1_to_point_in_ref1
+        diff.x : x_ref1_to_ref2_in_ref1
+        diff.q : q_ref1_to_ref2
+
+        x : x_ref2_to_point_in_ref2 <-- diff.q * (self.x - diff.x)
+        """
+        diff = self.reference.differential(reference, in_self=True)  # self to other
+        diff_x = self._pull_from_reference(diff)
+        if angle_only:
+            x = q_mult_vec(diff.q, self.x)
+        else:
+            x = q_mult_vec(diff.q, self.x - diff_x)
+        if inplace:
+            self.x = x
+            self.reference = reference
+        else:
+            return self.factory()(x, reference, self.n_prec)
+
+    @staticmethod
+    def factory():
+        return Vector
+
+    def _pull_from_reference(self, reference: ReferenceFrame):
+        return reference.x
+
+    def sqrt(self):
+        return np.sqrt(self.x)
+
+    def norm(self):
+        return np.linalg.norm(self.x)
+
+    def unit(self):
+        return self.factory()(self.x / np.linalg.norm(self.x), self.reference)
+
+    def distance(self, other):
+        return (self - other).norm()
+
+
+class VectorHeadTail:
+    def __init__(
+        self,
+        head: np.ndarray,
+        tail: np.ndarray,
+        reference: ReferenceFrame,
+        n_prec: int = 8,
+    ) -> None:
+        self.n_prec = n_prec
+        self.head = Vector(head, reference, n_prec=n_prec)
+        self.tail = Vector(tail, reference, n_prec=n_prec)
+
+    def change_reference(
+        self, reference: ReferenceFrame, inplace: bool, angle_only: bool = False
+    ):
+        if inplace:
+            self.head.change_reference(
+                reference, inplace=inplace, angle_only=angle_only
+            )
+            self.tail.change_reference(
+                reference, inplace=inplace, angle_only=angle_only
+            )
+        else:
+            head = self.head.change_reference(
+                reference, inplace=inplace, angle_only=angle_only
+            )
+            tail = self.head.change_reference(
+                reference, inplace=inplace, angle_only=angle_only
+            )
+            return VectorHeadTail(head.x, tail.x, reference)
+
+
+class Spherical(Vector):
+    def __init__(
+        self, x: np.ndarray, reference: ReferenceFrame, n_prec: int = 8, wrapping="v1"
+    ) -> None:
+        """
+
+        wrapping:
+            - v1: azimuth wraps to [-pi, pi]
+                  elevation wraps [-pi/2, pi/2]
+            - v2: azimuth wraps to [0, 2pi]
+                  elevation wraps to [-pi/2, pi/2]
+        """
+        super().__init__(x, reference, n_prec)
+        assert wrapping in ["v1", "v2"]
+        if self.wrapping == "v1":
+            self.wrap_az = lambda az: (az + np.pi) % (2 * np.pi) - np.pi
+            self.wrap_el = lambda el: (el + np.pi / 2) % np.pi - np.pi / 2
+        elif self.wrapping == "v2":
+            self.wrap_az = lambda az: az % (2 * np.pi)
+            self.wrap_el = lambda el: (el + np.pi / 2) % np.pi - np.pi / 2
+        else:
+            raise NotImplementedError(wrapping)
+        self.wrapping = wrapping
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        if len(x) > 1:
+            x[1] = self.wrap_az(x[1])
+        if len(x) > 2:
+            x[2] = self.wrap_el(x[2])
+        y = np.empty_like(x)
+        self._x = fastround(x, self.n_prec, y)
+
+
+class Rotation:
+    """
+    Rotation is defined as q_reference_to_object
+    """
+
+    def __init__(self, q: np.quaternion, reference: ReferenceFrame, n_prec=8) -> None:
+        self.n_prec = n_prec
+        if isinstance(q, np.quaternion):
+            pass
+        elif isinstance(q, np.ndarray) and ((q.shape == (3, 3)) or (q.shape == (2, 2))):
+            q = tforms.transform_orientation(q, "dcm", "quat")
+        else:
+            raise ValueError(f"{type(q)} must be quaternion or 3x3 or 2x2")
+        self.q = q
+        self.reference = reference
+
+    @property
+    def reference(self):
+        return self._reference
+
+    @reference.setter
+    def reference(self, reference):
+        assert isinstance(reference, ReferenceFrame)
+        self._reference = reference
+
+    @property
+    def q(self):
+        return self._q
+
+    @q.setter
+    def q(self, q):
+        y = np.empty_like(q.vec)
+        self._q = np.quaternion(
+            np.round(q.w, self.n_prec), *fastround(q.vec, self.n_prec, y)
+        )
+
+    @property
+    def qw(self):
+        return self.q.w
+
+    @property
+    def qx(self):
+        return self.q.x
+
+    @property
+    def qy(self):
+        return self.q.y
+
+    @property
+    def qz(self):
+        return self.q.z
+
+    @property
+    def R(self):
+        return tforms.transform_orientation(self.q, "quat", "dcm")
+
+    @property
+    def euler(self):
+        return tforms.transform_orientation(self.q, "quat", "euler")
+
+    @property
+    def forward_vector(self):
+        return self.R[0, :]
+
+    @property
+    def left_vector(self):
+        return self.R[1, :]
+
+    @property
+    def up_vector(self):
+        return self.R[2, :]
+
+    @property
+    def yaw(self):
+        return self.euler[2]
+
+    def conjugate(self):
+        return self.factory()(self.q.conjugate(), self.reference)
+
+    def __str__(self):
+        return f"{type(self)} - {self.q}, {self.reference}"
+
+    def __repr__(self):
+        return str(self)
+
+    def __mul__(self, other: "Rotation", inplace: bool = False):
+        if self.reference != other.reference:
+            other = other.change_reference(self.reference, inplace=False)
+        if inplace:
+            self.q = self.q * other.q
+        else:
+            return self.factory()(self.q * other.q, self.reference, self.n_prec)
+
+    def __matmul__(self, other):
+        raise NotImplementedError
+
+    def encode(self):
+        return json.dumps(self, cls=RotationEncoder)
+
+    def allclose(self, other: "Rotation"):
+        if self.reference == other.reference:
+            return np.allclose(self.q.vec, other.q.vec)
+        else:
+            other = other.change_reference(self.reference, inplace=False)
+            return np.allclose(self.q.vec, other.q.vec)
+
+    def angle_between(self, other: "Rotation"):
+        if self.reference != other.reference:
+            other = other.change_reference(self.reference, inplace=False)
+        return 2 * np.arcsin(np.linalg.norm((self.q * other.q.conjugate()).vec))
+
+    def change_reference(self, reference: ReferenceFrame, inplace: bool):
+        """Change of reference frame of a vector
+
+        Step 1: compute the differential
+        Step 2: apply the differential to this object
+        TODO: could do angles only...
+
+        self.q : q_ref1_to_point
+        diff.q : q_ref1_to_ref2
+
+        q : q_ref2_to_point <-- q_ref1_to_point * q_ref1_to_ref2.conjugate()
+        """
+        diff = self.reference.differential(reference, in_self=True)  # self to other
+        diff_q = self._pull_from_reference(diff)
+        q = self.q * diff_q.conjugate()
+        if inplace:
+            self.q = q
+            self.reference = reference
+        else:
+            return self.factory()(q, reference, self.n_prec)
+
+    def _pull_from_reference(self, reference: ReferenceFrame):
+        return reference.q
+
+    @staticmethod
+    def factory():
+        return Rotation
 
 
 class Position(Vector):

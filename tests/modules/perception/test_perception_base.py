@@ -10,7 +10,7 @@
 
 import sys
 
-from avstack.geometry import GlobalOrigin3D
+from avstack.geometry import WorldFrame
 from avstack.modules import perception
 from avstack.sensors import LidarData
 
@@ -37,6 +37,6 @@ pc_bev = LidarData(pc.timestamp, pc.frame, pc.data[:, [1, 2]], lidar_calib, 100)
 def test_percep_base():
     try:
         percep = perception.object2dbev.Lidar2dCentroidDetector()
-        output = percep(pc_bev, GlobalOrigin3D, "lidar-detector")
+        output = percep(pc_bev, WorldFrame, "lidar-detector")
     except (NameError, ModuleNotFoundError):
         pass

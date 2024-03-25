@@ -14,7 +14,7 @@ import numpy as np
 
 import avstack
 from avstack.datastructs import DataContainer
-from avstack.geometry import GlobalOrigin3D, ReferenceFrame
+from avstack.geometry import ReferenceFrame, WorldFrame
 from avstack.geometry.transformations import xyzvel_to_razelrrt
 from avstack.modules.perception.detections import BoxDetection, RazelRrtDetection
 from avstack.modules.tracking import tracker3d
@@ -95,7 +95,7 @@ def test_ab3dmot_kitti():
 
 def test_inline_razelrrt_tracker_3d():
     """test an object traveling in line with sensor"""
-    platform = GlobalOrigin3D
+    platform = WorldFrame
     tracker = tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     target_xyzvel = np.array([20, 0, 0, 30, 0, 0])
     dt = 0.1
@@ -125,7 +125,7 @@ def test_inline_razelrrt_tracker_3d():
 
 def tests_transverse_razelrrt_tracker_3d():
     """test an object traveling transverse to the sensor"""
-    platform = GlobalOrigin3D
+    platform = WorldFrame
     tracker = tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     target_xyzvel = np.array([20, 0, 0, 0, 10, 0])
     dt = 0.1
@@ -155,7 +155,7 @@ def tests_transverse_razelrrt_tracker_3d():
 
 def tests_full_razelrrt_tracker_3d():
     """test an object traveling transverse to the sensor"""
-    platform = GlobalOrigin3D
+    platform = WorldFrame
     tracker = tracker3d.BasicRazelRrtTracker(threshold_coast=5)
     target_xyzvel = np.array([20, 10, -5, 2, 10, 2.4])
     dt = 0.1
@@ -190,7 +190,7 @@ def test_box_tracker_moving_reference():
     tracker = tracker3d.BasicBoxTracker3D()
     for frame in range(frames):
         reference = ReferenceFrame(
-            box1.reference.x + v0 * dt * frame, box1.reference.q, GlobalOrigin3D
+            box1.reference.x + v0 * dt * frame, box1.reference.q, WorldFrame
         )
         dets = DataContainer(
             frame=frame,
@@ -210,7 +210,7 @@ def test_box_tracker_moving_reference():
 
 
 # def test_basic_joint_box_tracker():
-#     platform = GlobalOrigin3D
+#     platform = WorldFrame
 #     n_targs = 4
 #     dt = 0.10
 #     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
@@ -251,7 +251,7 @@ def test_box_tracker_moving_reference():
 
 # def test_eagermot_associations():
 #     dt = 0.10
-#     platform = GlobalOrigin3D
+#     platform = WorldFrame
 #     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(dt=dt, n_frames=4)
 #     tracker = tracker3d.EagermotTracker()
 #     trk_base = tracker.tracker
@@ -319,7 +319,7 @@ def test_box_tracker_moving_reference():
 
 
 # def test_eagermot_performance():
-#     platform = GlobalOrigin3D
+#     platform = WorldFrame
 #     n_targs = 4
 #     dt = 0.10
 #     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(

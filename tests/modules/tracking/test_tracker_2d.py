@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 
-from avstack.geometry import GlobalOrigin3D
+from avstack.geometry import WorldFrame
 from avstack.modules.tracking import tracker2d
 
 
@@ -22,7 +22,7 @@ def test_raz_tracker():
 
 
 def test_basic_box_tracker_2d():
-    platform = GlobalOrigin3D
+    platform = WorldFrame
     n_targs = 4
     dt = 0.05
     dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(

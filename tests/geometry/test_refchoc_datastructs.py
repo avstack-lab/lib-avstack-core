@@ -5,11 +5,11 @@ from avstack.geometry import (
     Acceleration,
     AngularVelocity,
     Attitude,
-    GlobalOrigin3D,
     PointMatrix3D,
     Position,
     ReferenceFrame,
     Velocity,
+    WorldFrame,
     q_mult_vec,
     q_stan_to_cam,
     transform_orientation,
@@ -32,7 +32,7 @@ def get_random_frame():
         acc=x_rand(),
         q=q_rand(),
         ang=q_rand(),
-        reference=GlobalOrigin3D,
+        reference=WorldFrame,
     )
 
 
@@ -75,7 +75,7 @@ def get_calib_cam():
     # -- set up camera calibration -- from FOV of 90 degrees
     x1 = np.array([0, 0, 0])
     q1 = q_stan_to_cam
-    O_cam = ReferenceFrame(x1, q1, GlobalOrigin3D)
+    O_cam = ReferenceFrame(x1, q1, WorldFrame)
     P = np.array(
         [[800.0, 0.0, 800.0, 0.0], [0.0, 800.0, 450.0, 0.0], [0.0, 0.0, 1.0, 0.0]]
     )
@@ -85,15 +85,15 @@ def get_calib_cam():
 
 
 def test_point_matrix_3d():
-    calib1 = Calibration(GlobalOrigin3D)
+    calib1 = Calibration(WorldFrame)
     pm = PointMatrix3D(np.random.rand(100, 3), calibration=calib1)
-    cf1 = ReferenceFrame(x_rand(), q_rand(), GlobalOrigin3D)
+    cf1 = ReferenceFrame(x_rand(), q_rand(), WorldFrame)
     pm_cf1 = pm.change_reference(cf1, inplace=False)
     assert np.allclose(pm_cf1.x, q_mult_vec(cf1.q, pm.x - cf1.x))
 
 
 def test_project_3d_to_2d():
-    calib1 = Calibration(GlobalOrigin3D)
+    calib1 = Calibration(WorldFrame)
     pm_3d = PointMatrix3D(np.random.rand(100, 3), calibration=calib1)
     calib_cam = get_calib_cam()
     pm_2d = pm_3d.project_to_2d(calib_cam)
@@ -101,7 +101,7 @@ def test_project_3d_to_2d():
 
 
 def test_project_3d_to_2d_2():
-    calib1 = Calibration(GlobalOrigin3D)
+    calib1 = Calibration(WorldFrame)
     pm_3d = PointMatrix3D(np.array([[100, 0, 0]]), calibration=calib1)
     calib_cam = get_calib_cam()
     pm_2d = pm_3d.project_to_2d(calib_cam)
@@ -109,8 +109,8 @@ def test_project_3d_to_2d_2():
 
 
 def test_point_matrix_2d_angles():
-    R1 = ReferenceFrame(np.zeros((3,)), np.quaternion(1), reference=GlobalOrigin3D)
-    R2 = ReferenceFrame(np.zeros((3,)), q_stan_to_cam, reference=GlobalOrigin3D)
+    R1 = ReferenceFrame(np.zeros((3,)), np.quaternion(1), reference=WorldFrame)
+    R2 = ReferenceFrame(np.zeros((3,)), q_stan_to_cam, reference=WorldFrame)
     P = np.array(
         [[800.0, 0.0, 800.0, 0.0], [0.0, 800.0, 450.0, 0.0], [0.0, 0.0, 1.0, 0.0]]
     )
@@ -130,7 +130,7 @@ def test_project_to_camera_halves_same_ReferenceFrame():
     calib_cam = get_calib_cam()
     x1 = np.array([0, 0, 0])
     q2 = np.quaternion(1)
-    O_pts = ReferenceFrame(x1, q2, GlobalOrigin3D)
+    O_pts = ReferenceFrame(x1, q2, WorldFrame)
 
     # -- make all points (in front only)
     pts_all = 2 * (np.random.rand(1000, 3) - 0.5) * np.array([10, 10, 2]) + np.array(
@@ -171,7 +171,7 @@ def test_project_to_camera_halves_same_ReferenceFrame():
 
 
 def test_filter_point_matrix():
-    calib1 = Calibration(GlobalOrigin3D)
+    calib1 = Calibration(WorldFrame)
     pm_3d = PointMatrix3D(np.random.rand(100, 3), calibration=calib1)
     mask = np.random.rand(100) < 0.25
     pm_3d_2 = pm_3d.filter(mask)

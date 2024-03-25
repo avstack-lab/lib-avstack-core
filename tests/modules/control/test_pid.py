@@ -15,10 +15,10 @@ from avstack.geometry import (
     Acceleration,
     AngularVelocity,
     Attitude,
-    GlobalOrigin3D,
     Pose,
     Position,
     Velocity,
+    WorldFrame,
     bbox,
 )
 from avstack.geometry import transformations as tforms
@@ -38,8 +38,8 @@ def test_pid_base():
 
 
 def test_vehicle_pid_control():
-    pos = Position(np.zeros((3,)), GlobalOrigin3D)
-    rot = Attitude(np.quaternion(1), GlobalOrigin3D)
+    pos = Position(np.zeros((3,)), WorldFrame)
+    rot = Attitude(np.quaternion(1), WorldFrame)
     box_obj = bbox.Box3D(pos, rot, [2, 2, 5])
     ego_state = VehicleState("car")
     lat = {"K_P": 1.5, "K_D": 0.02, "K_I": 0.01}
@@ -55,15 +55,15 @@ def test_vehicle_pid_control():
     lane_width = 3.7
     yaw = lambda t: 1 / 4 * np.sin(t / 3)
 
-    pos = Position(np.zeros(3), GlobalOrigin3D)
+    pos = Position(np.zeros(3), WorldFrame)
     rot = Attitude(
         tforms.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
-        GlobalOrigin3D,
+        WorldFrame,
     )
     v = 10
-    vel = Velocity(v * rot.forward_vector, GlobalOrigin3D)
-    acc = Acceleration(np.zeros(3), GlobalOrigin3D)
-    ang_vel = AngularVelocity(np.quaternion(*np.zeros(3)), GlobalOrigin3D)
+    vel = Velocity(v * rot.forward_vector, WorldFrame)
+    acc = Acceleration(np.zeros(3), WorldFrame)
+    ang_vel = AngularVelocity(np.quaternion(*np.zeros(3)), WorldFrame)
 
     # Run looop
     pos_all = []
@@ -73,9 +73,9 @@ def test_vehicle_pid_control():
         # -- reference
         rot = Attitude(
             tforms.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
-            GlobalOrigin3D,
+            WorldFrame,
         )
-        vel_new = Velocity(v * rot.forward_vector, GlobalOrigin3D)
+        vel_new = Velocity(v * rot.forward_vector, WorldFrame)
         pos = pos + (vel + vel_new) * dt / 2
         vel = vel_new
 
@@ -87,7 +87,7 @@ def test_vehicle_pid_control():
             tforms.transform_orientation(
                 [0, 0, yaw(t) + np.random.randn(1)], "euler", "dcm"
             ),
-            GlobalOrigin3D,
+            WorldFrame,
         )
         ego_state.set(t, pos_ego, box_obj, vel_ego, acc_ego, rot_ego, ang_vel)
 

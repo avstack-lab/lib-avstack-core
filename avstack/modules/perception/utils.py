@@ -1,6 +1,6 @@
 import numpy as np
 
-from avstack.geometry import Attitude, GlobalOrigin3D, Position, q_cam_to_stan
+from avstack.geometry import Attitude, Position, q_cam_to_stan
 from avstack.geometry.bbox import Box2D, Box3D, SegMask2D
 from avstack.geometry.transformations import transform_orientation
 
@@ -260,10 +260,12 @@ def convert_mm3d_to_avstack(
 
                 # -- pruning
                 # ---- too low
-                if prune_low and (
-                    box3d.t.change_reference(GlobalOrigin3D, inplace=False)[2]
-                    < thresh_low
-                ):
+                if prune_low:
+                    raise
+                    # and (
+                    #     box3d.t.change_reference(GlobalOrigin3D, inplace=False)[2]
+                    #     < thresh_low
+                    # ):
                     if verbose:
                         print("Box registered uncharacteristically low...skipping")
                     continue

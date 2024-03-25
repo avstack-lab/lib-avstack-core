@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 from avstack.config import MODELS, ConfigDict
 from avstack.datastructs import DataContainer
-from avstack.geometry import GlobalOrigin3D
+from avstack.geometry import WorldFrame
 from avstack.utils.decorators import apply_hooks
 
 from ..base import BaseModule
@@ -19,7 +19,7 @@ from ..base import BaseModule
 
 @MODELS.register_module()
 class MeasurementBasedMultiTracker(BaseModule):
-    def __init__(self, tracker, name="multitracker", platform=GlobalOrigin3D, **kwargs):
+    def __init__(self, tracker, name="multitracker", platform=WorldFrame, **kwargs):
         super().__init__(name=name, **kwargs)
         self.tracker = (
             MODELS.build(tracker) if isinstance(tracker, ConfigDict) else tracker

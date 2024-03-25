@@ -14,7 +14,7 @@ import numpy as np
 import quaternion
 
 from avstack.environment.objects import VehicleState
-from avstack.geometry import Attitude, GlobalOrigin3D, Position, Velocity
+from avstack.geometry import Attitude, Position, Velocity, WorldFrame
 from avstack.geometry import transformations as tforms
 from avstack.modules import localization
 from avstack.sensors import GpsData, ImuData
@@ -38,9 +38,7 @@ def run_gps_localization(L, ego_true):
     while t <= t_max:
         ego_true = F(dt) @ ego_true
         z = ego_true[:3] + rs * np.random.randn(3)
-        gps_data = GpsData(
-            t, frame, {"z": z, "R": R}, GlobalOrigin3D, gps_ID, levar=levar
-        )
+        gps_data = GpsData(t, frame, {"z": z, "R": R}, WorldFrame, gps_ID, levar=levar)
         ego_est = L(t, gps_data)
         if ego_est is not None:
             last_ego = ego_est
@@ -94,7 +92,7 @@ def run_gps_imu_localization(L, trajectory, origin_ecef):
                     t,
                     i,
                     {"dt": dt, "dv": dv, "dth": dth, "R": R_imu},
-                    GlobalOrigin3D,
+                    WorldFrame,
                     imu_ID,
                 )
                 t_last_imu = t
@@ -103,7 +101,7 @@ def run_gps_imu_localization(L, trajectory, origin_ecef):
             if (t - t_last_gps) >= (gps_interval - 1e-5):
                 z = r_k + rs_gps * np.random.randn(3)
                 gps_data = GpsData(
-                    t, i, {"z": z, "R": R_gps}, GlobalOrigin3D, gps_ID, levar=levar
+                    t, i, {"z": z, "R": R_gps}, WorldFrame, gps_ID, levar=levar
                 )
                 t_last_gps = t
             else:
@@ -129,7 +127,7 @@ def run_gps_imu_localization(L, trajectory, origin_ecef):
 
 
 def test_basic_kalman_filter_with_init():
-    reference = GlobalOrigin3D
+    reference = WorldFrame
     ego_init = VehicleState("Car")
     rate = 10
     t_init = 0.0
@@ -153,7 +151,7 @@ def test_basic_kalman_filter_with_init():
 def tests_gps_imu_kalman_filter():
     with open("tests/data/vehicle_truth_data_v1.p", "rb") as f:
         trajectory = pickle.load(f)
-    reference = GlobalOrigin3D
+    reference = WorldFrame
     ego_init = VehicleState("Car")
     t_init = trajectory["t"][0]
     # random origin

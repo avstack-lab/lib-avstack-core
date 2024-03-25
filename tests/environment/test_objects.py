@@ -15,7 +15,7 @@ from copy import deepcopy
 import numpy as np
 
 from avstack.environment.objects import ObjectStateDecoder
-from avstack.geometry import Attitude, GlobalOrigin3D, ReferenceFrame
+from avstack.geometry import Attitude, ReferenceFrame, WorldFrame
 from avstack.geometry import transformations as tforms
 
 
@@ -33,7 +33,7 @@ def test_change_reference():
     O_new = ReferenceFrame(
         np.array([1, 2, 3]),
         tforms.transform_orientation([1, -1, 0.1], "euler", "quat"),
-        GlobalOrigin3D,
+        WorldFrame,
     )
     obj1 = get_ego(seed=1)
     O_orig = deepcopy(obj1.reference)

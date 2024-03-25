@@ -8,10 +8,9 @@ from avstack.environment.objects import ObjectState
 from avstack.geometry import (
     Attitude,
     BoxDecoder,
-    PassiveReferenceFrame,
     Position,
-    ReferenceDecoder,
     ReferenceFrame,
+    ReferenceFrameDecoder,
     Velocity,
 )
 from avstack.geometry.bbox import Box2D, Box3D
@@ -72,7 +71,7 @@ class TrackDecoder(json.JSONDecoder):
     def object_hook(json_object):
         try:
             reference = json.loads(
-                list(json_object.values())[0]["reference"], cls=ReferenceDecoder
+                list(json_object.values())[0]["reference"], cls=ReferenceFrameDecoder
             )
         except Exception:
             pass
@@ -215,7 +214,7 @@ class _TrackBase:
 
     @reference.setter
     def reference(self, reference):
-        if not isinstance(reference, (PassiveReferenceFrame, ReferenceFrame)):
+        if not isinstance(reference, ReferenceFrame):
             raise ValueError(f"Reference frame type not appropriate, {type(reference)}")
         self._reference = reference
 

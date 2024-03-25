@@ -8,10 +8,9 @@ from avstack.datastructs import DataContainerDecoder
 from avstack.geometry import (
     Box2D,
     Box3D,
-    PassiveReferenceFrame,
     Position,
-    ReferenceDecoder,
     ReferenceFrame,
+    ReferenceFrameDecoder,
     SegMask2D,
     Vector,
     bbox,
@@ -50,7 +49,7 @@ class DetectionDecoder(json.JSONDecoder):
     def object_hook(json_object):
         try:
             reference = json.loads(
-                list(json_object.values())[0]["reference"], cls=ReferenceDecoder
+                list(json_object.values())[0]["reference"], cls=ReferenceFrameDecoder
             )
         except Exception:
             pass
@@ -121,7 +120,7 @@ class Detection_:
 
     @reference.setter
     def reference(self, reference):
-        assert isinstance(reference, (PassiveReferenceFrame, ReferenceFrame))
+        assert isinstance(reference, ReferenceFrame)
         self._reference = reference
 
     @property

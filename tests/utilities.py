@@ -25,12 +25,12 @@ from avstack.geometry import (
     AngularVelocity,
     Attitude,
     Box3D,
-    GlobalOrigin3D,
     PointMatrix3D,
     Position,
     ReferenceFrame,
     Vector,
     Velocity,
+    WorldFrame,
     q_stan_to_cam,
 )
 from avstack.geometry import transformations as tforms
@@ -40,10 +40,10 @@ from avstack.sensors import ImageData, LidarData, RadarDataRazelRRT
 
 # -- calibration data
 ref_lidar = ReferenceFrame(
-    x=np.array([0, 0, 1.73]), q=np.quaternion(1), reference=GlobalOrigin3D
+    x=np.array([0, 0, 1.73]), q=np.quaternion(1), reference=WorldFrame
 )
 ref_camera = ReferenceFrame(
-    x=np.array([0.27, 0.06, 1.65]), q=q_stan_to_cam, reference=GlobalOrigin3D
+    x=np.array([0.27, 0.06, 1.65]), q=q_stan_to_cam, reference=WorldFrame
 )
 P_cam = np.array(
     [
@@ -65,9 +65,9 @@ KITTI_data_dir = os.path.join(os.getcwd(), "data/test_data/object/training")
 def get_lane_lines():
     pt_pairs_left = [(i, 4) for i in range(20)]
     pt_pairs_right = [(i + 1, -3) for i in range(20)]
-    pts_left = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_left]
+    pts_left = [Vector([x, y, 0], WorldFrame) for x, y in pt_pairs_left]
     lane_left = detections.LaneLineInSpace(pts_left)
-    pts_right = [Vector([x, y, 0], GlobalOrigin3D) for x, y in pt_pairs_right]
+    pts_right = [Vector([x, y, 0], WorldFrame) for x, y in pt_pairs_right]
     lane_right = detections.LaneLineInSpace(pts_right)
     return [lane_left, lane_right]
 

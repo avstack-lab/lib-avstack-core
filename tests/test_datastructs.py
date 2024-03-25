@@ -14,7 +14,7 @@ import time
 import numpy as np
 
 import avstack.datastructs as ds
-from avstack.geometry import GlobalOrigin3D, ReferenceFrame
+from avstack.geometry import ReferenceFrame, WorldFrame
 
 
 sys.path.append("tests/")
@@ -63,7 +63,7 @@ def test_priority_max_heap_full_circular():
 
 def get_object_dc():
     frame = timestamp = source_identifier = 0
-    data = [get_object_global(seed=i, reference=GlobalOrigin3D) for i in range(4)]
+    data = [get_object_global(seed=i, reference=WorldFrame) for i in range(4)]
     dc = ds.DataContainer(
         frame=frame, timestamp=timestamp, data=data, source_identifier=source_identifier
     )
@@ -73,14 +73,14 @@ def get_object_dc():
 def test_datacontainer_apply():
     dc1 = get_object_dc()
     ref2 = ReferenceFrame(
-        x=np.array([1, 2, 3]), q=np.quaternion(1), reference=GlobalOrigin3D
+        x=np.array([1, 2, 3]), q=np.quaternion(1), reference=WorldFrame
     )
 
     # check the initial
     ids = []
     id_dc1 = id(dc1)
     for item in dc1:
-        assert item.reference == GlobalOrigin3D
+        assert item.reference == WorldFrame
         ids.append(id(item))
 
     # use the apply version -- inplace
@@ -101,7 +101,7 @@ def test_datacontainer_apply():
 def test_datacontainer_apply_and_return():
     dc1 = get_object_dc()
     ref2 = ReferenceFrame(
-        x=np.array([1, 2, 3]), q=np.quaternion(1), reference=GlobalOrigin3D
+        x=np.array([1, 2, 3]), q=np.quaternion(1), reference=WorldFrame
     )
     dc2 = dc1.apply_and_return("change_reference", reference=ref2, inplace=False)
     assert id(dc1) != id(dc2)

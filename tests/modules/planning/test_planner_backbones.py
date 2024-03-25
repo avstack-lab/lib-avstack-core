@@ -12,7 +12,7 @@ import sys
 import numpy as np
 
 from avstack.environment import EnvironmentState
-from avstack.geometry import GlobalOrigin3D, Vector
+from avstack.geometry import Vector, WorldFrame
 from avstack.modules import planning
 from avstack.modules.perception.detections import LaneLineInSpace
 from avstack.modules.planning.vehicle import components
@@ -23,9 +23,9 @@ from utilities import get_ego, get_object_global
 
 
 def get_lanes():
-    l_pts = [Vector([i, 4, 0], GlobalOrigin3D) for i in range(20)]
+    l_pts = [Vector([i, 4, 0], WorldFrame) for i in range(20)]
     left_lane = LaneLineInSpace(l_pts)
-    r_pts = [Vector([i, -3, 0], GlobalOrigin3D) for i in range(20)]
+    r_pts = [Vector([i, -3, 0], WorldFrame) for i in range(20)]
     right_lane = LaneLineInSpace(r_pts)
     return [[left_lane, right_lane]]
 

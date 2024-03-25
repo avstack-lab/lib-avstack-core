@@ -1,6 +1,6 @@
 import sys
 
-from avstack.geometry import GlobalOrigin3D
+from avstack.geometry import WorldFrame
 from avstack.modules.tracking import tracks
 
 
@@ -8,7 +8,7 @@ sys.path.append("tests/")
 
 
 def test_score_tracks():
-    reference = GlobalOrigin3D
+    reference = WorldFrame
     razel = [100, 0, 0]
     track = tracks.XyzFromRazelTrack(
         t0=0.0, razel=razel, reference=reference, obj_type="car"
@@ -21,7 +21,7 @@ def test_score_tracks():
 
 
 def test_coast():
-    reference = GlobalOrigin3D
+    reference = WorldFrame
     razel = [100, 0, 0]
     track = tracks.XyzFromRazelTrack(
         t0=0.0, razel=razel, reference=reference, obj_type="car"

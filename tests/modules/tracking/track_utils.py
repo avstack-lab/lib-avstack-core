@@ -4,7 +4,7 @@ from copy import deepcopy
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import GlobalOrigin3D
+from avstack.geometry import WorldFrame
 from avstack.geometry.transformations import cartesian_to_spherical, xyzvel_to_razelrrt
 from avstack.modules.perception.detections import (
     BoxDetection,
@@ -106,7 +106,7 @@ def make_kitti_2d_3d_tracking_data(dt=0.1, n_frames=10, n_targs=4):
 
 
 def run_tracker(tracker, det_type, dt=0.25):
-    platform = GlobalOrigin3D
+    platform = WorldFrame
     dets_all = make_kitti_tracking_data(
         dt=dt, n_frames=20, n_targs=4, det_type=det_type
     )

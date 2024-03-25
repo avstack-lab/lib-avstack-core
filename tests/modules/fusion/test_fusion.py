@@ -11,18 +11,18 @@ from copy import deepcopy
 
 import numpy as np
 
-from avstack.geometry import Attitude, GlobalOrigin3D, Position, bbox
+from avstack.geometry import Attitude, Position, WorldFrame, bbox
 from avstack.modules import clustering, fusion, tracking
 
 
 def get_n_tracks(n_tracks=2):
     t0 = 0.0
     obj_type = "car"
-    pos = Position(np.array([-1, -2, -3]), GlobalOrigin3D)
-    rot = Attitude(np.quaternion(1), GlobalOrigin3D)
+    pos = Position(np.array([-1, -2, -3]), WorldFrame)
+    rot = Attitude(np.quaternion(1), WorldFrame)
     box1 = bbox.Box3D(pos, rot, [2, 2, 4])
     tracks = [
-        tracking.tracker3d.BasicBoxTrack3D(t0, deepcopy(box1), GlobalOrigin3D, obj_type)
+        tracking.tracker3d.BasicBoxTrack3D(t0, deepcopy(box1), WorldFrame, obj_type)
         for _ in range(n_tracks)
     ]
     return tracks
