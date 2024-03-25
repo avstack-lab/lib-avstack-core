@@ -86,7 +86,7 @@ class SensorData:
         self.calibration.save_to_file(os.path.join(folder, "calib-" + filename))
         self.save_to_file(os.path.join(folder, "data-" + filename), **kwargs)
 
-    def save_to_file(self, filename):
+    def save_to_file(self, filename, **kwargs):
         """Each derived class saves data"""
         raise NotImplementedError
 
@@ -179,8 +179,8 @@ class ImageData(SensorData):
     def __init__(self, *args, source_name="image", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
-    def save_to_file(self, filepath):
-        save_image_file(self.rgb_image, filepath, self.source_name)
+    def save_to_file(self, filepath, **kwargs):
+        save_image_file(self.rgb_image, filepath, self.source_name, **kwargs)
 
     @property
     def rgb_image(self):
@@ -218,8 +218,8 @@ class SemanticSegmentationImageData(ImageData):
         super().__init__(*args, source_name=source_name, **kwargs)
         self._rgb_image = None
 
-    def save_to_file(self, filepath):
-        save_image_file(self.data, filepath, self.source_name)
+    def save_to_file(self, filepath, **kwargs):
+        save_image_file(self.data, filepath, self.source_name, **kwargs)
 
     @property
     def rgb_image(self):
@@ -293,8 +293,8 @@ class DepthImageData(SensorData):
                 raise NotImplementedError
         return self.depth_in_meters
 
-    def save_to_file(self, filepath):
-        save_image_file(self.data, filepath, self.source_name)
+    def save_to_file(self, filepath, **kwargs):
+        save_image_file(self.data, filepath, self.source_name, **kwargs)
 
     def view(self, axis=False, extent=None):
         """View image using matplotlib"""
@@ -400,7 +400,9 @@ class LidarData(SensorData):
         calib_new = LidarCalibration(reference=ref_new)
         return self.project(calib_new)
 
-    def save_to_file(self, filepath: str, as_ply: bool = False):
+    def save_to_file(
+        self, filepath: str, as_ply: bool = False, **kwargs
+    ):
         if isinstance(self.data, (PointMatrix3D, np.ndarray)):
             data = self.data if isinstance(self.data, np.ndarray) else self.data.x
             data = data.astype(np.float32)
@@ -600,7 +602,7 @@ class _RadarData(SensorData):
     def __init__(self, *args, source_name="radar", **kwargs):
         super().__init__(*args, **kwargs, source_name=source_name)
 
-    def save_to_file(self, filepath: str):
+    def save_to_file(self, filepath: str, **kwargs):
         """Saves radar detection information in a numpy array"""
         if isinstance(self.data, np.ndarray):
             if not filepath.endswith(".txt"):
@@ -690,7 +692,7 @@ class RadarDataXYZRRT(_RadarData):
 
 
 def save_image_file(
-    data: np.ndarray, filepath: str, is_depth: bool = False, ext: str = ".png"
+    data: np.ndarray, filepath: str, is_depth: bool = False, ext: str = ".png", **kwargs
 ):
     """Saves image to a file with opencv
 
