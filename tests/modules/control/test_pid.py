@@ -1,26 +1,13 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-06
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-08
-# @Description:
-"""
-
-"""
-
 import numpy as np
 
 from avstack.geometry import (
-    Acceleration,
-    AngularVelocity,
-    Attitude,
+    BoundingBox3D,
     Pose,
-    Position,
-    Velocity,
+    Rotation,
+    Vector,
     WorldFrame,
-    bbox,
+    conversions,
 )
-from avstack.geometry import transformations as tforms
 from avstack.modules import control
 from avstack.modules.planning import Waypoint, WaypointPlan
 from avstack.objects import VehicleState
@@ -38,9 +25,9 @@ def test_pid_base():
 
 
 def test_vehicle_pid_control():
-    pos = Position(np.zeros((3,)), WorldFrame)
-    rot = Attitude(np.quaternion(1), WorldFrame)
-    box_obj = bbox.Box3D(pos, rot, [2, 2, 5])
+    pos = Vector(np.zeros((3,)), WorldFrame)
+    rot = Rotation(np.quaternion(1), WorldFrame)
+    box_obj = BoundingBox3D(pos, rot, [2, 2, 5])
     ego_state = VehicleState("car")
     lat = {"K_P": 1.5, "K_D": 0.02, "K_I": 0.01}
     lon = {"K_P": 1.0, "K_D": 0.01, "K_I": 0.05}
@@ -55,15 +42,15 @@ def test_vehicle_pid_control():
     lane_width = 3.7
     yaw = lambda t: 1 / 4 * np.sin(t / 3)
 
-    pos = Position(np.zeros(3), WorldFrame)
-    rot = Attitude(
-        tforms.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
+    pos = Vector(np.zeros(3), WorldFrame)
+    rot = Rotation(
+        conversions.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
         WorldFrame,
     )
     v = 10
-    vel = Velocity(v * rot.forward_vector, WorldFrame)
-    acc = Acceleration(np.zeros(3), WorldFrame)
-    ang_vel = AngularVelocity(np.quaternion(*np.zeros(3)), WorldFrame)
+    vel = Vector(v * rot.forward_vector, WorldFrame)
+    acc = Vector(np.zeros(3), WorldFrame)
+    ang_vel = Vector(np.zeros(3), WorldFrame)
 
     # Run looop
     pos_all = []
@@ -71,11 +58,11 @@ def test_vehicle_pid_control():
     while t < tmax:
         t += dt
         # -- reference
-        rot = Attitude(
-            tforms.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
+        rot = Rotation(
+            conversions.transform_orientation([0, 0, yaw(t)], "euler", "dcm"),
             WorldFrame,
         )
-        vel_new = Velocity(v * rot.forward_vector, WorldFrame)
+        vel_new = Vector(v * rot.forward_vector, WorldFrame)
         pos = pos + (vel + vel_new) * dt / 2
         vel = vel_new
 
@@ -83,8 +70,8 @@ def test_vehicle_pid_control():
         pos_ego = pos + np.random.randn(3)
         vel_ego = vel + np.random.randn(3)
         acc_ego = acc
-        rot_ego = Attitude(
-            tforms.transform_orientation(
+        rot_ego = Rotation(
+            conversions.transform_orientation(
                 [0, 0, yaw(t) + np.random.randn(1)], "euler", "dcm"
             ),
             WorldFrame,

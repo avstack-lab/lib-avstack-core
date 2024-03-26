@@ -12,12 +12,17 @@ from avstack.calibration import (
 )
 from avstack.geometry import (
     BoundingBox3D,
+    BoxSize,
+    FrameTransform,
     PointMatrix3D,
-    ReferenceFrame,
+    Pose,
     Rotation,
+    Transform,
+    TransformManager,
     Vector,
     WorldFrame,
     conversions,
+    q_stan_to_cam,
 )
 from avstack.modules.perception import detections
 from avstack.objects import VehicleState
@@ -25,12 +30,20 @@ from avstack.sensors import ImageData, LidarData, RadarDataRazelRRT
 
 
 # -- calibration data
-ref_lidar = ReferenceFrame(
-    x=np.array([0, 0, 1.73]), q=np.quaternion(1), reference=WorldFrame
+tm = TransformManager()
+
+lidar_tform = Transform(x=np.array([0, 0, 1.73]), q=np.quaternion(1))
+lidar_frame = FrameTransform(
+    from_frame="world", to_frame="lidar", transform=lidar_tform
 )
-ref_camera = ReferenceFrame(
-    x=np.array([0.27, 0.06, 1.65]), q=q_stan_to_cam, reference=WorldFrame
+tm.add_transform(lidar_frame)
+
+camera_tform = Transform(x=np.array([0.27, 0.06, 1.65]), q=q_stan_to_cam)
+camera_frame = FrameTransform(
+    from_frame="world", to_frame="camera", transform=lidar_tform
 )
+tm.add_transform(camera_frame)
+
 P_cam = np.array(
     [
         [7.215377000000e02, 0.000000000000e00, 6.095593000000e02, 4.485728000000e01],
@@ -40,10 +53,12 @@ P_cam = np.array(
 )
 
 img_shape = (375, 1242, 3)
-camera_calib = CameraCalibration(ref_camera, P_cam, img_shape)
-box_calib = Calibration(ref_camera)
-lidar_calib = LidarCalibration(ref_lidar)
-radar_calib = RadarCalibration(ref_lidar, fov_horizontal=np.pi, fov_vertical=np.pi / 2)
+camera_calib = CameraCalibration(camera_frame, P_cam, img_shape)
+box_calib = Calibration(camera_frame)
+lidar_calib = LidarCalibration(lidar_frame)
+radar_calib = RadarCalibration(
+    lidar_frame, fov_horizontal=np.pi, fov_vertical=np.pi / 2
+)
 
 KITTI_data_dir = os.path.join(os.getcwd(), "data/test_data/object/training")
 
@@ -58,28 +73,30 @@ def get_lane_lines():
     return [lane_left, lane_right]
 
 
-def get_ego(seed, reference=ref_camera):
+def get_ego(seed, reference=camera_frame):
     np.random.seed(seed)
-    rot = Attitude(q_stan_to_cam, reference)
-    pos = Position(np.random.rand(3), reference)
+    rot = Rotation(q_stan_to_cam, reference)
+    pos = Vector(np.random.rand(3), reference)
     hwl = [1, 2, 4]
-    box = Box3D(pos, rot, hwl)  # box in local coordinates
-    vel = Velocity(np.random.rand(3), reference)
-    acc = Acceleration(np.random.rand(3), reference)
-    ang = AngularVelocity(np.quaternion(1), reference)
+    pose = Pose(pos, rot)
+    box_size = BoxSize(hwl)
+    box = BoundingBox3D(pose, box_size)  # box in local coordinates
+    vel = Vector(np.random.rand(3), reference)
+    acc = Vector(np.random.rand(3), reference)
+    ang = Vector(np.zeros(3), reference)
     ego_init = VehicleState("car")
     ego_init.set(0, pos, box, vel, acc, rot, ang)
     return ego_init
 
 
-def get_object_global(seed, reference=ref_camera):
+def get_object_global(seed, reference=camera_frame):
     np.random.seed(seed)
-    pos_obj = Position(10 * np.random.rand(3), reference)
-    rot_obj = Attitude(q_stan_to_cam, reference)
-    box_obj = Box3D(pos_obj, rot_obj, [2, 2, 5])  # box in local coordinates
-    vel_obj = Velocity(10 * np.random.rand(3), reference)
-    acc_obj = Acceleration(np.random.rand(3), reference)
-    ang_obj = AngularVelocity(np.quaternion(1), reference)
+    pos_obj = Vector(10 * np.random.rand(3), reference)
+    rot_obj = Rotation(q_stan_to_cam, reference)
+    box_obj = BoundingBox3D(pos_obj, rot_obj, [2, 2, 5])  # box in local coordinates
+    vel_obj = Vector(10 * np.random.rand(3), reference)
+    acc_obj = Vector(np.random.rand(3), reference)
+    ang_obj = Vector(np.zeros(3), reference)
     obj = VehicleState("car")
     obj.set(0, pos_obj, box_obj, vel_obj, acc_obj, rot_obj, ang_obj)
     return obj
@@ -119,7 +136,7 @@ def get_radar_data(t, frame, radar_ID=0):
     return rad
 
 
-def get_test_sensor_data(frame=1000, reference=ref_camera):
+def get_test_sensor_data(frame=1000, reference=camera_frame):
     sys.path.append(KITTI_data_dir)
     obj = VehicleState("car", ID=1)
 
@@ -135,7 +152,9 @@ def get_test_sensor_data(frame=1000, reference=ref_camera):
         conversions.transform_orientation([0, 0, yaw], "euler", "quat"),
         reference=reference,
     )
-    box_3d = BoundingBox3D(position, attitude, [h, w, l])
+    pose = Pose(position, attitude)
+    box_size = BoxSize(h, w, l)
+    box_3d = BoundingBox3D(pose, box_size)
     vel = acc = ang = None
     obj.set(
         t=t,
@@ -148,7 +167,7 @@ def get_test_sensor_data(frame=1000, reference=ref_camera):
     )
 
     # -- sensor data
-    box_2d = box_3d.project_to_2d_bbox(camera_calib)
+    box_2d = camera_calib.project_3d_box_to_2d(box_3d)
     pc = get_lidar_data(t, frame)
     img = get_image_data(t, frame)
     rad = get_radar_data(t, frame)

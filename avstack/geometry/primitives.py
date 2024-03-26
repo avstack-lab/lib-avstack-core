@@ -12,9 +12,9 @@ from .frame import WorldFrame
 
 
 class Vector:
-    def __init__(self, x: np.ndarray, frame: "ReferenceFrame" = WorldFrame):
-        self.x = x
-        self.reference = frame
+    def __init__(self, x: np.ndarray, reference: "ReferenceFrame" = WorldFrame):
+        self.x = np.asarray(x)
+        self.reference = reference
 
     def copy(self):
         return Vector(self.x.copy(), self.frame)
@@ -26,14 +26,14 @@ class Vector:
         T: "FrameTransform" = None,
     ):
         if not T:
-            T = tm.get_transform(from_frame=self.frame, to_stamp=stamp)
+            T = tm.get_transform(from_frame=self.frame, to_frame=frame)
         raise NotImplementedError
 
 
 class Rotation:
-    def __init__(self, q: np.array, frame: "ReferenceFrame" = WorldFrame):
+    def __init__(self, q: np.array, reference: "ReferenceFrame" = WorldFrame):
         self.q = q
-        self.reference = frame
+        self.reference = reference
 
     def copy(self):
         return Rotation(self.q.copy(), self.frame)
@@ -45,7 +45,7 @@ class Rotation:
         T: "FrameTransform" = None,
     ):
         if not T:
-            T = tm.get_transform(from_frame=self.frame, to_stamp=stamp)
+            T = tm.get_transform(from_frame=self.frame, to_frame=frame)
         raise NotImplementedError
 
 
@@ -53,22 +53,28 @@ class Pose:
     def __init__(self, position: "Vector", attitude: "Rotation"):
         self.position = position
         self.attitude = attitude
-        if position.frame != attitude.frame:
-            raise FrameEquivalenceError(position.frame, attitude.frame)
+        if position.reference != attitude.reference:
+            raise FrameEquivalenceError(position.reference, attitude.reference)
+
+    @property
+    def reference(self):
+        return self.position.reference
 
     def copy(self):
         return Pose(self.position.copy(), self.attitude.copy())
 
-    def change_reference(self, frame: "ReferenceFrame", tm: "TransformManager"):
-        T = tm.get_transform(from_frame=self.frame, to_stamp=stamp)  # for efficiency
-        self.position.change_reference(frame, tm, T=T)
-        self.attitude.change_reference(frame, tm, T=T)
+    def change_reference(self, reference: "ReferenceFrame", tm: "TransformManager"):
+        T = tm.get_transform(
+            from_frame=self.reference, to_frame=reference
+        )  # for efficiency
+        self.position.change_reference(reference, tm, T=T)
+        self.attitude.change_reference(reference, tm, T=T)
 
 
 class PointMatrix:
-    def __init__(self, x: np.ndarray, frame: "ReferenceFrame") -> None:
+    def __init__(self, x: np.ndarray, reference: "ReferenceFrame") -> None:
         self.x = x
-        self.reference = frame
+        self.reference = reference
 
     @property
     def x(self):
@@ -91,7 +97,7 @@ class PointMatrix:
         return self.x[indices]
 
     def copy(self):
-        return self.__class__(self.x.copy(), self.frame)
+        return self.__class__(self.x.copy(), self.reference)
 
 
 class PointMatrix3D(PointMatrix):

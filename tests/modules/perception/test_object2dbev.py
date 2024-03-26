@@ -1,17 +1,8 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-04-08
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-08-09
-# @Description:
-"""
-
-"""
 import sys
 
 from avstack.geometry import WorldFrame
 from avstack.modules.perception import object2dbev
-from avstack.modules.perception.detections import CentroidDetection
+from avstack.modules.perception.detections import CartesianDetection
 from avstack.sensors import LidarData
 
 
@@ -43,6 +34,6 @@ def test_lidar_2d_centroid_detector():
         D = object2dbev.Lidar2dCentroidDetector()
         dets = D(pc_bev, platform, alg_name)
         assert isinstance(dets, list)
-        assert isinstance(dets[0], CentroidDetection)
+        assert isinstance(dets[0], CartesianDetection)
     except (ModuleNotFoundError, NameError):
         pass

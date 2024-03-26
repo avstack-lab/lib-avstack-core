@@ -1,20 +1,9 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-20
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-08-25
-# @Description:
-"""
-
-"""
-
 import pickle
 
 import numpy as np
 import quaternion
 
-from avstack.geometry import Attitude, Position, Velocity, WorldFrame
-from avstack.geometry import transformations as tforms
+from avstack.geometry import Rotation, Vector, WorldFrame, conversions
 from avstack.modules import localization
 from avstack.objects import VehicleState
 from avstack.sensors import GpsData, ImuData
@@ -78,7 +67,7 @@ def run_gps_imu_localization(L, trajectory, origin_ecef):
             q_N_2_Bk = quaternion.from_rotation_vector(
                 np.array([0, 0, np.pi / 180 * trajectory["yaw"][i]])
             )
-            q_E_2_N = tforms.get_q_ecef_to_ned((r_k, "ecef"))
+            q_E_2_N = conversions.get_q_ecef_to_ned((r_k, "ecef"))
             q_E_2_Bk = q_N_2_Bk * q_E_2_N
 
             # -- make sensor data
@@ -87,7 +76,7 @@ def run_gps_imu_localization(L, trajectory, origin_ecef):
                 dt = t - t_last_imu
                 dv = v_k - v_km1
                 q_Bkm1_2_Bk = q_E_2_Bk * q_E_2_Bkm1.conjugate()
-                dth = tforms.transform_orientation(q_Bkm1_2_Bk, "quat", "euler")
+                dth = conversions.transform_orientation(q_Bkm1_2_Bk, "quat", "euler")
                 imu_data = ImuData(
                     t,
                     i,
@@ -135,11 +124,11 @@ def test_basic_kalman_filter_with_init():
     att = np.eye(3)
     ego_init.set(
         t=0,
-        position=Position(ego_true[:3], reference),
+        position=Vector(ego_true[:3], reference),
         box=None,
-        velocity=Velocity(ego_true[3:6], reference),
+        velocity=Vector(ego_true[3:6], reference),
         acceleration=None,
-        attitude=Attitude(att, reference),
+        attitude=Rotation(att, reference),
         angular_velocity=None,
     )
     L = localization.BasicGpsKinematicKalmanLocalizer(
@@ -155,21 +144,21 @@ def tests_gps_imu_kalman_filter():
     ego_init = VehicleState("Car")
     t_init = trajectory["t"][0]
     # random origin
-    origin_ecef = tforms.transform_point(np.array([0, 0, 0]), "lla", "ecef")[:, 0]
+    origin_ecef = conversions.transform_point(np.array([0, 0, 0]), "lla", "ecef")[:, 0]
     pos = origin_ecef + np.array(
         [trajectory["x"][0], trajectory["y"][0], trajectory["z"][0]]
     )
     vel = np.array([trajectory["vx"][0], trajectory["vy"][0], trajectory["vz"][0]])
-    att = tforms.transform_orientation(
+    att = conversions.transform_orientation(
         np.array([0, 0, np.pi / 180 * trajectory["yaw"][0]]), "euler", "dcm"
     )
     ego_init.set(
         t=0,
-        position=Position(pos, reference),
+        position=Vector(pos, reference),
         box=None,
-        velocity=Velocity(vel, reference),
+        velocity=Vector(vel, reference),
         acceleration=None,
-        attitude=Attitude(att, reference),
+        attitude=Rotation(att, reference),
         angular_velocity=None,
     )
     L = localization.BasicGpsImuErrorStateKalmanLocalizer(

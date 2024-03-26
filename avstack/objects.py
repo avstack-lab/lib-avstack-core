@@ -7,7 +7,14 @@ from enum import IntEnum
 
 import numpy as np
 
-from avstack.geometry import ReferenceFrame, conversions
+from avstack.geometry import (
+    BoundingBox2D,
+    BoundingBox3D,
+    ReferenceFrame,
+    Rotation,
+    Vector,
+    conversions,
+)
 from avstack.maskfilters import box_in_fov, filter_points_in_box
 
 
@@ -70,7 +77,7 @@ class ObjectStateDecoder(json.JSONDecoder):
                 t=json_object["t"],
                 box=None
                 if json_object["box"] is None
-                else json.loads(json_object["box"], cls=bbox.BoundingBoxDecoder),
+                else json.loads(json_object["box"], cls=BoundingBoxDecoder),
                 position=None
                 if json_object["position"] is None
                 else json.loads(json_object["position"], cls=VectorDecoder),
@@ -188,12 +195,12 @@ class ObjectState:
     def set(
         self,
         t,
-        position: Position,
-        box: Box2D | Box3D,
-        velocity: Velocity = None,
-        acceleration: Acceleration = None,
-        attitude: Attitude = None,
-        angular_velocity: AngularVelocity = None,
+        position: Vector,
+        box: BoundingBox2D | BoundingBox3D,
+        velocity: Vector = None,
+        acceleration: Vector = None,
+        attitude: Rotation = None,
+        angular_velocity: Vector = None,
         occlusion=Occlusion.UNKNOWN,
         visible_fraction: float = None,
     ):
@@ -202,11 +209,11 @@ class ObjectState:
         self.visible_fraction = visible_fraction
 
         # -- position
-        assert isinstance(position, (Position, NoneType)), type(position)
+        assert isinstance(position, (Vector, NoneType)), type(position)
         self.position = position
 
         # -- bbox
-        assert isinstance(box, (Box2D, Box3D, NoneType)), type(box)
+        assert isinstance(box, (BoundingBox2D, BoundingBox3D, NoneType)), type(box)
         self.box = box
         if self.box is not None:
             if self.box.obj_class is None:
@@ -215,21 +222,19 @@ class ObjectState:
                 self.box.ID = self.ID
 
         # -- velocity
-        assert isinstance(velocity, (Velocity, NoneType)), type(velocity)
+        assert isinstance(velocity, (Vector, NoneType)), type(velocity)
         self.velocity = velocity
 
         # -- accel
-        assert isinstance(acceleration, (Acceleration, NoneType)), type(acceleration)
+        assert isinstance(acceleration, (Vector, NoneType)), type(acceleration)
         self.acceleration = acceleration
 
         # -- attitude
-        assert isinstance(attitude, (Attitude, NoneType)), type(attitude)
+        assert isinstance(attitude, (Rotation, NoneType)), type(attitude)
         self.attitude = attitude  # world 2 body
 
         # -- angular vel
-        assert isinstance(angular_velocity, (AngularVelocity, NoneType)), type(
-            angular_velocity
-        )
+        assert isinstance(angular_velocity, (Vector, NoneType)), type(angular_velocity)
         self.angular_velocity = angular_velocity
 
     def distance(self, other, check_reference: bool = True) -> float:

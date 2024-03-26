@@ -14,10 +14,13 @@ class ReferenceFrameDecoder:
 
 
 class TransformManager:
-    def add_transform(self, from_frame, to_frame) -> "FrameTransform":
-        raise NotImplementedError
+    def __init__(self):
+        self.transforms = [WorldFrame]
 
-    def get_transform(self, from_frame, to_frame) -> "FrameTransform":
+    def add_transform(self, transform: "FrameTransform"):
+        self.transforms.append(transform)
+
+    def get_transform(self, from_frame, to_frame, time) -> "FrameTransform":
         raise NotImplementedError
 
 

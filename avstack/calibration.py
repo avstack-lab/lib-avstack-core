@@ -4,7 +4,13 @@ import json
 
 import numpy as np
 
-from avstack.geometry import ReferenceFrameDecoder
+from avstack.exceptions import FrameEquivalenceError
+from avstack.geometry import (
+    BoundingBox2Dxyxy,
+    BoundingBox3D,
+    ReferenceFrameDecoder,
+    conversions,
+)
 
 
 class CalibrationEncoder(json.JSONEncoder):
@@ -217,6 +223,63 @@ class CameraCalibration(Calibration):
 
     def allclose(self, other: CameraCalibration):
         return self.frame.allclose(other.reference) and np.allclose(self.P, other.P)
+
+    def project_3d_box_to_2d(self, box: BoundingBox3D):
+        """
+        Squeeze:
+        Using the squeeze via-line method, the following combinations of points
+        must be checked
+
+              0-----3
+             -     --
+            -     - -
+           -     -  -
+          -     -   -
+         -     -    -
+        1-----2     7
+        -     -    -
+        -     -   -
+        -     -  -
+        -     - -
+        -     --
+        5-----6
+
+
+        All pairs:
+        0 -- 1
+        0 -- 3
+        0 -- 4
+        1 -- 2
+        1 -- 5
+        2 -- 3
+        2 -- 6
+        3 -- 7
+        4 -- 5
+        4 -- 7
+        5 -- 6
+        6 -- 7
+        """
+        # Get 3D box points
+        if box.reference != self.reference:
+            raise FrameEquivalenceError(box.reference, self.reference)
+        box3d_pts_3d = box.corners
+
+        # Project into image plane
+        corners_3d_in_image = conversions.project_to_image(box3d_pts_3d, self.P)
+
+        # Get mins and maxes to make 2D bbox
+        xmin, xmax = np.min(corners_3d_in_image[:, 0]), np.max(
+            corners_3d_in_image[:, 0]
+        )
+        ymin, ymax = np.min(corners_3d_in_image[:, 1]), np.max(
+            corners_3d_in_image[:, 1]
+        )
+        return BoundingBox2Dxyxy(
+            np.array([xmin, ymin, xmax, ymax]),
+            reference=self.reference,
+            obj_class=box.obj_class,
+            ID=box.ID,
+        )
 
 
 _carla_semseg_labels_colors = [

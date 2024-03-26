@@ -1,18 +1,9 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-28
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-08
-# @Description:
-"""
-
-"""
 import json
 
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import Attitude, Box3D, Position, Vector, WorldFrame
+from avstack.geometry import Vector, WorldFrame
 from avstack.modules.perception import detections
 
 

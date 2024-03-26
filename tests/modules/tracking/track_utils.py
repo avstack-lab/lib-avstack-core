@@ -5,10 +5,10 @@ import numpy as np
 
 from avstack.datastructs import DataContainer
 from avstack.geometry import WorldFrame
-from avstack.geometry.transformations import cartesian_to_spherical, xyzvel_to_razelrrt
+from avstack.geometry.conversions import cartesian_to_spherical, xyzvel_to_razelrrt
 from avstack.modules.perception.detections import (
     BoxDetection,
-    CentroidDetection,
+    CartesianDetection,
     RazDetection,
     RazelDetection,
     RazelRrtDetection,
@@ -60,7 +60,7 @@ def make_kitti_tracking_data(
                     centroid = det.box3d.t.x[:2]
                 else:
                     centroid = det.box3d.t.x
-                det = CentroidDetection(name_3d, centroid, reference, det.obj_type)
+                det = CartesianDetection(name_3d, centroid, reference, det.obj_type)
             elif det_type == "raz":
                 razel = cartesian_to_spherical(det.box3d.t.x)
                 det = RazDetection(name_3d, razel[:2], reference, det.obj_type)
