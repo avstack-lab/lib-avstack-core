@@ -1,7 +1,7 @@
 import numpy as np
 
 from avstack.config import MODELS
-from avstack.geometry import Box2D
+from avstack.geometry import BoundingBox2Dxyxy
 
 from ._sort import Sort
 from .base import _TrackingAlgorithm
@@ -22,13 +22,13 @@ class PassthroughTracker2D(_TrackingAlgorithm):
         tracks = []
         for det in detections:
             trk = BasicBoxTrack2D(
-                t0=detections.timestamp,
+                t0=detections.stamp,
                 box2d=det.box2d,
-                obj_type=det.obj_type,
+                obj_class=det.obj_class,
                 ID_force=None,
                 v=None,
                 P=np.eye(6),  # fake this
-                t=detections.timestamp,
+                t=detections.stamp,
                 coast=0,
                 n_updates=1,
                 age=1,
@@ -64,10 +64,10 @@ class BasicXyTracker(_BaseCenterTracker):
 
     def spawn_track_from_detection(self, detection):
         return XyFromXyTrack(
-            t0=self.timestamp,
+            t0=self.stamp,
             xy=detection.xy,
             reference=detection.reference,
-            obj_type=detection.obj_type,
+            obj_class=detection.obj_class,
         )
 
 
@@ -77,10 +77,10 @@ class BasicRazTracker(_BaseCenterTracker):
 
     def spawn_track_from_detection(self, detection):
         return XyFromRazTrack(
-            t0=self.timestamp,
+            t0=self.stamp,
             raz=detection.raz,
             reference=detection.reference,
-            obj_type=detection.obj_type,
+            obj_class=detection.obj_class,
         )
 
 
@@ -110,10 +110,10 @@ class BasicBoxTracker2D(_BaseBoxTracker2D):
 
     def spawn_track_from_detection(self, detection):
         return BasicBoxTrack2D(
-            t0=self.timestamp,
+            t0=self.stamp,
             box2d=detection.box2d,
             reference=detection.reference,
-            obj_type=detection.obj_type,
+            obj_class=detection.obj_class,
         )
 
 
@@ -151,17 +151,17 @@ class SortTracker2D(_TrackingAlgorithm):
         # inputs wrap to SORT format
         dets_sort = [det.box2d.box2d + [float(det.score)] for det in detections]
         calibs = [det.box2d.calibration for det in detections]
-        obj_types = [det.obj_type for det in detections]
-        ts = [detections.timestamp] * len(detections)
-        _, trackers = self.sort_algorithm.update(dets_sort, calibs, obj_types, ts)
+        obj_classs = [det.obj_class for det in detections]
+        ts = [detections.stamp] * len(detections)
+        _, trackers = self.sort_algorithm.update(dets_sort, calibs, obj_classs, ts)
         # outputs wrap to AVstack format
         tracks_avstack = []
         for tracker in trackers:
-            box2d = Box2D(tracker.get_state()[0, :], tracker.calibration)
+            box2d = BoundingBox2Dxyxy(tracker.get_state()[0, :], tracker.frame)
             trk = BasicBoxTrack2D(
                 t0=tracker.t0,
                 box2d=box2d,
-                obj_type=tracker.obj_type,
+                obj_class=tracker.obj_class,
                 ID_force=tracker.id,
                 v=tracker.kf.x[4:6, 0],
                 P=np.eye(6),  # fake this
@@ -169,7 +169,7 @@ class SortTracker2D(_TrackingAlgorithm):
                 coast=tracker.time_since_update,
                 n_updates=tracker.hits,
                 age=tracker.age,
-                reference=tracker.calibration.reference,
+                frame=tracker.frame,
             )
             tracks_avstack.append(trk)
         return tracks_avstack

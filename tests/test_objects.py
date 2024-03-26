@@ -14,9 +14,9 @@ from copy import deepcopy
 
 import numpy as np
 
-from avstack.environment.objects import ObjectStateDecoder
 from avstack.geometry import Attitude, ReferenceFrame, WorldFrame
 from avstack.geometry import transformations as tforms
+from avstack.objects import ObjectStateDecoder
 
 
 sys.path.append("tests/")

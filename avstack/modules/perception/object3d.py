@@ -6,7 +6,6 @@ from cv2 import imwrite
 
 from avstack.config import MODELS
 from avstack.datastructs import DataContainer
-from avstack.geometry import Box3D
 from avstack.modules.perception import detections, utils
 from avstack.modules.perception.base import _MMObjectDetector, _PerceptionAlgorithm
 
@@ -33,14 +32,12 @@ class GroundTruth3DObjectDetector(_PerceptionAlgorithm):
                         self.MODE,
                         obj_in_ego.box,
                         obj_in_ego.box.reference,
-                        obj.obj_type,
+                        obj.obj_class,
                     )
                 else:
                     raise NotImplementedError(obj)
                 dets.append(det)
-        return DataContainer(
-            ground_truth.frame, ground_truth.timestamp, dets, identifier
-        )
+        return DataContainer(ground_truth.frame, ground_truth.stamp, dets, identifier)
 
 
 @MODELS.register_module()
@@ -57,24 +54,24 @@ class Passthrough3DObjectDetector(_PerceptionAlgorithm):
                     source_identifier=self.MODE,
                     box=obj,
                     reference=obj.reference,
-                    obj_type=obj.obj_type,
+                    obj_class=obj.obj_class,
                 )
             elif hasattr(obj, "box"):
                 det = detections.BoxDetection(
                     source_identifier=self.MODE,
                     box=obj.box,
                     reference=obj.reference,
-                    obj_type=obj.obj_type,
+                    obj_class=obj.obj_class,
                 )
             else:
-                det = detections.CentroidDetection(
+                det = detections.CartesianDetection(
                     centroid=obj.x,
                     source_identifier=self.MODE,
                     reference=obj.reference,
-                    obj_type=obj.obj_type if hasattr(obj, "obj_type") else None,
+                    obj_class=obj.obj_class if hasattr(obj, "obj_class") else None,
                 )
             dets.append(det)
-        return DataContainer(data.frame, data.timestamp, dets, identifier)
+        return DataContainer(data.frame, data.stamp, dets, identifier)
 
 
 # ===========================================================================
@@ -136,7 +133,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             prune_close=(self.model_name in ["pgd"]),
             **kwargs,
         )
-        return DataContainer(data.frame, data.timestamp, detections, identifier)
+        return DataContainer(data.frame, data.stamp, detections, identifier)
 
     @staticmethod
     def run_mm_inference(inference_detector, model, data, input_data, eval_method):

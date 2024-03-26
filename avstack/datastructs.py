@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-04-21
-# @Last Modified by:   spencer@primus
-# @Last Modified date: 2022-09-29
-# @Description:
-"""
-Custom data structures. Some based on the heapq library.
-"""
 from __future__ import annotations
 
 import heapq
@@ -17,6 +8,8 @@ from functools import total_ordering
 from typing import Any
 
 import numpy as np
+
+from .time import Stamp, StampDecoder
 
 
 def is_iterable(item):
@@ -184,7 +177,7 @@ class PriorityQueue(_Priority):
             try:
                 heapq.heappush(self.heap, (self.mult * priority, item))
             except TypeError as e:
-                print(priority, item, item.source_identifier)
+                print(priority, item, item.identifier)
                 raise e
         else:
             # highest multiplied will be removed
@@ -234,7 +227,7 @@ class PriorityQueue(_Priority):
         try:
             priority, item = heapq.heappushpop(self.heap, (self.mult * priority, item))
         except TypeError as e:
-            print(priority, item, item.source_identifier)
+            print(priority, item, item.identifier)
             raise e
         return self.mult * priority, item
 
@@ -589,7 +582,7 @@ class DataManager:
             if isinstance(data, list):
                 raise TypeError("Cannot process list in data manager")
             else:
-                ID = ID if ID else data.source_identifier
+                ID = ID if ID else data.identifier
                 if ID not in self.data:
                     self.data[ID] = DataBucket(
                         ID,
@@ -672,7 +665,7 @@ class DataBucket(PriorityQueue):
     A priority queue with some sugar on top
 
     Attributes:
-        source_identifier (string):
+        identifier (string):
             The identifier of this data bucket. Should be a unique string
         max_size (int):
             Maximum number of elements to be stored in the queue
@@ -691,7 +684,7 @@ class DataBucket(PriorityQueue):
 
     def __init__(
         self,
-        source_identifier: str,
+        identifier: str,
         max_size: int = 10,
         empty_returns_none: bool = True,
         max_heap: bool = False,
@@ -703,14 +696,14 @@ class DataBucket(PriorityQueue):
             max_heap=max_heap,
             circular=circular,
         )
-        self.source_identifier = source_identifier
+        self.identifier = identifier
 
     def push(self, data, item=None):
-        if hasattr(data, "timestamp"):
+        if hasattr(data, "stamp"):
             assert (
-                data.source_identifier == self.source_identifier
-            ), f"{data.source_identifier} needs to match {self.source_identifier}"
-            super(DataBucket, self).push(data.timestamp, data)
+                data.identifier == self.identifier
+            ), f"{data.identifier} needs to match {self.identifier}"
+            super(DataBucket, self).push(data.stamp.stamp, data)
         else:
             if item is not None:
                 priority = data
@@ -724,9 +717,8 @@ class DataBucket(PriorityQueue):
 class DataContainerEncoder(json.JSONEncoder):
     def default(self, o):
         dc_dict = {
-            "frame": o.frame,
-            "timestamp": o.timestamp,
-            "source_identifier": o.source_identifier,
+            "stamp": o.stamp.encode(),
+            "identifier": o.identifier,
             "data": [d.encode() for d in o.data],
         }
         return {"datacontainer": dc_dict}
@@ -742,12 +734,11 @@ class DataContainerDecoder(json.JSONDecoder):
         if "datacontainer" in json_object:
             json_object = json_object["datacontainer"]
             return DataContainer(
-                frame=json_object["frame"],
-                timestamp=json_object["timestamp"],
+                stamp=json.loads(json_object["stamp"], cls=StampDecoder),
                 data=[
                     json.loads(d, cls=self.data_decoder) for d in json_object["data"]
                 ],
-                source_identifier=json_object["source_identifier"],
+                identifier=json_object["identifier"],
             )
         else:
             return json_object
@@ -758,30 +749,27 @@ class DataContainer:
 
     For example, a collection of detection results can be stored
     in a data container. Anything in a data container is assumed (forced)
-    to have the same "fundamentals" which includes frame, timestamp, and
+    to have the same "fundamentals" which includes stamp, and
     source identifier.
 
     Attributes:
-        frame (int):
-            Frame that the data were captured
-        timestamp (float):
-            Timestamp that the data were captured
+        stamp (Stamp):
+            stamp that the data were captured
         data (iterable):
             The collection of data (e.g., a list of detections)
-        source_identifier (string):
+        identifier (string):
             The identifier of the source of data
     """
 
     TYPE = "DataContainer"
 
-    def __init__(self, frame: int, timestamp: float, data: Any, source_identifier: str):
-        self.frame = int(frame)
-        self.timestamp = float(timestamp)
+    def __init__(self, data: Any, identifier: str, stamp: "Stamp"):
+        self.stamp = stamp
         self.data = data
-        self.source_identifier = str(source_identifier)
+        self.identifier = str(identifier)
 
     def __str__(self):
-        return f"{len(self.data)} elements at frame {self.frame}, time {self.timestamp}, ID: {self.source_identifier}\n{self.data}"
+        return f"{len(self.data)} elements at stamp {self.stamp}, ID: {self.identifier}\n{self.data}"
 
     def __repr__(self):
         return self.__str__()
@@ -805,47 +793,35 @@ class DataContainer:
         if isinstance(other, DataContainer):
             self._check_fundamentals(other)
             return DataContainer(
-                self.frame,
-                self.timestamp,
                 self.data + other.data,
-                self.source_identifier,
+                self.identifier,
+                self.stamp,
             )
         elif isinstance(other, list):
-            return DataContainer(
-                self.frame, self.timestamp, self.data + other, self.source_identifier
-            )
+            return DataContainer(self.data + other, self.identifier, self.stamp)
         else:
             raise NotImplementedError(f"Cannot add type {type(other)} to {self.TYPE}")
 
     def __lt__(self, other):
-        if self.timestamp != other.timestamp:
-            return self.timestamp < other.timestamp
+        if self.stamp != other.stamp:
+            return self.stamp < other.stamp
         else:
             if len(self) != len(other):
                 return len(self) < len(other)
             else:
-                return hash(self.source_identifier) < hash(other.source_identifier)
+                return hash(self.identifier) < hash(other.identifier)
 
     @property
-    def frame(self):
-        return self._frame
+    def stamp(self):
+        return self._stamp
 
-    @frame.setter
-    def frame(self, frame):
-        assert frame >= 0
-        self._frame = frame
-
-    @property
-    def timestamp(self):
-        return self._timestamp
-
-    @timestamp.setter
-    def timestamp(self, timestamp):
-        if not isinstance(timestamp, (int, float, np.int64, np.float64)):
+    @stamp.setter
+    def stamp(self, stamp):
+        if not isinstance(stamp, (Stamp)):
             raise TypeError(
-                f"Input timestamp of type {type(timestamp)} is not of an acceptable type"
+                f"Input stamp of type {type(stamp)} is not of an acceptable type"
             )
-        self._timestamp = timestamp
+        self._stamp = stamp
 
     def encode(self):
         return json.dumps(self, cls=DataContainerEncoder)
@@ -879,18 +855,15 @@ class DataContainer:
                 method_func = getattr(item, method)
                 data.append(method_func(*args, **kwargs))
         return type(self)(
-            frame=self.frame,
-            timestamp=self.timestamp,
+            stamp=self.stamp,
             data=data,
-            source_identifier=self.source_identifier,
+            identifier=self.identifier,
         )
 
     def _check_fundamentals(self, other):
         if isinstance(other, DataContainer):
-            if (self.frame != other.frame) or (self.timestamp != other.timestamp):
-                raise RuntimeError(
-                    f"Mismatch in frame or timestamp -- ({self.frame}, {self.timestamp}, ({other.frame}, {other.timestamp})"
-                )
+            if self.stamp != other.stamp:
+                raise RuntimeError(f"Mismatch stamp -- ({self.stamp}, {other.stamp})")
         else:
             raise NotImplementedError
 

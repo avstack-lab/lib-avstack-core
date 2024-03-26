@@ -102,7 +102,7 @@ class MidasDepthEstimator(_PerceptionAlgorithm):
 
         # store output
         img_out = DepthImageData(
-            timestamp=data.timestamp,
+            stamp=data.stamp,
             frame=data.frame,
             data=prediction,
             encoding="midas",

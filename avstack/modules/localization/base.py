@@ -105,6 +105,6 @@ class GroundTruthLocalizer(_LocalizationAlgorithm):
         super().__init__(t_init, ego_init, rate, *args, **kwargs)
 
     def execute(self, t, ground_truth, *args, **kwargs):
-        assert t == ground_truth.timestamp, (t, ground_truth.timestamp)
-        self.assign_from_ego(ground_truth.timestamp, ground_truth.ego_state)
+        assert t == ground_truth.stamp, (t, ground_truth.stamp)
+        self.assign_from_ego(ground_truth.stamp, ground_truth.ego_state)
         return ground_truth.ego_state

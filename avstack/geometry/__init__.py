@@ -1,83 +1,44 @@
-import quaternion
-
-from .base import q_mult_vec
-from .bbox import Box2D, Box3D, BoxDecoder, SegMask2D
-from .coordinates import CameraCoordinates, StandardCoordinates
-from .datastructs import (
-    Acceleration,
-    AngularVelocity,
-    Attitude,
+from .bbox import (
+    BoundingBox2D,
+    BoundingBox2Dcwh,
+    BoundingBox2Dxyxy,
+    BoundingBox3D,
+    BoundingBoxDecoder,
+    BoxSize,
+)
+from .frame import (
+    ReferenceFrame,
+    ReferenceFrameDecoder,
+    TransformManager,
+    TransformManagerDecoder,
+    WorldFrame,
+)
+from .primitives import (
+    PointMatrix,
     PointMatrix2D,
     PointMatrix3D,
     Pose,
-    Position,
-    ReferenceFrame,
-    ReferenceFrameDecoder,
     Rotation,
-    RotationDecoder,
-    Twist,
     Vector,
-    VectorDecoder,
-    VectorHeadTail,
-    Velocity,
 )
-from .fov import Circle, Shape, Sphere, Vesica, Wedge
-from .frame import ReferenceFrame, WorldFrame
-
-# from .refchoc import (
-#     GlobalOrigin2D,
-#     GlobalOrigin3D,
-#     PassiveReferenceFrame,
-#     ReferenceDecoder,
-#     ReferenceFrame,
-#     Rotation,
-#     RotationEncoder,
-#     Vector,
-#     VectorEncoder,
-#     VectorHeadTail,
-# )
-from .transformations import transform_orientation
-
-
-R_stan_to_cam = StandardCoordinates.get_conversion_matrix(CameraCoordinates)
-q_stan_to_cam = quaternion.from_rotation_matrix(R_stan_to_cam)
-R_cam_to_stan = R_stan_to_cam.T
-q_cam_to_stan = q_stan_to_cam.conjugate()
 
 
 __all__ = [
-    "Acceleration",
-    "AngularVelocity",
-    "Attitude",
-    "Box2D",
-    "Box3D",
-    "BoxDecoder",
-    "Circle",
-    "GlobalOrigin2D",
-    "GlobalOrigin3D",
-    "GroundPlane",
-    "plane_2_transform",
-    "PointMatrix2D",
+    "BoundingBox2D",
+    "BoundingBox2Dcwh",
+    "BoundingBox2Dxyxy",
+    "BoundingBox3D",
+    "BoundingBoxDecoder",
+    "BoxSize",
+    "PointMatrix",
     "PointMatrix3D",
+    "PointMatrix2D",
     "Pose",
-    "Position",
-    "q_mult_vec",
-    "ReferenceFrameDecoder",
     "ReferenceFrame",
+    "ReferenceFrameDecoder",
     "Rotation",
-    "RotationDecoder",
-    "RotationEncoder",
-    "SegMask2D",
-    "Shape",
-    "Sphere",
-    "transform_orientation",
-    "Twist",
+    "TransformManager",
+    "TransformManagerDecoder",
     "Vector",
-    "VectorDecoder",
-    "VectorEncoder",
-    "VectorHeadTail",
-    "Velocity",
-    "Vesica",
-    "Wedge",
     "WorldFrame",
 ]

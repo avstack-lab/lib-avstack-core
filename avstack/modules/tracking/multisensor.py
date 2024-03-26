@@ -7,9 +7,8 @@ if TYPE_CHECKING:
 from avstack.config import MODELS, ConfigDict
 from avstack.datastructs import DataContainer
 from avstack.geometry import WorldFrame
+from avstack.modules import BaseModule
 from avstack.utils.decorators import apply_hooks
-
-from ..base import BaseModule
 
 
 # ==============================================================
@@ -19,12 +18,12 @@ from ..base import BaseModule
 
 @MODELS.register_module()
 class MeasurementBasedMultiTracker(BaseModule):
-    def __init__(self, tracker, name="multitracker", platform=WorldFrame, **kwargs):
+    def __init__(self, tracker, name="multitracker", frame=WorldFrame, **kwargs):
         super().__init__(name=name, **kwargs)
         self.tracker = (
             MODELS.build(tracker) if isinstance(tracker, ConfigDict) else tracker
         )
-        self.platform = platform
+        self.reference = frame
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self.tracker, name)
@@ -34,7 +33,7 @@ class MeasurementBasedMultiTracker(BaseModule):
         self,
         detections: Dict[int, DataContainer],
         fovs: Dict[int, "Shape"],
-        platforms: Dict[int, "ReferenceFrame"],
+        frames: Dict[int, "ReferenceFrame"],
         check_reference: bool = True,
         *args,
         **kwargs,
@@ -43,8 +42,8 @@ class MeasurementBasedMultiTracker(BaseModule):
         for ID in detections:
             # align reference frame for checking observables
             pts_ref = [
-                trk.position.change_reference(platforms[ID], inplace=False)
-                if check_reference
+                trk.position.change_reference(frames[ID])
+                if trk.position.frame != frames[ID]
                 else trk.position
                 for trk in self.tracker.tracks_active
             ]
@@ -62,7 +61,6 @@ class MeasurementBasedMultiTracker(BaseModule):
                 detections=detections[ID],
                 platform=self.platform,
                 trks_observable=trks_observable,
-                check_reference=check_reference,
                 *args,
                 **kwargs,
             )
@@ -70,7 +68,7 @@ class MeasurementBasedMultiTracker(BaseModule):
         # format as data container
         tracks_out = DataContainer(
             frame=self.tracker.frame,
-            timestamp=self.tracker.timestamp,
+            stamp=self.tracker.stamp,
             data=self.tracker.tracks_confirmed,
             source_identifier=self.name,
         )

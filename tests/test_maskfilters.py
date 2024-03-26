@@ -1,10 +1,3 @@
-# @Author: Spencer Hallyburton <spencer>
-# @Date:   2021-02-24
-# @Filename: test_maskfilters.py
-# @Last modified by:   spencer
-# @Last modified time: 2021-08-03
-
-
 import sys
 from copy import deepcopy
 
@@ -12,14 +5,7 @@ import numpy as np
 
 import avstack.maskfilters as maskfilters
 from avstack.calibration import CameraCalibration
-from avstack.geometry import (
-    Attitude,
-    Box3D,
-    Position,
-    ReferenceFrame,
-    WorldFrame,
-    q_stan_to_cam,
-)
+from avstack.geometry import BoundingBox3D, ReferenceFrame, Rotation, Vector, WorldFrame
 
 
 sys.path.append("tests/")
@@ -50,10 +36,10 @@ def test_filter_frustum():
 
 def test_filter_bbox():
     # make up a random box that works with the point cloud
-    position = Position(np.mean(pc.data[pc.data[:, 0] > 0, :3], axis=0), pc.reference)
-    attitude = Attitude(np.quaternion(1), pc.reference)
+    position = Vector(np.mean(pc.data[pc.data[:, 0] > 0, :3], axis=0), pc.reference)
+    attitude = Rotation(np.quaternion(1), pc.reference)
     hwl = [2, 2, 4]
-    box_3d = Box3D(position, attitude, hwl)
+    box_3d = BoundingBox3D(position, attitude, hwl)
     bbox_filter = maskfilters.filter_points_in_object_bbox(pc, box_3d)
     assert sum(bbox_filter) > 0
     assert max(np.where(bbox_filter)[0]) < pc.shape[0]
@@ -129,10 +115,10 @@ def test_object_in_fov_long():
         x=np.array([22, -10, 2]), q=np.quaternion(1), reference=WorldFrame
     )
     rf_cam = ReferenceFrame(x=np.array([2, 0, 0]), q=q_stan_to_cam, reference=rf_ego)
-    pos = Position(x=np.array([20, 0, 0]), reference=rf_ego)
-    att = Attitude(q=np.quaternion(1), reference=rf_ego)
+    pos = Vector(x=np.array([20, 0, 0]), reference=rf_ego)
+    att = Rotation(q=np.quaternion(1), reference=rf_ego)
     h, w, l = 2, 2, 4
-    box_3d = Box3D(pos, att, [h, w, l])
+    box_3d = BoundingBox3D(pos, att, [h, w, l])
     P = np.array([[500, 0, 500, 0], [0, 500, 300, 0], [0, 0, 1, 0]])
     img_shape = (1000, 600)
     cam_calib = CameraCalibration(reference=rf_cam, P=P, img_shape=img_shape)

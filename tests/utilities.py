@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-08-08
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-27
-# @Description:
-"""
-
-"""
 import os
 import sys
 
@@ -19,22 +10,17 @@ from avstack.calibration import (
     LidarCalibration,
     RadarCalibration,
 )
-from avstack.environment.objects import VehicleState
 from avstack.geometry import (
-    Acceleration,
-    AngularVelocity,
-    Attitude,
-    Box3D,
+    BoundingBox3D,
     PointMatrix3D,
-    Position,
     ReferenceFrame,
+    Rotation,
     Vector,
-    Velocity,
     WorldFrame,
-    q_stan_to_cam,
+    conversions,
 )
-from avstack.geometry import transformations as tforms
 from avstack.modules.perception import detections
+from avstack.objects import VehicleState
 from avstack.sensors import ImageData, LidarData, RadarDataRazelRRT
 
 
@@ -125,7 +111,7 @@ def get_radar_data(t, frame, radar_ID=0):
     pc = get_lidar_data(t=t, frame=frame)
     nrows = 50
     rad = pc.data[np.random.randint(pc.data.shape[0], size=nrows), :]
-    rad[:, :3] = tforms.matrix_cartesian_to_spherical(
+    rad[:, :3] = conversions.matrix_cartesian_to_spherical(
         rad[:, :3]
     )  # change to spherical coordinates
     rad[:, 3] = 0  # range rate set to zero artificially...
@@ -140,15 +126,16 @@ def get_test_sensor_data(frame=1000, reference=ref_camera):
     # -- vehicle data
     t = 0
     p = [6.27, -1.45, 14.55]
-    position = Position(p, reference=reference)
+    position = Vector(p, reference=reference)
     yaw = 3.09
     h = 1.47
     w = 1.77
     l = 4.49
-    attitude = Attitude(
-        tforms.transform_orientation([0, 0, yaw], "euler", "quat"), reference=reference
+    attitude = Rotation(
+        conversions.transform_orientation([0, 0, yaw], "euler", "quat"),
+        reference=reference,
     )
-    box_3d = Box3D(position, attitude, [h, w, l])
+    box_3d = BoundingBox3D(position, attitude, [h, w, l])
     vel = acc = ang = None
     obj.set(
         t=t,

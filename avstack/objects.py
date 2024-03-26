@@ -7,21 +7,7 @@ from enum import IntEnum
 
 import numpy as np
 
-from avstack.geometry import (
-    Acceleration,
-    AngularVelocity,
-    Attitude,
-    Box2D,
-    Box3D,
-    Position,
-    ReferenceFrame,
-    RotationDecoder,
-    VectorDecoder,
-    VectorHeadTail,
-    Velocity,
-    bbox,
-)
-from avstack.geometry import transformations as tforms
+from avstack.geometry import ReferenceFrame, conversions
 from avstack.maskfilters import box_in_fov, filter_points_in_box
 
 
@@ -40,7 +26,7 @@ class Occlusion(IntEnum):
 class ObjectStateEncoder(json.JSONEncoder):
     def default(self, o):
         o_dict = {
-            "obj_type": o.obj_type,
+            "obj_class": o.obj_class,
             "ID": o.ID,
             "occlusion": o.occlusion,
             "t": o.t,
@@ -68,7 +54,7 @@ class ObjectStateDecoder(json.JSONDecoder):
         if "objectstate" in json_object:
             json_object = json_object["objectstate"]
             obj = ObjectState(
-                obj_type=json_object["obj_type"],
+                obj_class=json_object["obj_class"],
                 ID=json_object["ID"],
             )
             if "visible_fraction" in json_object:
@@ -84,7 +70,7 @@ class ObjectStateDecoder(json.JSONDecoder):
                 t=json_object["t"],
                 box=None
                 if json_object["box"] is None
-                else json.loads(json_object["box"], cls=bbox.BoxDecoder),
+                else json.loads(json_object["box"], cls=bbox.BoundingBoxDecoder),
                 position=None
                 if json_object["position"] is None
                 else json.loads(json_object["position"], cls=VectorDecoder),
@@ -111,9 +97,9 @@ class ObjectStateDecoder(json.JSONDecoder):
 class ObjectState:
     _ids = itertools.count()
 
-    def __init__(self, obj_type, ID=None):
+    def __init__(self, obj_class, ID=None):
         self.ID = ID if ID is not None else next(self._ids)
-        self.obj_type = obj_type
+        self.obj_class = obj_class
         self.score = 1.0
         self.set(
             t=0,
@@ -128,7 +114,7 @@ class ObjectState:
         )
 
     def __str__(self):
-        return f"VehicleState {self.obj_type} at position {self.position}"
+        return f"VehicleState {self.obj_class} at position {self.position}"
 
     def __repr__(self):
         return self.__str__()
@@ -144,7 +130,7 @@ class ObjectState:
 
     @property
     def object_type(self):
-        return self.obj_type
+        return self.obj_class
 
     @property
     def box3d(self):
@@ -194,9 +180,9 @@ class ObjectState:
         acc = self.acceleration.x if self.acceleration else np.zeros((3,))
         att = self.attitude.q if self.attitude else np.quaternion(1)
         ang = self.angular_velocity.q if self.angular_velocity else np.quaternion(1)
-        ref = self.reference
+        ref = self.frame
         return ReferenceFrame(
-            x=pos, v=vel, acc=acc, q=att, ang=ang, reference=ref, timestamp=self.t
+            x=pos, v=vel, acc=acc, q=att, ang=ang, reference=ref, stamp=self.t
         )
 
     def set(
@@ -223,8 +209,8 @@ class ObjectState:
         assert isinstance(box, (Box2D, Box3D, NoneType)), type(box)
         self.box = box
         if self.box is not None:
-            if self.box.obj_type is None:
-                self.box.obj_type = self.obj_type
+            if self.box.obj_class is None:
+                self.box.obj_class = self.obj_class
             if self.box.ID is None:
                 self.box.ID = self.ID
 
@@ -260,7 +246,7 @@ class ObjectState:
         acc = deepcopy(self.acceleration)
         att = deepcopy(self.attitude)
         ang = deepcopy(self.angular_velocity)
-        VS = VehicleState(self.obj_type, ID=self.ID)
+        VS = VehicleState(self.obj_class, ID=self.ID)
         VS.set(
             self.t + dt,
             pos,
@@ -319,7 +305,7 @@ class ObjectState:
             angular_velocity = None
 
         if not inplace:
-            obj_out = ObjectState(self.obj_type, self.ID)
+            obj_out = ObjectState(self.obj_class, self.ID)
             obj_out.set(
                 t=self.t,
                 position=position,
@@ -396,7 +382,7 @@ class ObjectState:
                 s = np.linalg.norm(w)
                 c = np.dot(vs, vo)
                 if np.isclose(c, -1):
-                    R = tforms.rotz(np.pi)  # eek...
+                    R = conversions.rotz(np.pi)  # eek...
                 else:
                     wx = np.array(
                         [[0, -w[2], w[1]], [w[2], 0, -w[0]], [-w[1], w[0], 0]]
@@ -404,7 +390,7 @@ class ObjectState:
                     R += wx + np.dot(wx, wx) * 1 / (1 + c)
 
             # -- rotate the object by this amount to put it forward
-            q_rot = tforms.transform_orientation(R.T, "dcm", "quat")
+            q_rot = conversions.transform_orientation(R.T, "dcm", "quat")
             box_self = box_self.rotate(q_rot, inplace=False)
 
             # -- get corners and compute the viewable area straight-on
@@ -428,7 +414,7 @@ class ObjectState:
             else:
                 area_ratio = area_cover / area_view
                 # -- results
-                if self.obj_type.lower() in [
+                if self.obj_class.lower() in [
                     "motorcycle",
                     "pedestrian",
                     "bicycle",
@@ -517,7 +503,7 @@ def global_to_local(v_self, v_other):
     box = bbox.Box3D(
         [v_other.box.h, v_other.box.w, v_other.box.l, pos, att.q], where_is_t=where_is_t
     )
-    VS = VehicleState(v_other.obj_type, v_other.ID)
+    VS = VehicleState(v_other.obj_class, v_other.ID)
     VS.set(
         v_other.t,
         pos,
@@ -567,7 +553,7 @@ def local_to_global(v_self, v_other):
     else:
         ang = R_s_to_g @ v_other.angular_velocity + v_self.angular_velocity
 
-    VS = VehicleState(v_other.obj_type, v_other.ID)
+    VS = VehicleState(v_other.obj_class, v_other.ID)
     VS.set(
         v_other.t,
         pos,
@@ -577,7 +563,7 @@ def local_to_global(v_self, v_other):
         att,
         ang,
         occlusion=v_self.occlusion,
-        origin=v_self.reference,
+        origin=v_self.frame,
     )
     return VS
 
@@ -599,7 +585,7 @@ def global_to_local_from_origin(o_self, v_other):
         [v_other.box.h, v_other.box.w, v_other.box.l, pos, att.q],
         where_is_t=v_other.box.where_is_t,
     )
-    VS = VehicleState(v_other.obj_type, v_other.ID)
+    VS = VehicleState(v_other.obj_class, v_other.ID)
     VS.set(
         v_other.t,
         pos,

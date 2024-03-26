@@ -24,22 +24,17 @@ def test_registry_1():
     assert alg.arg_1 == "test"
 
 
-def test_registry_2():
-    alg = MODELS.build(dict(type="BasicXyTracker"))
-    assert type(alg).__name__ == "BasicXyTracker"
-
-
 def test_registry_two_level():
     alg = MODELS.build(
         dict(
             type="MyMODELSecondaryBuild",
             arg_1="test",
-            arg_2=dict(type="BasicXyTracker"),
+            arg_2=dict(type="MyAlgorithm", arg_1="test", arg_2="test2"),
         )
     )
     assert isinstance(alg, MyMODELSecondaryBuild)
     assert alg.arg_1 == "test"
-    assert type(alg.arg_2).__name__ == "BasicXyTracker"
+    assert type(alg.arg_2).__name__ == "MyAlgorithm"
 
 
 def test_build_with_default():
@@ -47,7 +42,7 @@ def test_build_with_default():
         dict(
             type="MyMODELSecondaryBuild",
             arg_1="test",
-            arg_2=dict(type="BasicXyTracker"),
+            arg_2=dict(type="MyAlgorithm", arg_1="test", arg_2="test2"),
         ),
     )
 
@@ -55,7 +50,7 @@ def test_build_with_default():
         dict(
             type="MyMODELSecondaryBuild",
             arg_1="test",
-            arg_2=dict(type="BasicXyTracker"),
+            arg_2=dict(type="MyAlgorithm", arg_1="test", arg_2="test2"),
         ),
         default_args={"arg_3": "new value!"},
     )

@@ -7,7 +7,7 @@ from avstack import maskfilters
 from avstack.config import MODELS
 
 from .base import _PerceptionAlgorithm
-from .detections import CentroidDetection
+from .detections import CartesianDetection
 
 
 try:
@@ -93,5 +93,5 @@ class Lidar2dCentroidDetector(_PerceptionAlgorithm):
     def _wrap(self, centroids, reference, alg_name):
         dets = []
         for cent in centroids:
-            dets.append(CentroidDetection(alg_name, cent, reference))
+            dets.append(CartesianDetection(alg_name, cent, reference))
         return dets

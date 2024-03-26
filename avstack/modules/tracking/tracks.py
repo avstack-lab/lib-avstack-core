@@ -4,17 +4,16 @@ from typing import List
 import numpy as np
 
 from avstack.datastructs import DataContainerDecoder
-from avstack.environment.objects import ObjectState
+from avstack.exceptions import FrameEquivalenceError
 from avstack.geometry import (
-    Attitude,
-    BoxDecoder,
-    Position,
+    BoundingBoxDecoder,
     ReferenceFrame,
     ReferenceFrameDecoder,
-    Velocity,
+    Rotation,
+    Vector,
 )
-from avstack.geometry.bbox import Box2D, Box3D
-from avstack.geometry.transformations import (
+from avstack.geometry.bbox import BoundingBox2Dxyxy, BoundingBox3D
+from avstack.geometry.conversions import (
     cartesian_to_spherical,
     razelrrt_to_xyzvel,
     spherical_to_cartesian,
@@ -38,7 +37,7 @@ class TrackEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, _TrackBase):
             t_dict = {
-                "obj_type": o.obj_type,
+                "obj_class": o.obj_class,
                 "t0": o.t0,
                 "t": o.t,
                 "ID": o.ID,
@@ -91,7 +90,7 @@ class TrackDecoder(json.JSONDecoder):
                 json_object["t0"],
                 None,
                 reference=reference,
-                obj_type=json_object["obj_type"],
+                obj_class=json_object["obj_class"],
                 ID_force=json_object["ID"],
                 x=np.array(json_object["x"]),
                 P=np.array(json_object["P"]),
@@ -111,12 +110,12 @@ class TrackDecoder(json.JSONDecoder):
                 factory = BasicBoxTrack3D
             else:
                 raise NotImplementedError(json_object)
-            box = json.loads(json_object["box"], cls=BoxDecoder)
+            box = json.loads(json_object["box"], cls=BoundingBoxDecoder)
             out = factory(
                 json_object["t0"],
                 box,
                 reference=reference,
-                obj_type=json_object["obj_type"],
+                obj_class=json_object["obj_class"],
                 ID_force=json_object["ID"],
                 v=np.array(json_object["v"]),
                 P=np.array(json_object["P"]),
@@ -178,7 +177,7 @@ class _TrackBase:
         x,
         P,
         reference,
-        obj_type,
+        obj_class,
         ID_force=None,
         t=None,
         dt_coast=0,
@@ -191,7 +190,7 @@ class _TrackBase:
             _TrackBase.ID_counter += 1
         else:
             ID = ID_force
-        self.obj_type = obj_type
+        self.obj_class = obj_class
         self.dt_coast = dt_coast
         self.ID = int(ID)
         self.t0 = t0
@@ -205,7 +204,6 @@ class _TrackBase:
         self.score = score_force if score_force else self.SCORE_INIT
         self.active = True
         self.confirmed = False
-        self.check_reference = check_reference
         self.attitude = None
 
     @property
@@ -214,24 +212,24 @@ class _TrackBase:
 
     @reference.setter
     def reference(self, reference):
-        if not isinstance(reference, ReferenceFrame):
+        if not isinstance(reference, (ReferenceFrame)):
             raise ValueError(f"Reference frame type not appropriate, {type(reference)}")
         self._reference = reference
 
     @property
     def position(self):
-        return Position(self.x[self.idx_pos], self.reference)
+        return Vector(self.x[self.idx_pos], self.frame)
 
     @position.setter
-    def position(self, position: Position):
+    def position(self, position: Vector):
         self.x[self.idx_pos] = position.x
 
     @property
     def velocity(self):
-        return Velocity(self.x[self.idx_vel], self.reference)
+        return Vector(self.x[self.idx_vel], self.frame)
 
     @velocity.setter
-    def velocity(self, velocity: Velocity):
+    def velocity(self, velocity: Vector):
         self.x[self.idx_vel] = velocity.x
 
     @property
@@ -239,7 +237,7 @@ class _TrackBase:
         return self._attitude
 
     @attitude.setter
-    def attitude(self, attitude):
+    def attitude(self, attitude: Rotation):
         self._attitude = attitude
 
     @property
@@ -319,8 +317,8 @@ class _TrackBase:
     def encode(self):
         return json.dumps(self, cls=TrackEncoder)
 
-    def distance(self, other, check_reference: bool = True):
-        return self.position.distance(other, check_reference=check_reference)
+    def distance(self, other):
+        return self.position.distance(other)
 
     def _predict(self, t):
         dt = t - self.t_last_predict
@@ -359,12 +357,12 @@ class _TrackBase:
         self.score += self.MISSED_DET_SCORE
 
     def R_old_to_new(self, reference):
-        diff = self.reference.differential(reference)
+        diff = self.frame.differential(reference)
         R_old_to_new = transform_orientation(diff.q, "quat", "dcm")
         return R_old_to_new
 
     def as_object(self):
-        vs = ObjectState(obj_type=self.obj_type, ID=self.ID)
+        vs = ObjectState(obj_class=self.obj_class, ID=self.ID)
         vs.set(
             t=self.t,
             position=self.position,
@@ -404,7 +402,7 @@ class _XYVxVyTrack(_TrackBase):
         return (np.diag([2, 2, 2, 2]) * dt) ** 2
 
     def change_reference(self, reference, inplace: bool):
-        vec = Position(np.array([self.x[0], self.x[1], 0]), self.reference)
+        vec = Position(np.array([self.x[0], self.x[1], 0]), self.frame)
         vec.change_reference(reference, inplace=True)
         if inplace:
             self.x[:2] = vec.x[:2]
@@ -460,7 +458,7 @@ class _XYZVxVyVzTrack(_TrackBase):
                 self.t0,
                 None,
                 reference=reference,
-                obj_type=self.obj_type,
+                obj_class=self.obj_class,
                 ID_force=self.ID,
                 x=np.concatenate((position.x, velocity.x)),
                 P=P,
@@ -485,7 +483,7 @@ class XyFromXyTrack(_XYVxVyTrack):
         t0,
         xy,
         reference,
-        obj_type,
+        obj_class,
         ID_force=None,
         x=None,
         P=None,
@@ -510,7 +508,7 @@ class XyFromXyTrack(_XYVxVyTrack):
         self.idx_pos = [0, 1]
         self.idx_vel = [2, 3]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0, x, P, reference, obj_class, ID_force, t, dt_coast, n_updates
         )
 
     @staticmethod
@@ -544,7 +542,7 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
         t0,
         xyz,
         reference,
-        obj_type,
+        obj_class,
         ID_force=None,
         x=None,
         P=None,
@@ -569,7 +567,7 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0, x, P, reference, obj_class, ID_force, t, dt_coast, n_updates
         )
 
     @staticmethod
@@ -610,7 +608,7 @@ class XyFromRazTrack(_XYVxVyTrack):
         t0,
         raz,
         reference,
-        obj_type,
+        obj_class,
         ID_force=None,
         x=None,
         P=None,
@@ -635,7 +633,7 @@ class XyFromRazTrack(_XYVxVyTrack):
         self.idx_pos = [0, 1]
         self.idx_vel = [2, 3]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0, x, P, reference, obj_class, ID_force, t, dt_coast, n_updates
         )
 
     @staticmethod
@@ -680,7 +678,7 @@ class XyzFromRazelTrack(_XYZVxVyVzTrack):
         t0,
         razel,
         reference,
-        obj_type,
+        obj_class,
         ID_force=None,
         x=None,
         P=None,
@@ -705,7 +703,7 @@ class XyzFromRazelTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0, x, P, reference, obj_class, ID_force, t, dt_coast, n_updates
         )
 
     @staticmethod
@@ -766,7 +764,7 @@ class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
         t0,
         razelrrt,
         reference,
-        obj_type,
+        obj_class,
         ID_force=None,
         x=None,
         P=None,
@@ -805,7 +803,7 @@ class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0, x, P, reference, obj_class, ID_force, t, dt_coast, n_updates
         )
 
     @property
@@ -866,7 +864,7 @@ class BasicBoxTrack3D(_TrackBase):
         t0,
         box3d,
         reference,
-        obj_type,
+        obj_class,
         ID_force=None,
         v=None,
         P=None,
@@ -902,7 +900,7 @@ class BasicBoxTrack3D(_TrackBase):
             x,
             P,
             reference,
-            obj_type,
+            obj_class,
             ID_force,
             t,
             dt_coast,
@@ -953,13 +951,15 @@ class BasicBoxTrack3D(_TrackBase):
         return self.q
 
     @attitude.setter
-    def attitude(self, attitude: Attitude):
+    def attitude(self, attitude: Rotation):
         self.q = attitude
 
     @property
     def box3d(self):
         hwl = self.x[3:6]
-        return Box3D(self.position, self.attitude, hwl, where_is_t=self.where_is_t)
+        return BoundingBox3D(
+            self.position, self.attitude, hwl, where_is_t=self.where_is_t
+        )
 
     @property
     def box(self):
@@ -970,11 +970,8 @@ class BasicBoxTrack3D(_TrackBase):
         return self.box3d.yaw
 
     def update(self, box3d, R=np.diag([1, 1, 1, 0.25, 0.25, 0.25]) ** 2):
-        if self.check_reference:
-            if box3d.reference != self.reference:
-                raise RuntimeError(
-                    "Should have converted the box location before this..."
-                )
+        if box3d.frame != self.frame:
+            raise FrameEquivalenceError(box3d.frame, self.frame)
         if self.where_is_t != box3d.where_is_t:
             raise NotImplementedError(
                 "Differing t locations not implemented: {}, {}".format(
@@ -990,8 +987,8 @@ class BasicBoxTrack3D(_TrackBase):
         return BoxDetection(
             source_identifier="tracker",
             box=self.box3d,
-            reference=self.reference,
-            obj_type=self.obj_type,
+            reference=self.frame,
+            obj_class=self.obj_class,
             score=1.0,
         )
 
@@ -1013,7 +1010,7 @@ class BasicBoxTrack3D(_TrackBase):
                 t0=self.t0,
                 box3d=box3d,
                 reference=reference,
-                obj_type=self.obj_type,
+                obj_class=self.obj_class,
                 ID_force=self.ID,
                 v=self.velocity,
                 P=self.P,
@@ -1032,7 +1029,7 @@ class BasicBoxTrack2D(_TrackBase):
         t0,
         box2d,
         reference,
-        obj_type,
+        obj_class,
         ID_force=None,
         v=None,
         P=None,
@@ -1058,9 +1055,9 @@ class BasicBoxTrack2D(_TrackBase):
         self.idx_pos = [0, 1]
         self.idx_vel = [4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0, x, P, reference, obj_class, ID_force, t, dt_coast, n_updates
         )
-        self.calibration = box2d.calibration
+        self.frame = box2d.frame
 
     @property
     def width(self):
@@ -1088,7 +1085,9 @@ class BasicBoxTrack2D(_TrackBase):
 
     @property
     def box2d(self):
-        return Box2D([self.xmin, self.ymin, self.xmax, self.ymax], self.calibration)
+        return BoundingBox2Dxyxy(
+            [self.xmin, self.ymin, self.xmax, self.ymax], self.frame
+        )
 
     @property
     def box(self):
@@ -1135,14 +1134,14 @@ class BasicBoxTrack2D(_TrackBase):
 class BasicJointBoxTrack(_TrackBase):
     NAME = "boxtrack2d3d"
 
-    def __init__(self, t0, box2d, box3d, reference, obj_type):
+    def __init__(self, t0, box2d, box3d, reference, obj_class):
         self.track_2d = (
-            BasicBoxTrack2D(t0, box2d, reference, obj_type)
+            BasicBoxTrack2D(t0, box2d, reference, obj_class)
             if box2d is not None
             else None
         )
         self.track_3d = (
-            BasicBoxTrack3D(t0, box3d, reference, obj_type)
+            BasicBoxTrack3D(t0, box3d, reference, obj_class)
             if box3d is not None
             else None
         )
@@ -1164,14 +1163,12 @@ class BasicJointBoxTrack(_TrackBase):
         return self.track_3d.P
 
     @property
-    def obj_type(self):
-        return self.track_3d.obj_type
+    def obj_class(self):
+        return self.track_3d.obj_class
 
     @property
     def idx_pos(self):
         return self.track_3d.idx_posok
-
-    # avapi.visualize.replay.replay_track_results(track_res_frames, fig_width=8)
 
     @property
     def idx_vel(self):
@@ -1231,14 +1228,14 @@ class BasicJointBoxTrack(_TrackBase):
     def __str__(self):
         return f"BasicJointBoxTrack w/ {self.track_2d.n_updates} 2D n_updates: {self.box2d}; {self.track_3d.n_updates} 3D n_updates: {self.box3d}"
 
-    def update(self, box, obj_type, reference):
+    def update(self, box, obj_class, reference):
         if isinstance(box, tuple):
             b2 = box[0]
             b3 = box[1]
-        elif isinstance(box, Box2D):
+        elif isinstance(box, BoundingBox2Dxyxy):
             b2 = box
             b3 = None
-        elif isinstance(box, Box3D):
+        elif isinstance(box, BoundingBox3D):
             b2 = None
             b3 = box
         else:
@@ -1247,7 +1244,7 @@ class BasicJointBoxTrack(_TrackBase):
         # -- update 2d
         if self.track_2d is None and b2 is not None:
             self.track_2d = BasicBoxTrack2D(
-                self.track_3d.t, b2, obj_type=obj_type, reference=reference
+                self.track_3d.t, b2, obj_class=obj_class, reference=reference
             )
         elif b2 is not None:
             self.track_2d.update(b2)
@@ -1255,7 +1252,7 @@ class BasicJointBoxTrack(_TrackBase):
         # -- update 3d
         if self.track_3d is None and b3 is not None:
             self.track_3d = BasicBoxTrack3D(
-                self.track_2d.t, b3, obj_type=obj_type, reference=reference
+                self.track_2d.t, b3, obj_class=obj_class, reference=reference
             )
         elif b3 is not None:
             self.track_3d.update(b3)

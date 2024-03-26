@@ -27,7 +27,7 @@ class _DataContainerLogger(Logger):
     def __call__(self, objects: DataContainer, *args, **kwargs):
         file = os.path.join(
             self.output_folder,
-            f"{self.prefix}-{objects.source_identifier}-{objects.frame:010d}-{objects.timestamp:012.2f}.txt",
+            f"{self.prefix}-{objects.source_identifier}-{objects.frame:010d}-{objects.stamp:012.2f}.txt",
         )
         with open(file, "w") as f:
             f.write(objects.encode())

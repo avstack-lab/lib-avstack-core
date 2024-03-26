@@ -1,21 +1,9 @@
-# @Author: Spencer Hallyburton <spencer>
-# @Date:   2021-02-17
-# @Filename: maskfilters.py
-# @Last modified by:   spencer
-# @Last modified time: 2021-08-04
-"""
-A collection of slicers, masks, and filtering operations for perception data
-
-The code is independent of data source so long as format is standard
-"""
-
-
 import numpy as np
 from numba import jit
 
 import avstack.geometry.bbox as bbox
 from avstack import calibration
-from avstack.geometry import transformations as tforms
+from avstack.geometry import conversions
 
 
 # ==============================================================================
@@ -319,7 +307,7 @@ def filter_points_in_image(points, P):
     Filter which points are in view for an image
     """
     im_size = [2 * P[1, 2], 2 * P[0, 2]]  # size is [h, w]
-    points_in_img = tforms.project_to_image(points, P)
+    points_in_img = conversions.project_to_image(points, P)
     points_in_im_mask = (
         (points_in_img[:, 0] > 0)
         & (points_in_img[:, 0] < im_size[1])

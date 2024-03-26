@@ -8,10 +8,10 @@ sys.path.append("tests/")
 
 
 def test_score_tracks():
-    reference = WorldFrame
+    frame = WorldFrame
     razel = [100, 0, 0]
     track = tracks.XyzFromRazelTrack(
-        t0=0.0, razel=razel, reference=reference, obj_type="car"
+        t0=0.0, data=razel, frame=frame, object_class="car"
     )
     assert not track.confirmed
     for _ in range(20):
@@ -21,10 +21,10 @@ def test_score_tracks():
 
 
 def test_coast():
-    reference = WorldFrame
+    frame = WorldFrame
     razel = [100, 0, 0]
     track = tracks.XyzFromRazelTrack(
-        t0=0.0, razel=razel, reference=reference, obj_type="car"
+        t0=0.0, data=razel, frame=frame, object_class="car"
     )
     assert not track.confirmed
     dt = 0.5

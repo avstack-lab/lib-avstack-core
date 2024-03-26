@@ -10,7 +10,6 @@
 
 import numpy as np
 
-from avstack.environment.objects import VehicleState
 from avstack.geometry import (
     Acceleration,
     AngularVelocity,
@@ -24,6 +23,7 @@ from avstack.geometry import (
 from avstack.geometry import transformations as tforms
 from avstack.modules import control
 from avstack.modules.planning import Waypoint, WaypointPlan
+from avstack.objects import VehicleState
 
 
 def test_pid_base():

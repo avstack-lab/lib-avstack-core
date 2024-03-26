@@ -97,22 +97,22 @@ def build_from_cfg(
     # temporarily.
     scope = args.pop("_scope_", None)
     # with registry.switch_scope_and_registry(scope) as registry:
-    obj_type = args.pop("type")
-    if isinstance(obj_type, str):
-        obj_cls = registry.get(obj_type)
+    obj_class = args.pop("type")
+    if isinstance(obj_class, str):
+        obj_cls = registry.get(obj_class)
         if obj_cls is None:
             raise KeyError(
-                f"{obj_type} is not in the {registry.scope}::{registry.name} registry. "  # noqa: E501
-                f"Please check whether the value of `{obj_type}` is "
+                f"{obj_class} is not in the {registry.scope}::{registry.name} registry. "  # noqa: E501
+                f"Please check whether the value of `{obj_class}` is "
                 "correct or it was registered as expected. More details "
                 "can be found at "
                 "https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#import-the-custom-module"  # noqa: E501
             )
     # this will include classes, functions, partial functions and more
-    elif callable(obj_type):
-        obj_cls = obj_type
+    elif callable(obj_class):
+        obj_cls = obj_class
     else:
-        raise TypeError(f"type must be a str or valid type, but got {type(obj_type)}")
+        raise TypeError(f"type must be a str or valid type, but got {type(obj_class)}")
 
     # If `obj_cls` inherits from `ManagerMixin`, it should be
     # instantiated by `ManagerMixin.get_instance` to ensure that it

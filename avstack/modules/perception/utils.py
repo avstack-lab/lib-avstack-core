@@ -1,8 +1,8 @@
 import numpy as np
 
-from avstack.geometry import Attitude, Position, q_cam_to_stan
-from avstack.geometry.bbox import Box2D, Box3D, SegMask2D
-from avstack.geometry.transformations import transform_orientation
+from avstack.geometry import BoxSize, Pose, Rotation, Vector
+from avstack.geometry.bbox import BoundingBox2Dcwh, BoundingBox3D, SegMask2D
+from avstack.geometry.conversions import transform_orientation
 
 from .detections import BoxDetection, MaskDetection
 
@@ -101,27 +101,27 @@ def convert_mm2d_to_avstack(
         segms = [None] * len(labels)
 
     # -- object types
-    obj_type_text = []
+    obj_class_text = []
     try:
         for label in labels:
             if (class_names is not None) and (
                 class_names[label] in class_maps[dataset]
             ):
-                obj_type_text.append(class_maps[dataset][class_names[label]])
+                obj_class_text.append(class_maps[dataset][class_names[label]])
             else:
-                obj_type_text.append(class_names[label])
+                obj_class_text.append(class_names[label])
     except IndexError as e:
         print(label, len(class_names), dataset)
         raise e
 
     # -- make objects
     dets = []
-    for segm, bbox, obj_type, score in zip(segms, bboxes, obj_type_text, scores):
-        if obj_type in whitelist:
-            box_2d = Box2D(bbox, calib)
+    for segm, bbox, obj_class, score in zip(segms, bboxes, obj_class_text, scores):
+        if obj_class in whitelist:
+            box_2d = BoundingBox2Dcwh(bbox, reference)
             if segm is None:
                 det = BoxDetection(
-                    source_identifier, box_2d, calib.reference, obj_type, score
+                    source_identifier, box_2d, calib.reference, obj_class, score
                 )
             else:
                 det = MaskDetection(
@@ -129,7 +129,7 @@ def convert_mm2d_to_avstack(
                     box_2d,
                     SegMask2D(segm, calib),
                     calib.reference,
-                    obj_type,
+                    obj_class,
                     score,
                 )
             dets.append(det)
@@ -172,8 +172,8 @@ def convert_mm3d_to_avstack(
     # -- convert boxes
     prev_locs = []
     for box, label, score in zip(bboxes, labels, scores):
-        obj_type = class_maps[dataset][obj_map[label]]
-        if obj_type in whitelist:
+        obj_class = class_maps[dataset][obj_map[label]]
+        if obj_class in whitelist:
             if score > thresh:
                 # get info from detections
                 cent = box[:3]
@@ -220,14 +220,14 @@ def convert_mm3d_to_avstack(
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += h
                         where_is_t = "center"
-                        reference = calib.reference
+                        reference = calib.frame
                     elif dataset == "carla-infrastructure":
                         yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
                         x_O_2_obj_in_O[2] += h
                         where_is_t = "center"
-                        reference = calib.reference
+                        reference = calib.frame
                     else:
                         raise NotImplementedError(dataset)
                 elif "pgd" in model_3d.cfg.filename:
@@ -238,14 +238,14 @@ def convert_mm3d_to_avstack(
                         q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
                         where_is_t = "bottom"
-                        reference = calib.reference  # camera reference
+                        reference = calib.frame  # camera reference
                     elif dataset == "nuscenes":
                         yaw = box[6] - np.pi / 2
                         q_L_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         q_C_2_obj = q_L_2_obj * q_cam_to_stan
                         x_C_2_obj_in_C = cent
                         where_is_t = "bottom"
-                        reference = calib.reference
+                        reference = calib.frame
                     else:
                         raise NotImplementedError(dataset)
                     x_O_2_obj_in_O = x_C_2_obj_in_C
@@ -254,9 +254,11 @@ def convert_mm3d_to_avstack(
                     raise NotImplementedError(model_3d.cfg.filename)
 
                 # make box output
-                pos = Position(x_O_2_obj_in_O, reference)
-                rot = Attitude(q_O_2_obj, reference)
-                box3d = Box3D(pos, rot, [h, w, l], where_is_t=where_is_t)
+                pos = Vector(x_O_2_obj_in_O, reference)
+                rot = Rotation(q_O_2_obj, reference)
+                pose = Pose(pos, rot)
+                box_size = BoxSize(h, w, l)
+                box3d = BoundingBox3D(pose, box_size, where_is_t=where_is_t)
 
                 # -- pruning
                 # ---- too low
@@ -284,7 +286,7 @@ def convert_mm3d_to_avstack(
                 prev_locs.append(x_O_2_obj_in_O)
                 dets.append(
                     BoxDetection(
-                        source_identifier, box3d, box3d.reference, obj_type, score
+                        source_identifier, box3d, box3d.reference, obj_class, score
                     )
                 )
 

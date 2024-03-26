@@ -10,7 +10,7 @@
 
 import sys
 
-from avstack.environment.objects import VehicleState
+from avstack.objects import VehicleState
 
 
 sys.path.append("tests/")

@@ -4,6 +4,7 @@ import numpy as np
 
 from avstack.config import MODELS
 from avstack.datastructs import DataContainer
+from avstack.time import Stamp
 from avstack.utils.decorators import apply_hooks
 
 from ..base import BaseModule
@@ -20,12 +21,8 @@ class NoClustering(_BaseClustering):
     """Each track is its own cluster"""
 
     @apply_hooks
-    def __call__(
-        self, objects: Dict[int, DataContainer], frame: int, timestamp: int
-    ) -> ClusterSet:
-        clusters = ClusterSet(
-            frame=frame, timestamp=timestamp, data=[], source_identifier="no-clustering"
-        )
+    def __call__(self, objects: Dict[int, DataContainer], stamp: int) -> ClusterSet:
+        clusters = ClusterSet(stamp=stamp, data=[], source_identifier="no-clustering")
         for agent_ID, tracks in objects.items():
             for track in tracks:
                 clusters.append(Cluster((agent_ID, track)))
@@ -47,9 +44,7 @@ class SampledAssignmentClusterer(_BaseClustering):
     def __call__(
         self,
         objects: Dict[int, DataContainer],
-        frame: int,
-        timestamp: float,
-        check_reference: bool = True,
+        stamp: "Stamp",
         *args,
         **kwargs,
     ) -> ClusterSet:
@@ -76,8 +71,7 @@ class SampledAssignmentClusterer(_BaseClustering):
         assert len(objects) > 0
 
         clusters = ClusterSet(
-            frame=frame,
-            timestamp=timestamp,
+            stamp=stamp,
             data=[],
             source_identifier="assignment-clustering",
         )
@@ -86,12 +80,7 @@ class SampledAssignmentClusterer(_BaseClustering):
         for agent_ID, objs in objects.items():
             for obj in objs:
                 # if not clusters.contains(agent_ID, obj):
-                distances = np.array(
-                    [
-                        clust.distance(obj, check_reference=check_reference)
-                        for clust in clusters
-                    ]
-                )
+                distances = np.array([clust.distance(obj) for clust in clusters])
                 try:
                     if any(distances <= self.assign_radius):
                         idx_min = np.argmin(distances)

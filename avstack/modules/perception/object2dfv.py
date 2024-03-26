@@ -129,7 +129,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             self.class_names,
             self.deploy,
         )
-        return DataContainer(data.frame, data.timestamp, detections, identifier)
+        return DataContainer(data.frame, data.stamp, detections, identifier)
 
     def run_mm_inference(self, image, eval_method):
         if self.deploy:

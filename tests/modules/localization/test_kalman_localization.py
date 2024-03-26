@@ -13,10 +13,10 @@ import pickle
 import numpy as np
 import quaternion
 
-from avstack.environment.objects import VehicleState
 from avstack.geometry import Attitude, Position, Velocity, WorldFrame
 from avstack.geometry import transformations as tforms
 from avstack.modules import localization
+from avstack.objects import VehicleState
 from avstack.sensors import GpsData, ImuData
 
 

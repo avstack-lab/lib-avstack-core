@@ -2,8 +2,7 @@ import numpy as np
 import quaternion
 
 from avstack.config import MODELS
-from avstack.geometry import Attitude, Position, Velocity, WorldFrame
-from avstack.geometry import transformations as tforms
+from avstack.geometry import Rotation, Vector, WorldFrame, conversions
 from avstack.sensors import DataBuffer, ImuBuffer
 
 from .base import _LocalizationAlgorithm
@@ -125,10 +124,8 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
     def execute(self, t, gps_data, *args, **kwargs):
         # Pull off data
         if gps_data is not None:
-            assert (
-                np.linalg.norm(t - gps_data.timestamp) <= 2e-1
-            ), f"{t}, {gps_data.timestamp}"
-            t = gps_data.timestamp
+            assert np.linalg.norm(t - gps_data.stamp) <= 2e-1, f"{t}, {gps_data.stamp}"
+            t = gps_data.stamp
             if self.attitude is not None:
                 z = gps_data.data["z"] - self.attitude.R.T @ gps_data.levar
             else:
@@ -152,8 +149,8 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
                 self._update(t, z, R)
 
             # Make vehicle state object
-            self.position = Position(self.x[:3], self.reference)  # in ENU
-            self.velocity = Velocity(self.x[3:6], self.reference)  # in ENU
+            self.position = Vector(self.x[:3], self.frame)  # in ENU
+            self.velocity = Vector(self.x[3:6], self.frame)  # in ENU
             self.acceleration = None
             if self.velocity.norm() > 0:
                 forward = self.velocity.x / np.linalg.norm(self.velocity.x)  # in ENU
@@ -165,9 +162,9 @@ class BasicGpsKinematicKalmanLocalizer(_LocalizationAlgorithm):
             left = np.cross(up, forward)
             up = np.cross(forward, left)
             R_enu_2_body = np.array([forward, left, up])  # R_enu_2_body
-            self.attitude = Attitude(
-                tforms.transform_orientation(R_enu_2_body, "dcm", "quat"),
-                self.reference,
+            self.attitude = Rotation(
+                conversions.transform_orientation(R_enu_2_body, "dcm", "quat"),
+                self.frame,
             )  # from velocity
             self.angular_velocity = None
             self.ego_template.set(
@@ -221,7 +218,7 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
 
         # initialize
         self._t_last_update = None
-        eulers = tforms.transform_orientation(ego_init.attitude.q, "quat", "euler")
+        eulers = conversions.transform_orientation(ego_init.attitude.q, "quat", "euler")
         x0 = np.concatenate((ego_init.position.x, np.zeros((3,)), eulers), axis=0)
         self._initialize(t_init, x0)
         self.imu_buffer = ImuBuffer()
@@ -247,11 +244,11 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
 
     @property
     def qN2B(self):
-        return tforms.transform_orientation(self.x[6:9], "euler", "quat")
+        return conversions.transform_orientation(self.x[6:9], "euler", "quat")
 
     @qN2B.setter
     def qN2B(self, qN2B):
-        self.x[6:9] = tforms.transform_orientation(qN2B, "quat", "euler")
+        self.x[6:9] = conversions.transform_orientation(qN2B, "quat", "euler")
 
     def _initialize(self, t0, x0):
         self.initialized = True
@@ -275,7 +272,7 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
         rE = self.rE  # if you get an error here, you must not be initialized yet
         vE = self.vE
         qN2B = self.qN2B
-        qE2N = tforms.get_q_ecef_to_ned((rE, "ecef"))
+        qE2N = conversions.get_q_ecef_to_ned((rE, "ecef"))
         qB2E = (qN2B * qE2N).conjugate()
 
         # --------------------
@@ -309,15 +306,13 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
         q_Bkm1_2_E = qB2E
         qB2E = q_Bkm1_2_E * q_Bkm1_2_Bk.conjugate()
         qE2N = quaternion.from_rotation_matrix(
-            tforms.get_R_ecef_to_ned((self.rE, "ecef"))
+            conversions.get_R_ecef_to_ned((self.rE, "ecef"))
         )
         self.qN2B = (qE2N * qB2E).conjugate()
 
     def _update(self, gps_data):
         """Update with gps measurement at time t"""
-        assert (
-            abs(gps_data.timestamp - self.t) < 1e-2
-        ), f"{gps_data.timestamp}, {self.t}"
+        assert abs(gps_data.stamp - self.t) < 1e-2, f"{gps_data.stamp}, {self.t}"
         z, R = gps_data.data["z"], gps_data.data["R"]
         y = z - self.rE  # z - H @ self.x
 
@@ -332,18 +327,18 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
         self.qN2B = q_Bkm1_2_Bk * self.qN2B
         self.xerr = np.zeros((9,))
 
-        self.t = gps_data.timestamp
+        self.t = gps_data.stamp
         self.n_msmt_updates += 1
 
     def execute(self, t, gps_data, imu_data, *args, **kwargs):
         # Pull off data
         # -- imu data
         if imu_data is not None:
-            self.imu_buffer.push(imu_data.timestamp, imu_data)
+            self.imu_buffer.push(imu_data.stamp, imu_data)
 
         # -- gps data
         if gps_data is not None:
-            self.gps_buffer.push(gps_data.timestamp, gps_data)
+            self.gps_buffer.push(gps_data.stamp, gps_data)
 
         # -- process all gps measurements for low-rate
         while not self.gps_buffer.empty():
@@ -357,9 +352,9 @@ class BasicGpsImuErrorStateKalmanLocalizer(_LocalizationAlgorithm):
             raise RuntimeError(f"Time out of date {t} {self.t}")
 
         # -- set outputs
-        position = Position(self.rE, self.reference)
-        velocity = Velocity(self.vE, self.reference)
-        attitude = Attitude(self.qN2B, self.reference)
+        position = Position(self.rE, self.frame)
+        velocity = Velocity(self.vE, self.frame)
+        attitude = Attitude(self.qN2B, self.frame)
         acceleration = None
         angular_velocity = None
         self.ego_template.set(

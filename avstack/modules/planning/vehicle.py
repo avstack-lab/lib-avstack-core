@@ -1,19 +1,8 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-28
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-28
-# @Description:
-"""
-
-"""
-
 from copy import deepcopy
 
 import numpy as np
 
-from avstack.geometry import Attitude, Pose
-from avstack.geometry import transformations as tforms
+from avstack.geometry import Pose, Rotation, conversions
 from avstack.utils.decorators import apply_hooks
 
 from ..base import BaseModule
@@ -45,7 +34,7 @@ class GoStraightPlanner(_PlanningAlgorithm):
         return plan
 
     def _get_waypoint(self, ego_state):
-        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
+        forward_vec = conversions.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
         target_loc = ego_state.position + self.d_forward * forward_vec
         target_point = Pose(ego_state.attitude, target_loc)
         dist_wpt = ego_state.position.distance(target_point)
@@ -80,7 +69,7 @@ class RandomPlanner(_PlanningAlgorithm):
         return plan
 
     def _get_waypoint(self, ego_state):
-        forward_vec = tforms.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
+        forward_vec = conversions.get_rot_yaw_matrix(ego_state.attitude.yaw, "+z")[:, 0]
         d1 = self.min_forward_dist
         d2 = self.max_forward_dist
         da = ((d2 - d1) * np.random.rand() + d1) * forward_vec
@@ -227,8 +216,8 @@ class LaneKeepingPlanner(_PlanningAlgorithm):
             target_loc = (
                 ego_state.position + lateral_offset * left_vec + d_forward * forward_vec
             )
-            R_b2way = Attitude(
-                tforms.get_rot_yaw_matrix(-yaw_offset, "+z"), target_loc.reference
+            R_b2way = Rotation(
+                conversions.get_rot_yaw_matrix(-yaw_offset, "+z"), target_loc.reference
             )
             R_world2b = ego_state.attitude
             target_rot = R_b2way * R_world2b

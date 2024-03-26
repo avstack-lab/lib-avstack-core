@@ -4,7 +4,7 @@ from typing import List, Union
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import Position
+from avstack.geometry import Vector
 
 
 class Cluster:
@@ -32,13 +32,13 @@ class Cluster:
                     pass
                 self.objects.append(arg[1])
                 raise
-                # if self.reference is None:
+                # if self.frame is None:
                 #     self.reference = arg[1].reference
                 # else:
-                #     if isinstance(self.reference, ReferenceFrame):
+                #     if isinstance(self.frame, ReferenceFrame):
                 #         assert self.reference == args[1].reference
                 #     else:
-                #         assert self.reference.allclose(arg[1].reference)
+                #         assert self.frame.allclose(arg[1].reference)
 
     def __str__(self) -> str:
         return "Cluster ({}, {} elements)".format(self.ID, len(self.objects))
@@ -63,18 +63,18 @@ class Cluster:
                 pass
             self.objects.append(an_obj[1])
             raise
-            # if self.reference is None:
+            # if self.frame is None:
             #     self.reference = an_obj[1].reference
             # else:
-            #     if isinstance(self.reference, PassiveReferenceFrame):
+            #     if isinstance(self.frame, PassiveReferenceFrame):
             #         assert self.reference == an_obj[1].reference
             #     else:
-            #         assert self.reference.allclose(an_obj[1].reference)
+            #         assert self.frame.allclose(an_obj[1].reference)
 
     def centroid(self):
         """Ensure all are of the same reference"""
         x_mean = np.mean([trk.position.x for trk in self.objects], axis=0)
-        return Position(x_mean, reference=self.reference)
+        return Vector(x_mean, frame=self.frame)
 
     def contains(self, agent_ID, obj) -> bool:
         try:
@@ -84,8 +84,8 @@ class Cluster:
         except AttributeError:
             return False
 
-    def distance(self, obj, check_reference: bool = True) -> float:
-        return obj.distance(self.centroid(), check_reference=check_reference)
+    def distance(self, obj) -> float:
+        return obj.distance(self.centroid())
 
     def get_objects_by_agent_ID(self, ID: int) -> list:
         return [

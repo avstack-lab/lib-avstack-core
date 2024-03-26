@@ -104,13 +104,13 @@ class Calibration:
         return self.__str__()
 
     def __str__(self):
-        return f"{self.__class__.__name__} with reference: {self.reference}"
+        return f"{self.__class__.__name__} with reference: {self.frame}"
 
     def encode(self):
         return json.dumps(self, cls=CalibrationEncoder)
 
     def allclose(self, other: Calibration):
-        return self.reference.allclose(other.reference)
+        return self.frame.allclose(other.reference)
 
     def save_to_file(self, file):
         if not file.endswith(".txt"):
@@ -146,7 +146,7 @@ class RadarCalibration(Calibration):
 
     def allclose(self, other: RadarCalibration):
         return (
-            self.reference.allclose(other.reference)
+            self.frame.allclose(other.reference)
             and np.isclose(self.fov_horizontal, other.fov_horizontal)
             and np.isclose(self.fov_vertical, other.fov_vertical)
         )
@@ -213,10 +213,10 @@ class CameraCalibration(Calibration):
         super().__init__(reference)
 
     def __str__(self):
-        return f"Camera Calibration with reference: {self.reference}; P:{self.P}"
+        return f"Camera Calibration with reference: {self.frame}; P:{self.P}"
 
     def allclose(self, other: CameraCalibration):
-        return self.reference.allclose(other.reference) and np.allclose(self.P, other.P)
+        return self.frame.allclose(other.reference) and np.allclose(self.P, other.P)
 
 
 _carla_semseg_labels_colors = [
@@ -277,11 +277,11 @@ class SemanticSegmentationCalibration(CameraCalibration):
         self.colors = colors
 
     def __str__(self):
-        return f"Semantic Segmentation Calibration with reference: {self.reference}; P:{self.P}"
+        return f"Semantic Segmentation Calibration with reference: {self.frame}; P:{self.P}"
 
     def allclose(self, other: SemanticSegmentationCalibration):
         return (
-            self.reference.allclose(other.reference)
+            self.frame.allclose(other.reference)
             and np.allclose(self.P, other.P)
             and (self.tags == other.tags)
         )

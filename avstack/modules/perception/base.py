@@ -13,7 +13,6 @@ class _PerceptionAlgorithm(BaseModule):
     def __init__(self, name="perception", *args, **kwargs):
         super().__init__(name=name, *args, **kwargs)
         self.ID = next(self.next_id)
-        self.iframe = -1
 
     @apply_hooks
     def __call__(self, data, frame=-1, *args, **kwargs):
@@ -22,7 +21,7 @@ class _PerceptionAlgorithm(BaseModule):
             return None
         else:
             detections = self._execute(
-                data, frame=frame, identifier=self.name, *args, **kwargs
+                data, stamp=stamp, identifier=self.name, *args, **kwargs
             )
             return detections
 

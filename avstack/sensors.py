@@ -13,20 +13,19 @@ try:
 except ModuleNotFoundError:
     pass
 
-from avstack import datastructs, maskfilters, messages
+from avstack import datastructs, maskfilters
 from avstack.calibration import CameraCalibration, LidarCalibration
-from avstack.geometry import PointMatrix3D
-from avstack.geometry import transformations as tforms
+from avstack.geometry import PointMatrix3D, conversions
 
 
 class SensorData:
     """Base class for sensor data structure"""
 
     def __init__(
-        self, timestamp, frame, data, calibration, source_ID, source_name, **kwargs
+        self, stamp, frame, data, calibration, source_ID, source_name, **kwargs
     ):
-        self.timestamp = float(timestamp)
-        self.frame = int(frame)
+        self.stamp = float(stamp)
+        self.reference = int(frame)
         self.source_ID = str(source_ID)
         self.source_name = str(source_name)
         self.source_identifier = self.source_name + "-" + self.source_ID
@@ -66,7 +65,7 @@ class SensorData:
 
     def duplicate(self):
         return self.__class__(
-            timestamp=self.timestamp,
+            stamp=self.stamp,
             frame=self.frame,
             data=self.data,
             calibration=self.calibration,
@@ -82,7 +81,7 @@ class SensorData:
             folder = os.path.join(folder, self._default_subfolder)
         os.makedirs(folder, exist_ok=True)
         if filename is None:
-            filename = "timestamp_%08.2f-frame_%06d" % (self.timestamp, self.frame)
+            filename = "stamp_%08.2f-frame_%06d" % (self.stamp, self.frame)
         self.calibration.save_to_file(os.path.join(folder, "calib-" + filename))
         self.save_to_file(os.path.join(folder, "data-" + filename), **kwargs)
 
@@ -95,7 +94,7 @@ class ImuData(SensorData):
     """IMU datastructure
 
     Attributes:
-        timestamp (float):
+        stamp (float):
             The time of the sensor data capture
         frame (int):
             The discrete frame when data were captured
@@ -125,7 +124,7 @@ class GpsData(SensorData):
     """GPS datastructure
 
     Attributes:
-        timestamp (float):
+        stamp (float):
             The time of the sensor data capture
         frame (int):
             The discrete frame when data were captured
@@ -162,7 +161,7 @@ class ImageData(SensorData):
     """Image datastructure
 
     Attributes:
-        timestamp (float):
+        stamp (float):
             The time of the sensor data capture
         frame (int):
             The discrete frame when data were captured
@@ -244,7 +243,7 @@ class DepthImageData(SensorData):
     """Depth image datastructure
 
     Attributes:
-        timestamp (float):
+        stamp (float):
             The time of the sensor data capture
         frame (int):
             The discrete frame when data were captured
@@ -310,7 +309,7 @@ class LidarData(SensorData):
     """LiDAR point cloud datastructure
 
     Attributes:
-        timestamp (float):
+        stamp (float):
             The time of the sensor data capture
         frame (int):
             The discrete frame when data were captured
@@ -360,7 +359,7 @@ class LidarData(SensorData):
         else:
             data = self.data.filter(mask)
             return LidarData(
-                self.timestamp, self.frame, data, self.calibration, self.source_ID
+                self.stamp, self.frame, data, self.calibration, self.source_ID
             )
 
     def project(self, calib_other):
@@ -368,7 +367,7 @@ class LidarData(SensorData):
             depth = np.linalg.norm(self.data[:, :3], axis=1)
             data = self.data.project_to_2d(calib_other)
             return ProjectedLidarData(
-                self.timestamp,
+                self.stamp,
                 self.frame,
                 data,
                 calib_other,
@@ -379,21 +378,19 @@ class LidarData(SensorData):
             if not isinstance(calib_other, LidarCalibration):
                 raise NotImplementedError(type(calib_other))
             data = self.data.change_calibration(calib_other, inplace=False)
-            return LidarData(
-                self.timestamp, self.frame, data, calib_other, self.source_ID
-            )
+            return LidarData(self.stamp, self.frame, data, calib_other, self.source_ID)
 
     def transform_to_ground(self):
         """Only possible with reference's reference to global origin for now"""
         raise NotImplementedError
         # x_new = np.array(
-        #     [self.reference.x[0], self.reference.x[1], 0]
+        #     [self.frame.x[0], self.frame.x[1], 0]
         # )  # flat on ground
-        # yaw_old = tforms.transform_orientation(self.reference.q, "quat", "euler")[2]
-        # q_new = tforms.transform_orientation(
+        # yaw_old = conversions.transform_orientation(self.frame.q, "quat", "euler")[2]
+        # q_new = conversions.transform_orientation(
         #     [0, 0, yaw_old], "euler", "quat"
         # )  # keep old yaw
-        # ref_new = ReferenceFrame(x_new, q_new, reference=self.reference.reference)
+        # ref_new = ReferenceFrame(x_new, q_new, reference=self.frame.reference)
         # calib_new = LidarCalibration(reference=ref_new)
         # return self.project(calib_new)
 
@@ -450,7 +447,7 @@ class LidarData(SensorData):
         E[E > 90] -= 360
 
         # how many discrete elevations do we have?
-        elevations = messages.get_velodyne_elevation_table(sensor)
+        # elevations = messages.get_velodyne_elevation_table(sensor)
 
         # get sensor characteristics
         if sensor is None:
@@ -539,7 +536,7 @@ class ProjectedLidarData(SensorData):
     """LiDAR point cloud projected into a 2D view
 
     Attributes:
-        timestamp (float):
+        stamp (float):
             The time of the sensor data capture
         frame (int):
             The discrete frame when data were captured
@@ -576,7 +573,7 @@ class _RadarData(SensorData):
     """Classic RADAR datastructure
 
     Attributes:
-        timestamp (float):
+        stamp (float):
             The time of the sensor data capture
         frame (int):
             The discrete frame when data were captured
@@ -617,7 +614,7 @@ class _RadarData(SensorData):
         else:
             data = self.data.filter(mask)
             return self.__class__(
-                self.timestamp, self.frame, data, self.calibration, self.source_ID
+                self.stamp, self.frame, data, self.calibration, self.source_ID
             )
 
 
@@ -628,9 +625,9 @@ class ProjectedRadarData(ProjectedLidarData):
 class RadarDataRazelRRT(_RadarData):
     def convert_to_cartesian(self):
         data = self.data.copy()
-        data.x[:, :3] = tforms.matrix_spherical_to_cartesian(data.x[:, :3])
+        data.x[:, :3] = conversions.matrix_spherical_to_cartesian(data.x[:, :3])
         return RadarDataXYZRRT(
-            self.timestamp, self.frame, data, self.calibration, self.source_ID
+            self.stamp, self.frame, data, self.calibration, self.source_ID
         )
 
     def project(self, calib_other):
@@ -651,9 +648,9 @@ class RadarDataRazelRRT(_RadarData):
 class RadarDataXYZRRT(_RadarData):
     def convert_to_spherical(self):
         data = self.data.copy()
-        data.x[:, :3] = tforms.matrix_cartesian_to_spherical(data.x[:, :3])
+        data.x[:, :3] = conversions.matrix_cartesian_to_spherical(data.x[:, :3])
         return RadarDataRazelRRT(
-            self.timestamp, self.frame, data, self.calibration, self.source_ID
+            self.stamp, self.frame, data, self.calibration, self.source_ID
         )
 
     def project(self, calib_other):
@@ -661,7 +658,7 @@ class RadarDataXYZRRT(_RadarData):
             depth = np.linalg.norm(self.data[:, :3], axis=1)
             data = self.data.project_to_2d(calib_other)
             return ProjectedRadarData(
-                self.timestamp,
+                self.stamp,
                 self.frame,
                 data,
                 calib_other,
@@ -671,7 +668,7 @@ class RadarDataXYZRRT(_RadarData):
         else:
             data = self.data.change_calibration(calib_other)
             return RadarDataXYZRRT(
-                self.timestamp, self.frame, data, calib_other, self.source_ID
+                self.stamp, self.frame, data, calib_other, self.source_ID
             )
 
     def filter_by_range(self, min_range: float, max_range: float, inplace=True):
@@ -750,7 +747,7 @@ class ImuBuffer(datastructs.PriorityQueue):
         dt_total = 0.0
         dv_total = np.zeros((3,))
         dth_total = np.zeros((3,))
-        frame = None
+        reference = None
         source_ID = None
         imu_calib = None
         R = np.zeros((6, 6))
@@ -761,7 +758,7 @@ class ImuBuffer(datastructs.PriorityQueue):
             R = imu_data.data["R"]
             source_ID = imu_data.source_ID
             imu_calib = imu_data.calibration
-            frame = imu_data.frame
+            reference = imu_data.frame
         return ImuData(
             t_up_to,
             frame,

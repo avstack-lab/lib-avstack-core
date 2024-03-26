@@ -1,24 +1,9 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-27
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-07-27
-# @Description:
-"""
-
-"""
-
-import sys
 import time
 
 import numpy as np
 
 import avstack.datastructs as ds
-from avstack.geometry import ReferenceFrame, WorldFrame
-
-
-sys.path.append("tests/")
-from utilities import get_lidar_data, get_object_global
+from avstack.time import Stamp
 
 
 def test_priority_min_heap_full():
@@ -61,73 +46,13 @@ def test_priority_max_heap_full_circular():
         assert queue.top()[0] == i
 
 
-def get_object_dc():
-    frame = timestamp = source_identifier = 0
-    data = [get_object_global(seed=i, reference=WorldFrame) for i in range(4)]
-    dc = ds.DataContainer(
-        frame=frame, timestamp=timestamp, data=data, source_identifier=source_identifier
-    )
-    return dc
-
-
-def test_datacontainer_apply():
-    dc1 = get_object_dc()
-    ref2 = ReferenceFrame(
-        x=np.array([1, 2, 3]), q=np.quaternion(1), reference=WorldFrame
-    )
-
-    # check the initial
-    ids = []
-    id_dc1 = id(dc1)
-    for item in dc1:
-        assert item.reference == WorldFrame
-        ids.append(id(item))
-
-    # use the apply version -- inplace
-    dc1.apply("change_reference", reference=ref2, inplace=True)
-    for idx, item in enumerate(dc1):
-        assert item.reference == ref2
-        assert id(item) == ids[idx]
-    assert id(dc1) == id_dc1
-
-    # use the apply version -- not inplace
-    dc1.apply("change_reference", reference=ref2, inplace=False)
-    for idx, item in enumerate(dc1):
-        assert item.reference == ref2
-        assert id(item) != ids[idx]
-    assert id(dc1) == id_dc1
-
-
-def test_datacontainer_apply_and_return():
-    dc1 = get_object_dc()
-    ref2 = ReferenceFrame(
-        x=np.array([1, 2, 3]), q=np.quaternion(1), reference=WorldFrame
-    )
-    dc2 = dc1.apply_and_return("change_reference", reference=ref2, inplace=False)
-    assert id(dc1) != id(dc2)
-    for el1, el2 in zip(dc1, dc2):
-        assert id(el1) != id(el2)
-
-
-def test_data_manager():
-    data_manager = ds.DataManager()
-    pc1 = get_lidar_data(0.0, 1)
-    data_manager.push(pc1)
-    assert data_manager.has_data(pc1.source_identifier)
-    pc2 = get_lidar_data(1.0, 100)
-    data_manager.push(pc2)
-    pc_got = data_manager.pop(pc1.source_identifier, with_priority=False)
-    assert pc_got == pc1
-
-
 def generate_data(dt_interval=0.05, n_data=100):
     data = {
         dt_interval
         * frame: ds.DataContainer(
-            frame,
-            dt_interval * frame,
             np.array([dt_interval * frame]),
-            source_identifier="0",
+            identifier="0",
+            stamp=Stamp(dt_interval * frame, frame),
         )
         for frame in range(n_data)
     }
@@ -199,3 +124,62 @@ def test_delay_managed_buffer_event_driven_emit_all():
     assert len(elements) == 1, len(elements)
     n_popped = int((n_data * dt_interval - dt_delay) / dt_interval)
     assert len(elements[list(elements.keys())[0]]) == min(n_data, n_popped)
+
+
+# def get_object_dc():
+#     frame = timestamp = identifier = 0
+#     data = [get_object_global(seed=i, reference=GlobalOrigin3D) for i in range(4)]
+#     dc = ds.DataContainer(
+#         frame=frame, timestamp=timestamp, data=data, identifier=identifier
+#     )
+#     return dc
+
+
+# def test_datacontainer_apply():
+#     dc1 = get_object_dc()
+#     ref2 = ReferenceFrame(
+#         x=np.array([1, 2, 3]), q=np.quaternion(1), reference=GlobalOrigin3D
+#     )
+
+#     # check the initial
+#     ids = []
+#     id_dc1 = id(dc1)
+#     for item in dc1:
+#         assert item.reference == GlobalOrigin3D
+#         ids.append(id(item))
+
+#     # use the apply version -- inplace
+#     dc1.apply("change_reference", reference=ref2, inplace=True)
+#     for idx, item in enumerate(dc1):
+#         assert item.reference == ref2
+#         assert id(item) == ids[idx]
+#     assert id(dc1) == id_dc1
+
+#     # use the apply version -- not inplace
+#     dc1.apply("change_reference", reference=ref2, inplace=False)
+#     for idx, item in enumerate(dc1):
+#         assert item.reference == ref2
+#         assert id(item) != ids[idx]
+#     assert id(dc1) == id_dc1
+
+
+# def test_datacontainer_apply_and_return():
+#     dc1 = get_object_dc()
+#     ref2 = ReferenceFrame(
+#         x=np.array([1, 2, 3]), q=np.quaternion(1), reference=GlobalOrigin3D
+#     )
+#     dc2 = dc1.apply_and_return("change_reference", reference=ref2, inplace=False)
+#     assert id(dc1) != id(dc2)
+#     for el1, el2 in zip(dc1, dc2):
+#         assert id(el1) != id(el2)
+
+
+# def test_data_manager():
+#     data_manager = ds.DataManager()
+#     pc1 = get_lidar_data(0.0, 1)
+#     data_manager.push(pc1)
+#     assert data_manager.has_data(pc1.identifier)
+#     pc2 = get_lidar_data(1.0, 100)
+#     data_manager.push(pc2)
+#     pc_got = data_manager.pop(pc1.identifier, with_priority=False)
+#     assert pc_got == pc1

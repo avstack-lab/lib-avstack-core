@@ -1,17 +1,22 @@
-from typing import List
+from typing import TYPE_CHECKING, List
+
+
+if TYPE_CHECKING:
+    from avstack.datastructs import DataContainer
+    from avstack.geometry import ReferenceFrame, TransformManager
 
 import numpy as np
 
-from avstack.datastructs import DataContainer
-from avstack.environment.objects import VehicleState
-from avstack.geometry import Box2D, Box3D, ReferenceFrame
+from avstack.exceptions import FrameEquivalenceError
+from avstack.geometry import BoundingBox2D, BoundingBox3D
 from avstack.modules.perception.detections import (
     BoxDetection,
-    CentroidDetection,
+    CartesianDetection,
     RazDetection,
     RazelDetection,
     RazelRrtDetection,
 )
+from avstack.time import Stamp
 from avstack.utils.decorators import apply_hooks
 
 from ..assignment import gnn_single_frame_assign
@@ -27,7 +32,6 @@ class _TrackingAlgorithm(BaseModule):
         threshold_coast=3,
         cost_threshold=-0.10,
         v_max=None,
-        check_reference=True,
         ID=None,
         name="tracking",
         **kwargs,
@@ -40,9 +44,7 @@ class _TrackingAlgorithm(BaseModule):
 
         self.ID = ID
         self.tracks = []
-        self.iframe = -1
-        self.frame = 0
-        self.timestamp = 0
+        self.stamp = Stamp(0, 0)
         self.assign_metric = assign_metric
         self.assign_radius = assign_radius
         if assign_metric == "center_dist":
@@ -57,7 +59,6 @@ class _TrackingAlgorithm(BaseModule):
         self.last_assignment = None
         self.threshold_confirmed = threshold_confirmed
         self.threshold_coast = threshold_coast
-        self.check_reference = check_reference
         self.v_max = v_max
 
     @property
@@ -69,41 +70,38 @@ class _TrackingAlgorithm(BaseModule):
         self._tracks = tracks
 
     @property
-    def confirmed_tracks(self):
-        return self.tracks_confirmed
-
-    @property
     def tracks_confirmed(self):
-        return [trk for trk in self.tracks if trk.confirmed]
+        return DataContainer(
+            [trk for trk in self.tracks if trk.confirmed], self.identifier, self.stamp
+        )
 
     @property
     def tracks_active(self):
-        return [trk for trk in self.tracks if trk.active]
+        return DataContainer(
+            [trk for trk in self.tracks if trk.active], self.identifier, self.stamp
+        )
 
     @apply_hooks
-    def __call__(self, detections, platform: ReferenceFrame, **kwargs):
-        self.timestamp = float(detections.timestamp)
-        self.frame = int(detections.frame)
-        self.iframe += 1
-        tracks = self.track(detections, platform, **kwargs)
-        track_data = DataContainer(self.frame, self.timestamp, tracks, self.name)
-        return track_data
+    def __call__(self, detections: "DataContainer", frame: "ReferenceFrame", **kwargs):
+        self.stamp = detections.stamp
+        tracks = self.track(detections, frame, **kwargs)
+        return tracks
 
     def get_assignment_matrix(self, dets, tracks):
         A = np.zeros((len(dets), len(tracks)))
         for i, det_ in enumerate(dets):
             # -- pull off detection state
-            if isinstance(det_, (VehicleState, BoxDetection)):
+            if isinstance(det_, (BoxDetection)):
                 det = det_.box
-            elif isinstance(det_, (Box3D, Box2D)):
+            elif isinstance(det_, (BoundingBox2D, BoundingBox3D)):
                 det = det_
-            elif isinstance(det_, RazelRrtDetection):
+            elif isinstance(det_, (RazelRrtDetection)):
                 det = det_.xyzrrt  # use the cartesian coordinates for gating
-            elif isinstance(det_, RazelDetection):
+            elif isinstance(det_, (RazelDetection)):
                 det = det_.xyz  # use the cartesian coordinates for gating
-            elif isinstance(det_, RazDetection):
+            elif isinstance(det_, (RazDetection)):
                 det = det_.xy  # use the cartesian coordinates for gating
-            elif isinstance(det_, CentroidDetection):
+            elif isinstance(det_, (CartesianDetection)):
                 if self.dimensions == 3:
                     det = det_.xyz
                 elif self.dimensions == 2:
@@ -115,21 +113,15 @@ class _TrackingAlgorithm(BaseModule):
 
             for j, trk_ in enumerate(tracks):
                 # -- pull off track state
-                if isinstance(det_, (VehicleState, BoxDetection, Box3D, Box2D)):
-                    try:
-                        trk = trk_.as_object().box
-                    except AttributeError:
-                        trk = trk_.box2d
-                    else:
-                        if trk is None:
-                            trk = trk_.box2d
+                if isinstance(det_, (BoxDetection, BoundingBox2D, BoundingBox3D)):
+                    trk = trk_.box
                 elif isinstance(det_, RazelRrtDetection):
                     trk = np.array([*trk_.x[:3], trk_.rrt])
                 elif isinstance(det_, RazelDetection):
                     trk = trk_.x[:3]
                 elif isinstance(det_, RazDetection):
                     trk = trk_.x[:2]
-                elif isinstance(det_, CentroidDetection):
+                elif isinstance(det_, CartesianDetection):
                     if self.dimensions == 3:
                         trk = trk_.x[:3]
                     elif self.dimensions == 2:
@@ -139,38 +131,20 @@ class _TrackingAlgorithm(BaseModule):
                 else:
                     raise NotImplementedError(type(det_))
 
-                # -- either way, change origin and use radius to filter coarsely
-                try:
-                    if self.check_reference:
-                        err = False
-                        if isinstance(det.reference, ReferenceFrame):
-                            if det.reference.frame != trk.reference.frame:
-                                err = True
-                        else:
-                            raise NotImplementedError(
-                                f"type of {type(det.reference)} not understood"
-                            )
-                        if err:
-                            raise RuntimeError(
-                                "Should have performed reference transformations earlier..."
-                            )
-                except AttributeError as e:
-                    pass
+                # -- check reference
+                if det.frame != trk.frame:
+                    raise FrameEquivalenceError(det.frame, trk.frame)
 
                 # -- gating
                 if self.assign_radius is not None:
-                    if isinstance(det_, (VehicleState, BoxDetection, Box3D)):
-                        dist = det.t.distance(
-                            trk.t, check_reference=self.check_reference
-                        )
-                    else:
+                    try:
                         dist = np.linalg.norm(trk - det)
+                    except AttributeError:
+                        dist = det.distance(trk)
 
                 # -- use the metric of choice
                 if self.assign_metric == "IoU":
-                    cost = -det.IoU(
-                        trk, check_reference=self.check_reference
-                    )  # lower is better
+                    cost = -det.IoU(trk)  # lower is better
                 elif self.assign_metric == "center_dist":
                     cost = dist - self.assign_radius  # lower is better
                 else:
@@ -181,15 +155,14 @@ class _TrackingAlgorithm(BaseModule):
         return A
 
     def spawn_track_from_detection(self, detection):
-        raise NotImplementedError
+        raise NotImplementedError("Implement in subclass")
 
     def track(
         self,
-        detections: DataContainer,
-        platform: ReferenceFrame,
-        change_in_place=False,
+        detections: "DataContainer",
+        frame: "ReferenceFrame",
         trks_observable: List = None,
-        check_reference: bool = True,
+        tm: "TransformManager" = None,
         *args,
         **kwargs,
     ):
@@ -197,14 +170,14 @@ class _TrackingAlgorithm(BaseModule):
 
         Note: detections being None means only do a prediction but don't penalize misses
         """
-        t = detections.timestamp
+        t = detections.stamp
         if not trks_observable:
             trks_observable = self.tracks_active
 
         # -- propagation
         for trk in self.tracks_active:
-            if platform and check_reference:
-                trk.change_reference(platform, inplace=True)
+            if trk.reference != frame:
+                trk.change_reference(frame, tm=tm)
             trk.predict(t)
             if self.v_max is not None:
                 if trk.velocity.norm() > self.v_max:
@@ -216,15 +189,12 @@ class _TrackingAlgorithm(BaseModule):
                 detections = {"sensor_1": detections}
             for sensor, dets in detections.items():
                 # -- change to platform reference
-                if platform and check_reference:
-                    if not change_in_place:
-                        dets = [
-                            det.change_reference(platform, inplace=False)
-                            for det in dets
-                        ]
-                    else:
-                        for det in dets:
-                            det.change_reference(platform, inplace=True)
+                dets = [
+                    det.copy().change_reference(frame, tm=tm)
+                    if det.frame != frame
+                    else det
+                    for det in dets
+                ]
 
                 # -- assignment with active and observable tracks
                 A = self.get_assignment_matrix(dets, trks_observable)

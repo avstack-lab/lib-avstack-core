@@ -1,20 +1,10 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-27
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-24
-# @Description:
-"""
-
-"""
-
 from typing import Any, List, Union
 
 import numpy as np
 
 from avstack.config import MODELS
 from avstack.datastructs import DataContainer
-from avstack.geometry import Box3D, Position, Velocity
+from avstack.geometry import BoundingBox3D, BoxSize, Pose, Vector
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
 from avstack.modules.tracking.tracks import _TrackBase
 from avstack.utils.decorators import apply_hooks
@@ -143,23 +133,25 @@ class CovarianceIntersectionFusionToBox(_BaseFusion):
             # get other attributes
             t0 = min([track.t0 for track in tracks])
             t = max([track.t for track in tracks])
-            reference = tracks[0].reference
-            obj_type = tracks[0].obj_type
+            reference = tracks[0].frame
+            obj_class = tracks[0].obj_class
             dt_coast = min([track.dt_coast for track in tracks])
             n_updates = max([track.n_updates for track in tracks])
             attitude = tracks[0].attitude  # APPROXIMATION
 
             # wrap into expected attributes
-            position = Position(x_fuse[0:3], reference=reference)
+            position = Vector(x_fuse[0:3], stamp=stamp)
             hwl = x_fuse[3:6]
-            box3d = Box3D(position, attitude, hwl)
-            v = Velocity(x_fuse[6:9], reference=reference)
+            pose = Pose(position, attitude)
+            box_size = BoxSize(*hwl)
+            box3d = BoundingBox3D(pose, box_size, hwl)
+            v = Vector(x_fuse[6:9], stamp=stamp)
 
             return BasicBoxTrack3D(
                 t0=t0,
                 box3d=box3d,
-                reference=reference,
-                obj_type=obj_type,
+                stamp=stamp,
+                obj_class=obj_class,
                 v=v,
                 P=P_fuse,
                 t=t,
