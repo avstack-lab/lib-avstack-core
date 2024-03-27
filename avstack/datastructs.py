@@ -703,7 +703,7 @@ class DataBucket(PriorityQueue):
             assert (
                 data.identifier == self.identifier
             ), f"{data.identifier} needs to match {self.identifier}"
-            super(DataBucket, self).push(data.stamp.stamp, data)
+            super(DataBucket, self).push(data.stamp.timestamp, data)
         else:
             if item is not None:
                 priority = data

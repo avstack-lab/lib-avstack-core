@@ -27,6 +27,7 @@ from avstack.geometry import (
 from avstack.modules.perception import detections
 from avstack.objects import VehicleState
 from avstack.sensors import ImageData, LidarData, RadarDataRazelRRT
+from avstack.time import Stamp
 
 
 # -- calibration data
@@ -79,7 +80,7 @@ def get_ego(seed, reference=camera_frame):
     pos = Vector(np.random.rand(3), reference)
     hwl = [1, 2, 4]
     pose = Pose(pos, rot)
-    box_size = BoxSize(hwl)
+    box_size = BoxSize(*hwl)
     box = BoundingBox3D(pose, box_size)  # box in local coordinates
     vel = Vector(np.random.rand(3), reference)
     acc = Vector(np.random.rand(3), reference)
@@ -113,14 +114,16 @@ def get_lidar_data(t, frame, lidar_ID=0):
     pc = PointMatrix3D(
         np.fromfile(pc_fname, dtype=np.float32).reshape((-1, 4)), lidar_calib
     )
-    pc = LidarData(t, frame, pc, lidar_calib, lidar_ID)
+    stamp = Stamp(timestamp=t, frame=frame)
+    pc = LidarData(stamp, pc, lidar_calib, lidar_ID)
     return pc
 
 
 def get_image_data(t, frame, camera_ID=0):
     img_fname = os.path.join(KITTI_data_dir, "image_2", "%06d.png" % frame)
     img = imread(img_fname)[:, :, ::-1]
-    img = ImageData(t, frame, img, camera_calib, camera_ID)
+    stamp = Stamp(timestamp=t, frame=frame)
+    img = ImageData(stamp, img, camera_calib, camera_ID)
     return img
 
 
@@ -132,7 +135,8 @@ def get_radar_data(t, frame, radar_ID=0):
         rad[:, :3]
     )  # change to spherical coordinates
     rad[:, 3] = 0  # range rate set to zero artificially...
-    rad = RadarDataRazelRRT(t, frame, rad, radar_calib, radar_ID)
+    stamp = Stamp(timestamp=t, frame=frame)
+    rad = RadarDataRazelRRT(stamp, rad, radar_calib, radar_ID)
     return rad
 
 

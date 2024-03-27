@@ -26,7 +26,9 @@ from .primitives import (
     PointMatrix3D,
     Pose,
     Rotation,
+    RotationDecoder,
     Vector,
+    VectorDecoder,
 )
 
 

@@ -22,7 +22,7 @@ from utilities import get_test_sensor_data
     box_2d,
     box_3d,
 ) = get_test_sensor_data()
-pc_bev = LidarData(pc.timestamp, pc.frame, pc.data[:, [1, 2]], lidar_calib, 100)
+pc_bev = LidarData(pc.stamp, pc.data[:, [1, 2]], lidar_calib, 100)
 
 alg_ID = 0
 alg_name = "detector-1"

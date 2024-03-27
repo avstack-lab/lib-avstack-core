@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-09
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-28
-# @Description:
-"""
-
-"""
-
 import os
 import sys
 import tempfile
 
 from avstack import sensors
 from avstack.datastructs import DataBucket, DataManager
+from avstack.time import Stamp
 
 
 sys.path.append("tests/")
@@ -35,34 +26,30 @@ from utilities import get_test_sensor_data
 
 
 def test_sensor_data_bucket():
-    SDB = DataBucket(source_identifier="sensor-1")
+    SDB = DataBucket(identifier="sensor-1")
     S1 = sensors.SensorData(
-        frame=2,
-        timestamp=10,
+        stamp=Stamp(10, 2),
         data="a",
         calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
     S2 = sensors.SensorData(
-        frame=3,
-        timestamp=11,
+        stamp=Stamp(11, 3),
         data="b",
         calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
     S3 = sensors.SensorData(
-        frame=1,
-        timestamp=9,
+        stamp=Stamp(9, 1),
         data="c",
         calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
     S4 = sensors.SensorData(
-        frame=0,
-        timestamp=8,
+        stamp=Stamp(8, 0),
         data="d",
         calibration=lidar_calib,
         source_ID=0,
@@ -88,32 +75,28 @@ def test_sensor_data_bucket():
 def test_sensor_data_manager():
     SDM = DataManager()
     S1 = sensors.SensorData(
-        frame=2,
-        timestamp=10,
+        stamp=Stamp(10, 2),
         data="a",
         calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
     S2 = sensors.SensorData(
-        frame=3,
-        timestamp=11,
+        stamp=Stamp(11, 3),
         data="b",
         calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
     S3 = sensors.SensorData(
-        frame=1,
-        timestamp=9,
+        stamp=Stamp(9, 1),
         data="c",
         calibration=lidar_calib,
         source_ID=1,
         source_name="sensor",
     )
     S4 = sensors.SensorData(
-        frame=0,
-        timestamp=8,
+        stamp=Stamp(8, 0),
         data="d",
         calibration=lidar_calib,
         source_ID=0,

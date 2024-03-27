@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from avstack.geometry import TransformManager
+
 import itertools
 import json
 from copy import deepcopy
@@ -10,9 +16,13 @@ import numpy as np
 from avstack.geometry import (
     BoundingBox2D,
     BoundingBox3D,
+    BoundingBoxDecoder,
+    FrameTransform,
     ReferenceFrame,
     Rotation,
+    RotationDecoder,
     Vector,
+    VectorDecoder,
     conversions,
 )
 from avstack.maskfilters import box_in_fov, filter_points_in_box
@@ -92,7 +102,7 @@ class ObjectStateDecoder(json.JSONDecoder):
                 else json.loads(json_object["attitude"], cls=RotationDecoder),
                 angular_velocity=None
                 if json_object["angular_velocity"] is None
-                else json.loads(json_object["angular_velocity"], cls=RotationDecoder),
+                else json.loads(json_object["angular_velocity"], cls=VectorDecoder),
                 occlusion=Occlusion(json_object["occlusion"]),
                 visible_fraction=vis_frac,
             )
@@ -160,12 +170,6 @@ class ObjectState:
         else:
             return None
 
-    @property
-    def velocity_head_tail(self):
-        pos_g = self.position.in_global()
-        vel_g = self.velocity.in_global()
-        return VectorHeadTail(pos_g.x, pos_g.x + vel_g.x, GlobalOrigin3D)
-
     def __getitem__(self, key):
         if key == "size":
             return self.box3d.size
@@ -186,11 +190,13 @@ class ObjectState:
         vel = self.velocity.x if self.velocity else np.zeros((3,))
         acc = self.acceleration.x if self.acceleration else np.zeros((3,))
         att = self.attitude.q if self.attitude else np.quaternion(1)
-        ang = self.angular_velocity.q if self.angular_velocity else np.quaternion(1)
-        ref = self.frame
-        return ReferenceFrame(
-            x=pos, v=vel, acc=acc, q=att, ang=ang, reference=ref, stamp=self.t
+        ang = self.angular_velocity.x if self.angular_velocity else np.zeros((3,))
+        ref = self.reference
+        T_ref_to_self = FrameTransform(
+            from_frame=self.reference.name, to_frame=self.identifier
         )
+        R_ref_to_self = ReferenceFrame(name=self.identifier, stamp=self.stamp)
+        return (R_ref_to_self,)
 
     def set(
         self,
@@ -264,64 +270,19 @@ class ObjectState:
         )
         return VS
 
-    def change_reference(self, reference: ReferenceFrame | ObjectState, inplace: bool):
-        """Transform the reference frame of this object
-
-        If other is a reference frame, assume it is static.
-        If other is another object state, it may not be static.
-        """
-
-        # wrapping reference frame
-        if isinstance(reference, (PassiveReferenceFrame, ReferenceFrame)):
-            pass
-        elif isinstance(reference, ObjectState):
-            reference = reference.as_reference()
-        else:
-            raise NotImplementedError(type(reference))
-
-        # transforms
+    def change_reference(self, reference: "ReferenceFrame", tm: "TransformManager"):
         if self.position is not None:
-            position = self.position.change_reference(reference, inplace=inplace)
-        else:
-            position = None
+            self.position.change_reference(reference, tm=tm)
         if self.velocity is not None:
-            velocity = self.velocity.change_reference(reference, inplace=inplace)
-        else:
-            velocity = None
+            self.velocity.change_reference(reference, tm=tm)
         if self.acceleration is not None:
-            acceleration = self.acceleration.change_reference(
-                reference, inplace=inplace
-            )
-        else:
-            acceleration = None
+            self.acceleration.change_reference(reference, tm=tm)
         if self.box is not None:
-            box = self.box.change_reference(reference, inplace=inplace)
-        else:
-            box = None
+            self.box.change_reference(reference, tm=tm)
         if self.attitude is not None:
-            attitude = self.attitude.change_reference(reference, inplace=inplace)
-        else:
-            attitude = None
+            self.attitude.change_reference(reference, tm=tm)
         if self.angular_velocity is not None:
-            angular_velocity = self.angular_velocity.change_reference(
-                reference, inplace=inplace
-            )
-        else:
-            angular_velocity = None
-
-        if not inplace:
-            obj_out = ObjectState(self.obj_class, self.ID)
-            obj_out.set(
-                t=self.t,
-                position=position,
-                box=box,
-                velocity=velocity,
-                acceleration=acceleration,
-                attitude=attitude,
-                angular_velocity=angular_velocity,
-                occlusion=Occlusion.UNKNOWN,
-            )
-            return obj_out
+            self.angular_velocity.change_reference(reference, tm=tm)
 
     def set_occlusion_by_depth(self, depth_image, check_reference=True):
         """sets occlusion level using depth image
@@ -518,7 +479,7 @@ def global_to_local(v_self, v_other):
         att,
         ang,
         occlusion=v_self.occlusion,
-        origin=v_other.reference,
+        reference=v_other.reference,
     )
     return VS
 
@@ -568,12 +529,12 @@ def local_to_global(v_self, v_other):
         att,
         ang,
         occlusion=v_self.occlusion,
-        origin=v_self.frame,
+        reference=v_self.reference,
     )
     return VS
 
 
-def global_to_local_from_origin(o_self, v_other):
+def global_to_local_from_reference(o_self, v_other):
     if (o_self.q is None) or (v_other.attitude is None):
         raise RuntimeError("Attitudes must be set to run this")
     R_g_to_s = o_self.rotation
@@ -600,7 +561,7 @@ def global_to_local_from_origin(o_self, v_other):
         att,
         ang,
         occlusion=v_other.occlusion,
-        origin=v_other.reference,
+        reference=v_other.reference,
     )
     return VS
 

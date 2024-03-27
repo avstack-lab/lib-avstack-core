@@ -16,23 +16,33 @@ except ModuleNotFoundError:
 from avstack import datastructs, maskfilters
 from avstack.calibration import CameraCalibration, LidarCalibration
 from avstack.geometry import PointMatrix3D, conversions
+from avstack.time import Stamp
 
 
 class SensorData:
     """Base class for sensor data structure"""
 
     def __init__(
-        self, stamp, frame, data, calibration, source_ID, source_name, **kwargs
+        self, stamp: Stamp, data, calibration, source_ID, source_name, **kwargs
     ):
-        self.stamp = float(stamp)
-        self.reference = int(frame)
+        self.stamp = stamp
         self.source_ID = str(source_ID)
         self.source_name = str(source_name)
-        self.source_identifier = self.source_name + "-" + self.source_ID
+        self.identifier = self.source_name + "-" + self.source_ID
         self.data = data
         self.calibration = calibration
         allowed_keys = {"depth", "in_front"}
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
+
+    @property
+    def stamp(self):
+        return self._stamp
+
+    @stamp.setter
+    def stamp(self, stamp):
+        if not isinstance(stamp, Stamp):
+            raise ValueError(stamp)
+        self._stamp = stamp
 
     @property
     def shape(self):
@@ -45,8 +55,16 @@ class SensorData:
         return self.calibration.reference
 
     @property
+    def timestamp(self):
+        return self.stamp.timestamp
+
+    @property
+    def frame(self):
+        return self.stamp.frame
+
+    @property
     def _default_subfolder(self):
-        return self.source_identifier
+        return self.identifier
 
     def __iter__(self):
         return iter(self.data)
@@ -66,7 +84,6 @@ class SensorData:
     def duplicate(self):
         return self.__class__(
             stamp=self.stamp,
-            frame=self.frame,
             data=self.data,
             calibration=self.calibration,
             source_ID=self.source_ID,
@@ -102,7 +119,7 @@ class ImuData(SensorData):
             Unique identifier for this sensor
         source_name (str):
             Name characterizing the sensor
-        source_identifier (str):
+        identifier (str):
             Concatenation of the source name and ID
         data (dict):
             Dictionary containing: dt, dv, dth, R
@@ -132,7 +149,7 @@ class GpsData(SensorData):
             Unique identifier for this sensor
         source_name (str):
             Name characterizing the sensor
-        source_identifier (str):
+        identifier (str):
             Concatenation of the source name and ID
         data (np.ndarray):
             Data for this sensor
@@ -251,7 +268,7 @@ class DepthImageData(SensorData):
             Unique identifier for this sensor
         source_name (str):
             Name characterizing the sensor
-        source_identifier (str):
+        identifier (str):
             Concatenation of the source name and ID
         data (np.ndarray):
             Depth image in format of [N x M x 3] in a coding
@@ -317,7 +334,7 @@ class LidarData(SensorData):
             Unique identifier for this sensor
         source_name (str):
             Name characterizing the sensor
-        source_identifier (str):
+        identifier (str):
             Concatenation of the source name and ID
         data (np.ndarray):
             Point cloud matrix of size [# points, # features]
@@ -544,7 +561,7 @@ class ProjectedLidarData(SensorData):
             Unique identifier for this sensor
         source_name (str):
             Name characterizing the sensor
-        source_identifier (str):
+        identifier (str):
             Concatenation of the source name and ID
         data (np.ndarray):
             Point cloud matrix of size [# points, # features]
@@ -581,7 +598,7 @@ class _RadarData(SensorData):
             Unique identifier for this sensor
         source_name (str):
             Name characterizing the sensor
-        source_identifier (str):
+        identifier (str):
             Concatenation of the source name and ID
         data (np.ndarray):
             TODO
