@@ -29,7 +29,7 @@ class BaseModule:
     def _apply_post_hooks(self, *args):
         for hook in self.post_hooks:
             args = hook(*args)
-        if len(args) == 1:
+        if isinstance(args, tuple) and (len(args) == 1):
             args = args[0]  # do not love this at all...
         return args
 

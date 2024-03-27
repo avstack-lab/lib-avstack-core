@@ -6,6 +6,7 @@ from cv2 import imwrite
 
 from avstack.config import MODELS
 from avstack.datastructs import DataContainer
+from avstack.environment.objects import ObjectState
 from avstack.geometry import Box3D
 from avstack.modules.perception import detections, utils
 from avstack.modules.perception.base import _MMObjectDetector, _PerceptionAlgorithm
@@ -52,6 +53,13 @@ class Passthrough3DObjectDetector(_PerceptionAlgorithm):
         for obj in data:
             if isinstance(obj, detections.Detection_):
                 det = obj
+            elif isinstance(obj, ObjectState):
+                det = detections.BoxDetection(
+                    source_identifier=self.MODE,
+                    box=obj.box,
+                    reference=obj.reference,
+                    obj_type=obj.obj_type,
+                )
             elif isinstance(obj, Box3D):
                 det = detections.BoxDetection(
                     source_identifier=self.MODE,

@@ -82,6 +82,10 @@ class _TrackingAlgorithm(BaseModule):
 
     @apply_hooks
     def __call__(self, detections, platform: ReferenceFrame, **kwargs):
+        if not isinstance(detections, DataContainer):
+            raise ValueError(
+                f"Detections are {type(detections)}, must be DataContainer"
+            )
         self.timestamp = float(detections.timestamp)
         self.frame = int(detections.frame)
         self.iframe += 1

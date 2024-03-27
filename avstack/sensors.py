@@ -115,8 +115,8 @@ class ImuData(SensorData):
         super().__init__(*args, **kwargs, source_name=source_name)
 
     def save_to_file(self, filename):
-        if not filename.endswith('.txt'):
-            filename = filename + '.txt'
+        if not filename.endswith(".txt"):
+            filename = filename + ".txt"
         with open(filename, "w") as f:
             f.write(json.dumps(self.data))
 
@@ -152,8 +152,8 @@ class GpsData(SensorData):
         self.levar = levar
 
     def save_to_file(self, filename):
-        if not filename.endswith('.txt'):
-            filename = filename + '.txt'
+        if not filename.endswith(".txt"):
+            filename = filename + ".txt"
         with open(filename, "w") as f:
             f.write("{} {} {}".format(*self.data))
 
@@ -400,9 +400,7 @@ class LidarData(SensorData):
         calib_new = LidarCalibration(reference=ref_new)
         return self.project(calib_new)
 
-    def save_to_file(
-        self, filepath: str, as_ply: bool = False, **kwargs
-    ):
+    def save_to_file(self, filepath: str, as_ply: bool = False, **kwargs):
         if isinstance(self.data, (PointMatrix3D, np.ndarray)):
             data = self.data if isinstance(self.data, np.ndarray) else self.data.x
             data = data.astype(np.float32)
