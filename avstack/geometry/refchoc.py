@@ -645,7 +645,7 @@ class Vector:
 
         # Perform dot product
         return self.x @ other
-    
+
     def copy(self):
         return self.factory()(self.x, self.reference)
 
@@ -880,10 +880,10 @@ class Rotation:
 
     def __matmul__(self, other):
         raise NotImplementedError
-    
+
     def copy(self):
         return self.factory()(self.q, self.reference)
-    
+
     def encode(self):
         return json.dumps(self, cls=RotationEncoder)
 

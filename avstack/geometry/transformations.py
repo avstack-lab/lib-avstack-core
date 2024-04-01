@@ -323,6 +323,7 @@ def get_R_ecef_to_lla():
 
 @jit(nopython=True, fastmath=True)
 def _make_euler(R):
+    R = np.clip(R, -1.0, 1.0)
     roll = np.arctan2(R[1, 2], R[2, 2])
     pitch = -np.arcsin(R[0, 2])
     yaw = np.arctan2(R[0, 1], R[0, 0])
@@ -465,6 +466,15 @@ def transform_orientation(x, a_from, a_to):
     if TO in q_list:
         if x_out.w < 0:
             x_out *= -1
+
+    # error checking
+    if ((TO in q_list) and (np.isnan(x_out.w) or np.isnan(x_out.vec).any())) or (
+        (TO not in q_list) and np.isnan(x_out).any()
+    ):
+        import pdb
+
+        pdb.set_trace()
+        raise RuntimeError(x_out)
 
     return x_out
 
