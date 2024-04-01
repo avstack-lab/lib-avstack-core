@@ -397,6 +397,9 @@ class Box3D:
     @property
     def reference(self):
         return self.position.reference
+    
+    def copy(self):
+        return Box3D(self.position.copy(), self.attitude.copy(), self.hwl, self.where_is_t)
 
     def encode(self):
         return json.dumps(self, cls=BoxEncoder)

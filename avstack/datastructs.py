@@ -847,6 +847,14 @@ class DataContainer:
             )
         self._timestamp = timestamp
 
+    def copy(self):
+        return DataContainer(
+            frame=self.frame,
+            timestamp=self.timestamp,
+            source_identifier=self.source_identifier,
+            data=[d.copy() for d in self.data],
+        )
+
     def encode(self):
         return json.dumps(self, cls=DataContainerEncoder)
 
