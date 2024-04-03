@@ -125,7 +125,9 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             else:
                 chk_path = os.path.join(mm2d_root, checkpoint_file)
         if not os.path.exists(chk_path):
-            raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint, mm3d root: {mm3d_root}, mm2d root: {mm2d_root}")
+            raise FileNotFoundError(
+                f"Cannot find {checkpoint_file} checkpoint, mm3d root: {mm3d_root}, mm2d root: {mm2d_root}"
+            )
 
         # set up inference model settings
         if self.MODE == "object_3d":
@@ -200,7 +202,12 @@ class _MMObjectDetector(_PerceptionAlgorithm):
                 "motorcycle",
                 "pedestrian",
             )
-        elif dataset in ["carla", "carla-infrastructure"]:
+        elif dataset in [
+            "carla",
+            "carla-vehicle",
+            "carla-joint",
+            "carla-infrastructure",
+        ]:
             all_objs = ["car", "bicycle", "truck", "motorcycle"]
             whitelist = all_objs
         elif dataset == "cityscapes":

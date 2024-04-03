@@ -57,6 +57,8 @@ class_maps = {
     "nuscenes": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "nuimages": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "carla": {k: ks[0] for ks in carla_clases for k in ks[1]},
+    "carla-joint": {k: ks[0] for ks in carla_clases for k in ks[1]},
+    "carla-vehicle": {k: ks[0] for ks in carla_clases for k in ks[1]},
     "carla-infrastructure": {k: ks[0] for ks in carla_clases for k in ks[1]},
     "coco-person": {k: ks[0] for ks in coco_person_classes for k in ks[1]},
     "coco": {k: ks[0] for ks in coco_classes for k in ks[1]},
