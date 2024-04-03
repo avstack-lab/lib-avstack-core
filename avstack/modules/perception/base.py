@@ -112,20 +112,20 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         if not os.path.exists(mod_path):
             mod_path = os.path.join(mm3d_root, config_file)
             if "latest" in checkpoint_file:
-                chk_path = self.checkpoint_to_latest(mm3d_root, checkpoint_file)
+                chk_path = self.map_checkpoint_to_latest(mm3d_root, checkpoint_file)
             else:
                 chk_path = os.path.join(mm3d_root, checkpoint_file)
             if not os.path.exists(mod_path):
                 raise FileNotFoundError(f"Cannot find {config_file} config")
             if not os.path.exists(chk_path):
-                raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint")
+                raise FileNotFoundError(f"Cannot find {chk_path} checkpoint")
         else:
             if "latest" in checkpoint_file:
                 chk_path = self.map_checkpoint_to_latest(mm2d_root, checkpoint_file)
             else:
                 chk_path = os.path.join(mm2d_root, checkpoint_file)
         if not os.path.exists(chk_path):
-            raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint")
+            raise FileNotFoundError(f"Cannot find {checkpoint_file} checkpoint, mm3d root: {mm3d_root}, mm2d root: {mm2d_root}")
 
         # set up inference model settings
         if self.MODE == "object_3d":
@@ -316,7 +316,7 @@ class _MMObjectDetector(_PerceptionAlgorithm):
                 ),
                 "r",
             ) as f:
-                chk_path = f.readlines()[0]
+                chk_path = f.readlines()[0].rstrip()
             return chk_path
         else:
             return None
