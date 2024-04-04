@@ -79,15 +79,15 @@ download_models "coco" "v2.0" "cascade_rcnn" "$COCO_CMRCNN"
 # for custom trained models
 # -----------------------------------
 
-CARLA_FRCNN="faster_rcnn_r50_fpn_1x_carla_vehicle"
-download_custom_models "carla" "carla" "$CARLA_FRCNN"
-CARLA_FRCNN_INF="faster_rcnn_r50_fpn_1x_carla_infrastructure"
-download_custom_models "carla" "carla" "$CARLA_FRCNN_INF"
+# CARLA_FRCNN="faster_rcnn_r50_fpn_1x_carla_vehicle"
+# download_custom_models "carla" "carla" "$CARLA_FRCNN"
+# CARLA_FRCNN_INF="faster_rcnn_r50_fpn_1x_carla_infrastructure"
+# download_custom_models "carla" "carla" "$CARLA_FRCNN_INF"
 
-CARLA_CRCNN="cascade-rcnn_r50_fpn_1x_carla_vehicle"
-download_custom_models "carla" "carla" "$CARLA_CRCNN"
-CARLA_CRCNN_INF="cascade-rcnn_r50_fpn_1x_carla_infrastructure"
-download_custom_models "carla" "carla" "$CARLA_CRCNN_INF"
+# CARLA_CRCNN="cascade-rcnn_r50_fpn_1x_carla_vehicle"
+# download_custom_models "carla" "carla" "$CARLA_CRCNN"
+# CARLA_CRCNN_INF="cascade-rcnn_r50_fpn_1x_carla_infrastructure"
+# download_custom_models "carla" "carla" "$CARLA_CRCNN_INF"
 
 
 echo "Adding symbolic link to mmdet directory"

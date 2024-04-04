@@ -216,7 +216,7 @@ def convert_mm3d_to_avstack(
                         x_O_2_obj_in_O = cent
                         where_is_t = "bottom"
                         reference = calib.reference
-                    elif dataset == "carla":
+                    elif dataset in ["carla", "carla-joint"]:
                         yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent

@@ -307,6 +307,16 @@ class ReferenceFrame:
                 f"Cannot check equality between reference frame and {type(other)}"
             )
 
+    def copy(self):
+        if self.is_global_origin:
+            return self
+        else:
+            return ReferenceFrame(
+                x=self.x.copy(),
+                q=self.q.copy(),
+                reference=self.reference.copy(),
+            )
+
     def set_reupdate(self):
         self._hash = None
         self._global_integrated = None

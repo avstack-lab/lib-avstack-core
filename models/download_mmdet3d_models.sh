@@ -80,10 +80,10 @@ download_models "nuscenes" "ssn" "$NUSC_SSN"
 # for custom trained models
 # -----------------------------------
 
-CARLA_PILLARS="pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle"
-download_custom_models "carla" "carla" $CARLA_PILLARS
-CARLA_INF_PILLARS="pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure"
-download_custom_models "carla" "carla" $CARLA_INF_PILLARS
+# CARLA_PILLARS="pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle"
+# download_custom_models "carla" "carla" $CARLA_PILLARS
+# CARLA_INF_PILLARS="pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure"
+# download_custom_models "carla" "carla" $CARLA_INF_PILLARS
 
 
 echo "Adding symbolic link to mmdet3d directory"
