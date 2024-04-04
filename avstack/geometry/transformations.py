@@ -4,8 +4,6 @@ import numpy as np
 import quaternion
 from numba import jit
 
-from avstack.geometry.coordinates import StandardCoordinates
-
 
 # WGS84 Constants:
 WGS_a = 6378137
@@ -60,18 +58,17 @@ def matrix_spherical_to_cartesian(M):
     return M_
 
 
-def spherical_to_cartesian(razel, coordinates=StandardCoordinates):
+def spherical_to_cartesian(razel):
     x = razel[0] * np.cos(razel[1]) * np.cos(razel[2])
     y = razel[0] * np.sin(razel[1]) * np.cos(razel[2])
     z = razel[0] * np.sin(razel[2])
-    return StandardCoordinates.convert(np.array([x, y, z]), coordinates)
+    return np.array([x, y, z])
 
 
-def cartesian_to_spherical(v, coordinates=StandardCoordinates):
-    v2 = coordinates.convert(v, StandardCoordinates)
-    rng = np.linalg.norm(v2)
-    az = np.arctan2(v2[1], v2[0])
-    el = np.arcsin(v2[2] / rng)
+def cartesian_to_spherical(xyz):
+    rng = np.linalg.norm(xyz)
+    az = np.arctan2(xyz[1], xyz[0])
+    el = np.arcsin(xyz[2] / rng)
     return np.array([rng, az, el])
 
 
