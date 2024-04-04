@@ -206,10 +206,14 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                     "configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
                 )
                 checkpoint_file = "checkpoints/nuscenes/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_nus-3d_20201021_120719-269f9dd6.pth"
-            elif dataset in ["carla", "carla-joint"]:
-                threshold = 0.05
+            elif dataset == "carla-joint":
+                threshold = 0.5
                 config_file = "work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-joint/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-joint.py"
                 checkpoint_file = f"work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-joint/{epoch_str}.pth"
+            elif dataset == "carla-vehicle":
+                threshold = 0.5
+                config_file = "work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle.py"
+                checkpoint_file = f"work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle/{epoch_str}.pth"
             elif dataset == "carla-infrastructure":
                 threshold = 0.5
                 config_file = "work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure.py"

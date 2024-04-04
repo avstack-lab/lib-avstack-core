@@ -56,7 +56,6 @@ class_maps = {
     "cityscapes": {k: ks[0] for ks in ci_classes for k in ks[1]},
     "nuscenes": {k: ks[0] for ks in nu_classes for k in ks[1]},
     "nuimages": {k: ks[0] for ks in nu_classes for k in ks[1]},
-    "carla": {k: ks[0] for ks in carla_clases for k in ks[1]},
     "carla-joint": {k: ks[0] for ks in carla_clases for k in ks[1]},
     "carla-vehicle": {k: ks[0] for ks in carla_clases for k in ks[1]},
     "carla-infrastructure": {k: ks[0] for ks in carla_clases for k in ks[1]},
@@ -216,7 +215,7 @@ def convert_mm3d_to_avstack(
                         x_O_2_obj_in_O = cent
                         where_is_t = "bottom"
                         reference = calib.reference
-                    elif dataset in ["carla", "carla-joint"]:
+                    elif dataset in ["carla-vehicle", "carla-joint"]:
                         yaw = box[6]
                         q_O_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent

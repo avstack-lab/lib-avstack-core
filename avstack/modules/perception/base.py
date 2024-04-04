@@ -203,7 +203,6 @@ class _MMObjectDetector(_PerceptionAlgorithm):
                 "pedestrian",
             )
         elif dataset in [
-            "carla",
             "carla-vehicle",
             "carla-joint",
             "carla-infrastructure",
