@@ -166,6 +166,7 @@ class MMDetObjectDetector2D(_MMObjectDetector):
         input_data = "camera"
         label_dataset_override = dataset
         epoch_str = "latest" if epoch == "latest" else "epoch_{}".format(epoch)
+        do_projection = False
         if model == "yolov3":
             raise NotImplementedError("yolo not trained yet")
         elif model == "rtmdet":
@@ -254,4 +255,5 @@ class MMDetObjectDetector2D(_MMObjectDetector):
             checkpoint_file,
             input_data,
             label_dataset_override,
+            do_projection,
         )

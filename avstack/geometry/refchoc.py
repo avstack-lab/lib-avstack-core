@@ -323,6 +323,19 @@ class ReferenceFrame:
         for ref in self._point_from:
             ref.set_reupdate()
 
+    def get_ground_projected_reference(self):
+        if self.reference != GlobalOrigin3D:
+            ref = self.integrate(start_at=GlobalOrigin3D)
+        else:
+            ref = self
+        x_new = np.array([ref.x[0], ref.x[1], 0])  # flat on ground
+        yaw_old = tforms.transform_orientation(ref.q, "quat", "euler")[2]
+        q_new = tforms.transform_orientation(
+            [0, 0, yaw_old], "euler", "quat"
+        )  # keep old yaw
+        ref_new = ReferenceFrame(x_new, q_new, reference=ref.reference)
+        return ref_new
+
     def encode(self):
         return json.dumps(self, cls=ReferenceEncoder)
 

@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 
 from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration, LidarCalibration
-from avstack.geometry import GlobalOrigin3D, PointMatrix3D, ReferenceFrame
+from avstack.geometry import PointMatrix3D
 from avstack.geometry import transformations as tforms
 
 
@@ -385,18 +385,7 @@ class LidarData(SensorData):
 
     def transform_to_ground(self):
         """Only possible with reference's reference to global origin for now"""
-        if self.reference.reference != GlobalOrigin3D:
-            raise NotImplementedError(
-                "Cannot yet project if calibration not level-1 only"
-            )
-        x_new = np.array(
-            [self.reference.x[0], self.reference.x[1], 0]
-        )  # flat on ground
-        yaw_old = tforms.transform_orientation(self.reference.q, "quat", "euler")[2]
-        q_new = tforms.transform_orientation(
-            [0, 0, yaw_old], "euler", "quat"
-        )  # keep old yaw
-        ref_new = ReferenceFrame(x_new, q_new, reference=self.reference.reference)
+        ref_new = self.reference.get_ground_projected_reference()
         calib_new = LidarCalibration(reference=ref_new)
         return self.project(calib_new)
 

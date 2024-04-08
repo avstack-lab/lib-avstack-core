@@ -125,7 +125,12 @@ class MMDetObjectDetector3D(_MMObjectDetector):
 
         # -- inference
         result_ = self.run_mm_inference(
-            self.inference_detector, self.model, data, self.input_data, eval_method
+            self.inference_detector,
+            self.model,
+            data,
+            self.input_data,
+            eval_method,
+            do_projection=self._do_projection,
         )
 
         # -- postprocess objects
@@ -139,6 +144,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             identifier,
             self.dataset,
             self.threshold,
+            do_projection=self._do_projection,
             front_only=self.front_only,
             prune_low=(self.model_name in ["pgd"]),
             prune_close=(self.model_name in ["pgd"]),
@@ -147,13 +153,18 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         return DataContainer(data.frame, data.timestamp, detections, identifier)
 
     @staticmethod
-    def run_mm_inference(inference_detector, model, data, input_data, eval_method):
+    def run_mm_inference(
+        inference_detector, model, data, input_data, eval_method, do_projection=False
+    ):
         if eval_method == "file":
             with tempfile.TemporaryDirectory() as temp_dir:
                 suffix = ".bin" if input_data == "lidar" else ".png"
                 fd_data, data_file = tempfile.mkstemp(suffix=suffix, dir=temp_dir)
                 os.close(fd_data)  # need to start with the file closed...
                 if input_data == "lidar":
+                    # project if necessary
+                    if do_projection:
+                        data = data.transform_to_ground()
                     data.save_to_file(data_file)
                     result_, _ = inference_detector(model, data_file)
                 elif input_data == "camera":
@@ -185,6 +196,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         dataset = dataset.lower()
         epoch_str = "latest" if epoch == "latest" else "epoch_{}".format(epoch)
         obj_class_dataset_override = dataset
+        do_projection = False
         if model == "second":
             if dataset == "kitti":
                 threshold = 0.5
@@ -218,6 +230,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                 threshold = 0.5
                 config_file = "work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure.py"
                 checkpoint_file = f"work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure/{epoch_str}.pth"
+                do_projection = True
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
             input_data = "lidar"
@@ -236,6 +249,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                 checkpoint_file = (
                     f"work_dirs/3dssd_4x4_carla-infrastructure-3d/{epoch_str}.pth"
                 )
+                do_projection = True
             else:
                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
             input_data = "lidar"
@@ -288,4 +302,5 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             checkpoint_file,
             input_data,
             obj_class_dataset_override,
+            do_projection,
         )

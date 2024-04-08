@@ -65,6 +65,7 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             checkpoint_file,
             self.input_data,
             label_dataset_override,
+            self._do_projection,
         ) = self.parse_mm_model_from_checkpoint(model, dataset, epoch)
         self.class_names = self.parse_mm_object_classes(label_dataset_override)[0]
         if threshold is not None:

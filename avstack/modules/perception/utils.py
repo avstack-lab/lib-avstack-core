@@ -149,12 +149,14 @@ def convert_mm3d_to_avstack(
     dataset,
     thresh=0.5,
     dist_min=2.0,
+    do_projection=False,
     front_only=False,
     prune_low=False,
     thresh_low=-3,
     prune_close=False,
     thresh_close=1.5,
     verbose=False,
+    nominal_height=1.8,
     **kwargs,
 ):
     dets = []
@@ -172,6 +174,7 @@ def convert_mm3d_to_avstack(
 
     # -- convert boxes
     prev_locs = []
+    gp_reference = calib.reference.get_ground_projected_reference()
     for box, label, score in zip(bboxes, labels, scores):
         obj_type = class_maps[dataset][obj_map[label]]
         if obj_type in whitelist:
@@ -215,20 +218,17 @@ def convert_mm3d_to_avstack(
                         x_O_2_obj_in_O = cent
                         where_is_t = "bottom"
                         reference = calib.reference
-                    elif dataset in ["carla-vehicle", "carla-joint"]:
+                    elif "carla" in dataset:
+                        if do_projection:
+                            reference = gp_reference
+                        else:
+                            reference = calib.reference
                         yaw = box[6]
-                        q_O_2_obj = transform_orientation([0, 0, -yaw], "euler", "quat")
-                        x_O_2_obj_in_O = cent
-                        x_O_2_obj_in_O[2] += h
-                        where_is_t = "center"
-                        reference = calib.reference
-                    elif dataset == "carla-infrastructure":
-                        yaw = box[6]
+                        dx = nominal_height - reference.x[2]
                         q_O_2_obj = transform_orientation([0, 0, yaw], "euler", "quat")
                         x_O_2_obj_in_O = cent
-                        x_O_2_obj_in_O[2] += h
-                        where_is_t = "center"
-                        reference = calib.reference
+                        x_O_2_obj_in_O[2] += dx
+                        where_is_t = "bottom"  # box is bottom-centered
                     else:
                         raise NotImplementedError(dataset)
                 elif "pgd" in model_3d.cfg.filename:
@@ -258,6 +258,10 @@ def convert_mm3d_to_avstack(
                 pos = Position(x_O_2_obj_in_O, reference)
                 rot = Attitude(q_O_2_obj, reference)
                 box3d = Box3D(pos, rot, [h, w, l], where_is_t=where_is_t)
+
+                # invert the projection if necessary
+                if do_projection:
+                    box3d.change_reference(calib.reference, inplace=True)
 
                 # -- pruning
                 # ---- too low
