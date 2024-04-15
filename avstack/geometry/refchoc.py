@@ -219,9 +219,11 @@ class ReferenceFrame:
     def q(self, q):
         if not isinstance(q, np.quaternion):
             raise TypeError(f"q must be of type np.quaternion -- is {type(q)}")
-        y = np.empty((3,))
+        # y = np.empty((3,))
         self._q = np.quaternion(
-            np.round(q.w, self.n_prec), *fastround(q.vec, self.n_prec, y)
+            # np.round(q.w, self.n_prec), *fastround(q.vec, self.n_prec, y)
+            q.w,
+            *q.vec,
         )
         self.set_reupdate()
 
@@ -259,9 +261,11 @@ class ReferenceFrame:
     def ang(self, ang: np.quaternion):
         if not isinstance(ang, np.quaternion):
             raise TypeError(f"ang must be of type np.quaternion - is {type(ang)}")
-        y = np.empty((3,))
+        # y = np.empty((3,))
         self._ang = np.quaternion(
-            np.round(ang.w, self.n_prec), *fastround(ang.vec, self.n_prec, y)
+            # np.round(ang.w, self.n_prec), *fastround(ang.vec, self.n_prec, y)
+            ang.w,
+            *ang.vec,
         )
         self.set_reupdate()
         self._fixed = None
@@ -600,7 +604,8 @@ class Vector:
         return self.x[key]
 
     def __setitem__(self, key: int, value: float):
-        self.x[key] = np.round(value, self.n_prec)
+        # self.x[key] = np.round(value, self.n_prec)
+        self.x[key] = value
 
     def __neg__(self):
         return self.factory()(-self.x, self.reference, n_prec=self.n_prec)
@@ -839,9 +844,11 @@ class Rotation:
 
     @q.setter
     def q(self, q):
-        y = np.empty_like(q.vec)
+        # y = np.empty_like(q.vec)
         self._q = np.quaternion(
-            np.round(q.w, self.n_prec), *fastround(q.vec, self.n_prec, y)
+            q.w,
+            *q.vec
+            # np.round(q.w, self.n_prec), *fastround(q.vec, self.n_prec, y)
         )
 
     @property

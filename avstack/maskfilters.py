@@ -364,7 +364,7 @@ def box_in_fov(box_3d, calib, d_thresh=None, check_reference=True):
 
 def _box_in_fov_camera(box_3d, camera_calib):
     """assumption: camera points along z axis"""
-    if _check_box_in_fov(
+    box_in_fov = _check_box_in_fov(
         fov_half=np.arctan(2 * (camera_calib.P[0, 0]) / camera_calib.img_shape[1]),
         center=box_3d.t.x,
         fv=box_3d.q.forward_vector,
@@ -372,10 +372,11 @@ def _box_in_fov_camera(box_3d, camera_calib):
         l=box_3d.l,
         w=box_3d.w,
         f_dim=2,
-    ):
-        box_3d = box_3d.project_to_2d_bbox(calib=camera_calib)
+    )
+    if box_in_fov:
+        box_3d_in_img = box_3d.project_to_2d_bbox(calib=camera_calib)
         box2d_image = [0, 0, camera_calib.img_shape[1], camera_calib.img_shape[0]]
-        if bbox.box_intersection(box_3d.box2d, box2d_image) > 0:
+        if bbox.box_intersection(box_3d_in_img.box2d, box2d_image) > 0:
             return True
     return False
 
@@ -391,13 +392,13 @@ def _check_box_in_fov(fov_half, center, fv, lv, l, w, f_dim):
     right_edge = center - w / 2 * lv
     cos_half = np.cos(fov_half)
 
-    return (
-        front_edge[f_dim] > cos_half * np.linalg.norm(front_edge)
-        or center[f_dim] > cos_half * np.linalg.norm(center)
-        or back_edge[f_dim] > cos_half * np.linalg.norm(front_edge)
-        or left_edge[f_dim] > cos_half * np.linalg.norm(left_edge)
-        or right_edge[f_dim] > cos_half * np.linalg.norm(right_edge)
-    )
+    # -- fov conditions
+    c1 = center[f_dim] > cos_half * np.linalg.norm(center)
+    c2 = front_edge[f_dim] > cos_half * np.linalg.norm(front_edge)
+    c3 = back_edge[f_dim] > cos_half * np.linalg.norm(front_edge)
+    c4 = left_edge[f_dim] > cos_half * np.linalg.norm(left_edge)
+    c5 = right_edge[f_dim] > cos_half * np.linalg.norm(right_edge)
+    return c1 or (sum([c2, c3, c4, c5]) > 1)
 
 
 def filter_objects_in_frustum(objs_1, objs_2, camera_calib):

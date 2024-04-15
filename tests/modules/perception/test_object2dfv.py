@@ -83,8 +83,8 @@ def test_mmdet_2d_perception_from_checkpoint():
             ("fasterrcnn", "kitti"),
             ("fasterrcnn", "cityscapes"),
             ("fasterrcnn", "coco-person"),
-            ("fasterrcnn", "carla"),
-            ("cascadercnn", "carla"),
+            ("fasterrcnn", "carla-vehicle"),
+            ("cascadercnn", "carla-vehicle"),
             ("rtmdet", "coco"),
         ]
 
