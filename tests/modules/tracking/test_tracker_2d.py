@@ -8,7 +8,7 @@ from avstack.modules.tracking import tracker2d
 
 sys.path.append("tests/")
 sys.path.append("tests/modules/tracking")
-from track_utils import make_kitti_2d_3d_tracking_data, run_tracker
+from track_utils import make_2d_tracking_data, run_tracker
 
 
 def test_xy_tracker():
@@ -23,12 +23,12 @@ def test_raz_tracker():
 
 def test_basic_box_tracker_2d():
     platform = GlobalOrigin3D
+    dt = 0.1
     n_targs = 4
-    dt = 0.05
-    dets_2d_all, dets_3d_all = make_kitti_2d_3d_tracking_data(
-        dt=dt, n_frames=10, n_targs=n_targs
-    )
+    n_frames = 30
+    dets_2d_all = make_2d_tracking_data(dt=dt, n_frames=n_frames, n_targs=n_targs)
     tracker = tracker2d.BasicBoxTracker2D()
+
     for frame, dets_2d in enumerate(dets_2d_all):
         _ = tracker(
             t=frame * dt,
@@ -37,7 +37,8 @@ def test_basic_box_tracker_2d():
             platform=platform,
             identifier="tracker-1",
         )
-    assert len(tracker.tracks_active) == len(dets_3d_all[-1])
+
+    assert len(tracker.tracks_active) == len(dets_2d_all[-1])
     for trk in tracker.tracks_active:
         for det in dets_2d_all[-1]:
             if (

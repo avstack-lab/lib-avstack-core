@@ -17,7 +17,8 @@ def test_stone_soup_2d_box_tracker():
     platform = GlobalOrigin3D
     n_targs = 4
     dt = 0.05
-    dets_2d_all = make_2d_tracking_data(dt=dt, n_frames=10, n_targs=n_targs)
+    n_frames = 100
+    dets_2d_all = make_2d_tracking_data(dt=dt, n_frames=n_frames, n_targs=n_targs)
     for frame, dets_2d in enumerate(dets_2d_all):
         _ = tracker(
             t=frame * dt,
@@ -27,6 +28,9 @@ def test_stone_soup_2d_box_tracker():
             identifier="tracker-1",
         )
 
+    import pdb
+
+    pdb.set_trace()
     assert len(tracker.tracks_active) == len(dets_2d_all[-1])
     for trk in tracker.tracks_active:
         trk_center = np.array(

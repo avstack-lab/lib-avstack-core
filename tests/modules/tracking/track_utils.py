@@ -3,8 +3,9 @@ from copy import deepcopy
 
 import numpy as np
 
+from avstack.calibration import CameraCalibration
 from avstack.datastructs import DataContainer
-from avstack.geometry import Box2D, GlobalOrigin3D
+from avstack.geometry import Box2D, GlobalOrigin3D, ReferenceFrame, q_stan_to_cam
 from avstack.geometry.transformations import cartesian_to_spherical, xyzvel_to_razelrrt
 from avstack.maskfilters import box_in_fov
 from avstack.modules.perception.detections import (
@@ -20,20 +21,23 @@ sys.path.append("tests/")
 from utilities import get_ego, get_object_local, get_test_sensor_data
 
 
-(
-    obj,
-    box_calib,
-    lidar_calib,
-    pc,
-    camera_calib,
-    img,
-    radar_calib,
-    rad,
-    box_2d,
-    box_3d,
-) = get_test_sensor_data()
-T_lidar = lidar_calib.reference
-T_camera = camera_calib.reference
+try:
+    (
+        obj,
+        box_calib,
+        lidar_calib,
+        pc,
+        camera_calib,
+        img,
+        radar_calib,
+        rad,
+        box_2d,
+        box_3d,
+    ) = get_test_sensor_data()
+    T_lidar = lidar_calib.reference
+    T_camera = camera_calib.reference
+except FileNotFoundError:
+    print("Cannot find data files but continuing anyway")
 
 name_3d = "lidar"
 name_2d = "image"
@@ -87,7 +91,34 @@ def make_kitti_tracking_data(
 
 def make_2d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
     # initialize objects
-    height, width = camera_calib.img_shape[:2]
+    ref_camera = ReferenceFrame(
+        x=np.array([0.27, 0.06, 1.65]), q=q_stan_to_cam, reference=GlobalOrigin3D
+    )
+    P_cam = np.array(
+        [
+            [
+                7.215377000000e02,
+                0.000000000000e00,
+                6.095593000000e02,
+                4.485728000000e01,
+            ],
+            [
+                0.000000000000e00,
+                7.21537000000e02,
+                1.728540000000e02,
+                2.163791000000e-01,
+            ],
+            [
+                0.000000000000e00,
+                0.000000000000e00,
+                1.000000000000e00,
+                2.745884000000e-03,
+            ],
+        ]
+    )
+    img_shape = (375, 1242, 3)
+    cam_calib = CameraCalibration(ref_camera, P_cam, img_shape)
+    height, width = cam_calib.img_shape[:2]
     detections = [
         [
             (
@@ -128,7 +159,7 @@ def make_2d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
                     source_identifier="detector-2d",
                     box=Box2D(
                         box2d=[det[0], det[2], det[0] + det[4], det[2] + det[5]],
-                        calibration=camera_calib,
+                        calibration=cam_calib,
                     ),
                     reference=GlobalOrigin3D,
                     obj_type="car",
