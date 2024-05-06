@@ -4,8 +4,9 @@ from copy import deepcopy
 import numpy as np
 
 from avstack.datastructs import DataContainer
-from avstack.geometry import GlobalOrigin3D
+from avstack.geometry import Box2D, GlobalOrigin3D
 from avstack.geometry.transformations import cartesian_to_spherical, xyzvel_to_razelrrt
+from avstack.maskfilters import box_in_fov
 from avstack.modules.perception.detections import (
     BoxDetection,
     CentroidDetection,
@@ -84,6 +85,63 @@ def make_kitti_tracking_data(
     return dets_3d_all
 
 
+def make_2d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
+    # initialize objects
+    height, width = camera_calib.img_shape[:2]
+    detections = [
+        [
+            (
+                np.random.randint(low=20, high=width - 20),
+                10 * np.random.randn(),
+                np.random.randint(low=20, high=height - 20),
+                10 * np.random.randn(),
+                np.random.randint(low=100, high=300),
+                np.random.randint(low=100, high=200),
+            )
+            for _ in range(n_targs)
+        ]
+    ]
+
+    # propagate objects in time
+    for i in range(1, n_frames):
+        detections.append(
+            [
+                (
+                    detections[i - 1][j][0] + detections[i - 1][j][1] * dt,
+                    detections[i - 1][j][1] + 0.1 * np.random.randn(),
+                    detections[i - 1][j][2] + detections[i - 1][j][3] * dt,
+                    detections[i - 1][j][3] + 0.1 * np.random.randn(),
+                    detections[i - 1][j][4] + 1 * np.random.randn(),
+                    detections[i - 1][j][5] + 1 * np.random.randn(),
+                )
+                for j in range(n_targs)
+            ]
+        )
+
+    # make detection objects
+    dets_2d_all = [
+        DataContainer(
+            frame=i,
+            timestamp=i * dt,
+            data=[
+                BoxDetection(
+                    source_identifier="detector-2d",
+                    box=Box2D(
+                        box2d=[det[0], det[2], det[0] + det[4], det[2] + det[5]],
+                        calibration=camera_calib,
+                    ),
+                    reference=GlobalOrigin3D,
+                    obj_type="car",
+                )
+                for det in dets
+            ],
+            source_identifier=name_2d,
+        )
+        for dets in detections
+    ]
+    return dets_2d_all
+
+
 def make_kitti_2d_3d_tracking_data(dt=0.1, n_frames=10, n_targs=4):
     dets_3d_all = make_kitti_tracking_data(dt, n_frames, n_targs=n_targs)
     dets_2d_all = []
@@ -97,6 +155,7 @@ def make_kitti_2d_3d_tracking_data(dt=0.1, n_frames=10, n_targs=4):
                 d.obj_type,
             )
             for d in dets_3d
+            if box_in_fov(d.box, camera_calib)
         ]
         dets_2d_all.append(
             DataContainer(i, dets_3d.timestamp, d_2d, source_identifier=name_2d)
