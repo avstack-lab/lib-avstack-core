@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 from stonesoup.dataassociator.neighbour import GNNWith2DAssignment
@@ -50,20 +50,20 @@ class StoneSoupKalmanTracker2DBox(BaseModule):
         measurement_model = LinearGaussian(
             ndim_state=6,
             mapping=[0, 2, 4, 5],
-            noise_covar=np.diag([1**2, 1**2, 3**2, 3**2]),
+            noise_covar=np.diag([5**2, 5**2, 3**2, 3**2]),
         )
         predictor = KalmanPredictor(transition_model)
         updater = KalmanUpdater(measurement_model)
 
         # data association
-        hypothesiser = DistanceHypothesiser(predictor, updater, Mahalanobis(), 10)
+        hypothesiser = DistanceHypothesiser(predictor, updater, Mahalanobis())
         data_associator = GNNWith2DAssignment(hypothesiser)
 
         # track management
         prior_state = GaussianState(
             StateVector(np.zeros((6, 1))),
             CovarianceMatrix(
-                np.diag([100**2, 30**2, 100**2, 30**2, 100**2, 100**2])
+                np.diag([100**2, 30**2, 100**2, 30**2, 500**2, 500**2])
             ),
         )
         deleter_init = UpdateTimeStepsDeleter(time_steps_since_update=3)
@@ -76,6 +76,9 @@ class StoneSoupKalmanTracker2DBox(BaseModule):
             min_points=3,
         )
         deleter = UpdateTimeStepsDeleter(time_steps_since_update=15)
+
+        # initial time
+        self.t0 = datetime.now()
 
         # attributes
         self.tracker = MultiTargetTracker(
@@ -110,7 +113,7 @@ class StoneSoupKalmanTracker2DBox(BaseModule):
     def track(self, detections_in, platform, **kwargs):
         # wrap AVstack detections to SS detections
         detections = set()
-        timestamp = datetime.fromtimestamp(detections_in.timestamp)
+        timestamp = self.t0 + timedelta(seconds=detections_in.timestamp)
         for det in detections_in:
             box = det.box.box2d
             class_ = det.obj_type

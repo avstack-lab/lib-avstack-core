@@ -152,8 +152,8 @@ def make_2d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
     # make detection objects
     dets_2d_all = [
         DataContainer(
-            frame=i,
-            timestamp=i * dt,
+            frame=frame,
+            timestamp=frame * dt,
             data=[
                 BoxDetection(
                     source_identifier="detector-2d",
@@ -168,7 +168,7 @@ def make_2d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
             ],
             source_identifier=name_2d,
         )
-        for dets in detections
+        for frame, dets in enumerate(detections)
     ]
     return dets_2d_all
 
