@@ -5,6 +5,7 @@ import os
 
 import cv2
 import numpy as np
+from concave_hull import concave_hull
 from PIL import Image
 
 
@@ -343,6 +344,11 @@ class LidarData(SensorData):
             return self.data[key, :]
         else:
             raise NotImplementedError(key)
+
+    def concave_hull_bev(self, concavity=3, length_threshold=1):
+        return concave_hull(
+            self.data.x[:, :2], concavity=concavity, length_threshold=length_threshold
+        )
 
     def filter_by_range(self, min_range: float, max_range: float, inplace=True):
         if (min_range is not None) or (max_range is not None):
