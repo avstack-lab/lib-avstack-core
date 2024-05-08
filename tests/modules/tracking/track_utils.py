@@ -5,8 +5,20 @@ import numpy as np
 
 from avstack.calibration import CameraCalibration
 from avstack.datastructs import DataContainer
-from avstack.geometry import Box2D, GlobalOrigin3D, ReferenceFrame, q_stan_to_cam
-from avstack.geometry.transformations import cartesian_to_spherical, xyzvel_to_razelrrt
+from avstack.geometry import (
+    Attitude,
+    Box2D,
+    Box3D,
+    GlobalOrigin3D,
+    Position,
+    ReferenceFrame,
+    q_stan_to_cam,
+)
+from avstack.geometry.transformations import (
+    cartesian_to_spherical,
+    transform_orientation,
+    xyzvel_to_razelrrt,
+)
 from avstack.maskfilters import box_in_fov
 from avstack.modules.perception.detections import (
     BoxDetection,
@@ -86,6 +98,74 @@ def make_kitti_tracking_data(
         detections = DataContainer(i, t, dets_class, source_identifier=name_3d)
         dets_3d_all.append(detections)
         t += dt
+    return dets_3d_all
+
+
+def make_3d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
+    ext = [(-40, 40), (-40, 40), (-2, 2)]
+    detections = [
+        [
+            (
+                np.random.uniform(low=ext[0][0], high=ext[0][1]),
+                3 * np.random.randn(),
+                np.random.uniform(low=ext[1][0], high=ext[1][1]),
+                3 * np.random.randn(),
+                np.random.uniform(low=ext[2][0], high=ext[2][1]),
+                0.1 * np.random.randn(),
+                np.random.uniform(low=1, high=4),
+                np.random.uniform(low=1, high=4),
+                np.random.uniform(low=1, high=4),
+            )
+            for _ in range(n_targs)
+        ]
+    ]
+
+    # propagate objects in time
+    for i in range(1, n_frames):
+        detections.append(
+            [
+                (
+                    detections[i - 1][j][0] + detections[i - 1][j][1] * dt,
+                    detections[i - 1][j][1] + 0.1 * np.random.randn(),
+                    detections[i - 1][j][2] + detections[i - 1][j][3] * dt,
+                    detections[i - 1][j][3] + 0.1 * np.random.randn(),
+                    detections[i - 1][j][4] + detections[i - 1][j][5] * dt,
+                    detections[i - 1][j][5] + 0.1 * np.random.randn(),
+                    detections[i - 1][j][6] + 0.1 * np.random.randn(),
+                    detections[i - 1][j][7] + 0.1 * np.random.randn(),
+                    detections[i - 1][j][8] + 0.1 * np.random.randn(),
+                )
+                for j in range(n_targs)
+            ]
+        )
+
+    # make detection objects
+    dets_3d_all = [
+        DataContainer(
+            frame=frame,
+            timestamp=frame * dt,
+            data=[
+                BoxDetection(
+                    source_identifier="detector-3d",
+                    box=Box3D(
+                        position=Position([det[0], det[2], det[4]], GlobalOrigin3D),
+                        attitude=Attitude(
+                            transform_orientation(
+                                [0, 0, np.arctan2(det[1], det[3])], "euler", "quat"
+                            ),
+                            GlobalOrigin3D,
+                        ),
+                        hwl=det[6:9],
+                    ),
+                    reference=GlobalOrigin3D,
+                    obj_type="car",
+                )
+                for det in dets
+            ],
+            source_identifier=name_3d,
+        )
+        for frame, dets in enumerate(detections)
+    ]
     return dets_3d_all
 
 
