@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, Union
+
+import numpy as np
 
 
 if TYPE_CHECKING:
@@ -7,6 +9,7 @@ if TYPE_CHECKING:
 from avstack.config import MODELS, ConfigDict
 from avstack.datastructs import DataContainer
 from avstack.geometry import GlobalOrigin3D
+from avstack.geometry.utils import in_hull
 from avstack.utils.decorators import apply_hooks
 
 from ..base import BaseModule
@@ -33,7 +36,7 @@ class MeasurementBasedMultiTracker(BaseModule):
     def __call__(
         self,
         detections: Dict[int, DataContainer],
-        fovs: Dict[int, "Shape"],
+        fovs: Dict[int, Union["Shape", np.ndarray]],
         platforms: Dict[int, "ReferenceFrame"],
         check_reference: bool = True,
         *args,
@@ -52,11 +55,15 @@ class MeasurementBasedMultiTracker(BaseModule):
             # use the FOV model to filter for observable tracks
             if detections[ID] is None:
                 continue
-            trks_observable = [
-                trk
-                for trk, pos in zip(self.tracker.tracks_active, pts_ref)
-                if fovs[ID].check_point(pos.x)
-            ]
+            trks_observable = []
+            for trk, pos in zip(self.tracker.tracks_active, pts_ref):
+                try:
+                    if fovs[ID].check_point(pos.x):
+                        trks_observable.append(trk)
+                except AttributeError:
+                    if in_hull(pos.x[:2], fovs[ID]):
+                        trks_observable.append(trk)
+
             # update the tracks with the new detections
             self.tracker(
                 detections=detections[ID],
