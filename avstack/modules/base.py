@@ -12,6 +12,7 @@ class BaseModule:
         post_hooks: List[ConfigDict] = [],
     ) -> None:
         self.name = name
+        self.output_folder = output_folder
         default_args = {}
         default_args["output_folder"] = output_folder
         self.pre_hooks = [

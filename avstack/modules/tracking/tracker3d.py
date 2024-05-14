@@ -275,8 +275,8 @@ class BasicBoxTrackerFusion3Stage(_TrackingAlgorithm):
             self.tracks = [
                 trk
                 for trk in self.tracks
-                if (trk.coast_2d < self.threshold_coast_2d)
-                and (trk.coast_3d < self.threshold_coast_3d)
+                if (trk.dt_coast_2d < self.threshold_coast_2d)
+                and (trk.dt_coast_3d < self.threshold_coast_3d)
             ]
 
         return self.tracks_confirmed
