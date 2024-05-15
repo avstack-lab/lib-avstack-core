@@ -298,4 +298,4 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
             calibration.reference,
         )
         hwl = np.array(track.state_vector[[6, 7, 8]]).reshape(3)
-        track.box3d = Box3D(position, attitude, hwl)
+        track.box3d = Box3D(position, attitude, hwl, where_is_t="bottom")
