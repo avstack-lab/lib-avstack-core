@@ -250,7 +250,7 @@ def make_2d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
         )
         for frame, dets in enumerate(detections)
     ]
-    return dets_2d_all
+    return dets_2d_all, cam_calib
 
 
 def make_kitti_2d_3d_tracking_data(dt=0.1, n_frames=10, n_targs=4):

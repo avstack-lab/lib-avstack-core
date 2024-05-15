@@ -26,7 +26,9 @@ def test_basic_box_tracker_2d():
     dt = 0.1
     n_targs = 4
     n_frames = 30
-    dets_2d_all = make_2d_tracking_data(dt=dt, n_frames=n_frames, n_targs=n_targs)
+    dets_2d_all, cam_calib = make_2d_tracking_data(
+        dt=dt, n_frames=n_frames, n_targs=n_targs
+    )
     tracker = tracker2d.BasicBoxTracker2D()
 
     for frame, dets_2d in enumerate(dets_2d_all):
