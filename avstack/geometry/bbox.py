@@ -373,6 +373,10 @@ class Box3D:
         return c1 and c2 and c3
 
     @property
+    def box3d(self):
+        return np.array([self.t[0], self.t[1], self.t[2], *self.hwl, self.yaw])
+
+    @property
     def t(self):
         return self.position
 

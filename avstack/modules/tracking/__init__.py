@@ -1,5 +1,6 @@
 from .grouptrack import GroupTracker
 from .multisensor import MeasurementBasedMultiTracker
+from .stonesoup import StoneSoupKalmanTracker2DBox, StoneSoupKalmanTracker3DBox
 from .tracker2d import BasicRazTracker, BasicXyTracker
 from .tracker3d import (
     BasicBoxTracker3D,
@@ -29,6 +30,8 @@ __all__ = [
     "BasicXyzTracker",
     "GroupTracker",
     "MeasurementBasedMultiTracker",
+    "StoneSoupKalmanTracker2DBox",
+    "StoneSoupKalmanTracker3DBox",
     "XyFromRazTrack",
     "XyFromXyTrack",
     "XyzFromRazelRrtTrack",

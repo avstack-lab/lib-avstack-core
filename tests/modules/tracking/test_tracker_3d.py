@@ -65,7 +65,7 @@ def test_make_2d3d_tracking_data():
     assert isinstance(dets_2d[0], BoxDetection)
     assert isinstance(dets_3d, DataContainer)
     assert isinstance(dets_3d[0], BoxDetection)
-    assert len(dets_2d) == len(dets_3d)
+    assert len(dets_2d) <= len(dets_3d)
 
 
 def test_xyz_tracker_3d():

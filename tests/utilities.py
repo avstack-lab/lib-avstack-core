@@ -105,8 +105,8 @@ def get_object_local(ego, seed):
     return obj
 
 
-def get_lidar_data(t, frame, lidar_ID=0):
-    pc_fname = os.path.join(KITTI_data_dir, "velodyne", "%06d.bin" % frame)
+def get_lidar_data(t, frame, lidar_ID=0, data_dir=KITTI_data_dir):
+    pc_fname = os.path.join(data_dir, "velodyne", "%06d.bin" % frame)
     pc = PointMatrix3D(
         np.fromfile(pc_fname, dtype=np.float32).reshape((-1, 4)), lidar_calib
     )
@@ -114,14 +114,14 @@ def get_lidar_data(t, frame, lidar_ID=0):
     return pc
 
 
-def get_image_data(t, frame, camera_ID=0):
-    img_fname = os.path.join(KITTI_data_dir, "image_2", "%06d.png" % frame)
+def get_image_data(t, frame, camera_ID=0, data_dir=KITTI_data_dir):
+    img_fname = os.path.join(data_dir, "image_2", "%06d.png" % frame)
     img = imread(img_fname)[:, :, ::-1]
     img = ImageData(t, frame, img, camera_calib, camera_ID)
     return img
 
 
-def get_radar_data(t, frame, radar_ID=0):
+def get_radar_data(t, frame, radar_ID=0, data_dir=KITTI_data_dir):
     pc = get_lidar_data(t=t, frame=frame)
     nrows = 50
     rad = pc.data[np.random.randint(pc.data.shape[0], size=nrows), :]
@@ -133,8 +133,8 @@ def get_radar_data(t, frame, radar_ID=0):
     return rad
 
 
-def get_test_sensor_data(frame=1000, reference=ref_camera):
-    sys.path.append(KITTI_data_dir)
+def get_test_sensor_data(frame=1000, reference=ref_camera, data_dir=KITTI_data_dir):
+    sys.path.append(data_dir)
     obj = VehicleState("car", ID=1)
 
     # -- vehicle data

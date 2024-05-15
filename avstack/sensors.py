@@ -16,7 +16,7 @@ except ModuleNotFoundError:
 
 from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration, LidarCalibration
-from avstack.geometry import PointMatrix3D
+from avstack.geometry import GlobalOrigin3D, PointMatrix3D
 from avstack.geometry import transformations as tforms
 
 
@@ -345,10 +345,12 @@ class LidarData(SensorData):
         else:
             raise NotImplementedError(key)
 
-    def concave_hull_bev(self, concavity=3, length_threshold=1):
-        return concave_hull(
-            self.data.x[:, :2], concavity=concavity, length_threshold=length_threshold
+    def concave_hull_bev(self, concavity=2, length_threshold=1, in_global=False):
+        cls = self if not in_global else self.project(LidarCalibration(GlobalOrigin3D))
+        hull_pts = concave_hull(
+            cls.data[:, :2], concavity=concavity, length_threshold=length_threshold
         )
+        return hull_pts
 
     def filter_by_range(self, min_range: float, max_range: float, inplace=True):
         if (min_range is not None) or (max_range is not None):
