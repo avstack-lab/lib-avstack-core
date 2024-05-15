@@ -55,14 +55,18 @@ class MeasurementBasedMultiTracker(BaseModule):
             # use the FOV model to filter for observable tracks
             if detections[ID] is None:
                 continue
-            trks_observable = []
-            for trk, pos in zip(self.tracker.tracks_active, pts_ref):
-                try:
-                    if fovs[ID].check_point(pos.x):
-                        trks_observable.append(trk)
-                except AttributeError:
-                    if in_hull(pos.x[:2], fovs[ID]):
-                        trks_observable.append(trk)
+            pos_to_check = [pos.x[:2] for pos in pts_ref]
+            trks_observable = (
+                []
+                if len(pos_to_check) == 0
+                else [
+                    trk
+                    for trk, in_h in zip(
+                        self.tracker.tracks_active, in_hull(pos_to_check, fovs[ID])
+                    )
+                    if in_h
+                ]
+            )
 
             # update the tracks with the new detections
             self.tracker(
