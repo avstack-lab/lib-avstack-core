@@ -4,6 +4,15 @@ from typing import Dict, FrozenSet, Union
 import numpy as np
 
 from avstack.config import GEOMETRY
+from avstack.geometry.utils import in_hull
+
+
+def points_in_fov(points, fov: Union["Shape", np.ndarray]):
+    try:
+        in_fov = fov.check_point(points)
+    except AttributeError:
+        in_fov = in_hull(points, fov)
+    return in_fov
 
 
 def get_disjoint_fov_subsets(fovs: Dict[int, "Shape"]) -> Dict[FrozenSet[int], "Shape"]:

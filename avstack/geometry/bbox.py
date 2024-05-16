@@ -515,6 +515,14 @@ class Box3D:
             )
             return newself
 
+    def distance(self, other, *args, **kwargs):
+        if isinstance(other, Box3D):
+            return self.position.distance(other.position, *args, **kwargs)
+        elif isinstance(other, (Position, np.ndarray)):
+            return self.position.distance(other, *args, **kwargs)
+        else:
+            raise NotImplementedError(type(other))
+
     def IoU(
         self,
         other,

@@ -451,6 +451,9 @@ class BoxDetection(Detection_):
     def factory():
         return BoxDetection
 
+    def distance(self, *args, **kwargs):
+        return self.box.distance(*args, **kwargs)
+
     def _change_reference(self, reference, inplace: bool):
         return self.data.change_reference(reference, inplace=inplace)
 
