@@ -11,6 +11,7 @@ from .tracker3d import (
 from .tracks import (
     BasicBoxTrack2D,
     BasicBoxTrack3D,
+    TrackBase,
     XyFromRazTrack,
     XyFromXyTrack,
     XyzFromRazelRrtTrack,
@@ -32,6 +33,7 @@ __all__ = [
     "MeasurementBasedMultiTracker",
     "StoneSoupKalmanTracker2DBox",
     "StoneSoupKalmanTracker3DBox",
+    "TrackBase",
     "XyFromRazTrack",
     "XyFromXyTrack",
     "XyzFromRazelRrtTrack",

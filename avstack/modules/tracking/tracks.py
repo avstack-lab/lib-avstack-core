@@ -37,7 +37,7 @@ group_tracks = ["grouptrack"]
 
 class TrackEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, _TrackBase):
+        if isinstance(o, TrackBase):
             t_dict = {
                 "obj_type": o.obj_type,
                 "t0": o.t0,
@@ -153,7 +153,7 @@ def KF_update(x, P, hx, H, z, R):
     return x + K @ y, (np.eye(P.shape[0]) - K @ H) @ P
 
 
-class _TrackBase:
+class TrackBase:
     ID_counter = 0
 
     N_UPDATES_CONFIRMED = 10
@@ -188,8 +188,8 @@ class _TrackBase:
         check_reference=False,
     ) -> None:
         if ID_force is None:
-            ID = _TrackBase.ID_counter
-            _TrackBase.ID_counter += 1
+            ID = TrackBase.ID_counter
+            TrackBase.ID_counter += 1
         else:
             ID = ID_force
         self.obj_type = obj_type
@@ -386,7 +386,7 @@ class _TrackBase:
 # ================================================
 
 
-class _XYVxVyTrack(_TrackBase):
+class _XYVxVyTrack(TrackBase):
     """When the track state is [x, y, vx, vy]"""
 
     @staticmethod
@@ -415,7 +415,7 @@ class _XYVxVyTrack(_TrackBase):
             raise NotImplementedError
 
 
-class _XYZVxVyVzTrack(_TrackBase):
+class _XYZVxVyVzTrack(TrackBase):
     """When the track state is [x, y, z, vx, vy, vz]"""
 
     @staticmethod
@@ -858,7 +858,7 @@ class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
 # =========================================
 
 
-class BasicBoxTrack3D(_TrackBase):
+class BasicBoxTrack3D(TrackBase):
 
     NAME = "boxtrack3d"
 
@@ -1025,7 +1025,7 @@ class BasicBoxTrack3D(_TrackBase):
             )
 
 
-class BasicBoxTrack2D(_TrackBase):
+class BasicBoxTrack2D(TrackBase):
     NAME = "boxtrack2d"
 
     def __init__(
@@ -1133,7 +1133,7 @@ class BasicBoxTrack2D(_TrackBase):
         self._update(det, R)
 
 
-class BasicJointBoxTrack(_TrackBase):
+class BasicJointBoxTrack(TrackBase):
     NAME = "boxtrack2d3d"
 
     def __init__(self, t0, box2d, box3d, reference, obj_type):
@@ -1284,7 +1284,7 @@ class BasicJointBoxTrack(_TrackBase):
 
 
 class GroupTrack:
-    def __init__(self, state: _TrackBase, members: List[_TrackBase]) -> None:
+    def __init__(self, state: TrackBase, members: List[TrackBase]) -> None:
         """Keep track on multiple tracks via a single state
 
         But maintain knowledge of the IDs of the members along the way

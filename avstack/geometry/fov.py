@@ -4,14 +4,14 @@ from typing import Dict, FrozenSet, Union
 import numpy as np
 
 from avstack.config import GEOMETRY
-from avstack.geometry.utils import in_hull
+from avstack.geometry.utils import parallel_in_polygon
 
 
 def points_in_fov(points, fov: Union["Shape", np.ndarray]):
     try:
         in_fov = fov.check_point(points)
     except AttributeError:
-        in_fov = in_hull(points, fov)
+        in_fov = parallel_in_polygon(points, fov)
     return in_fov
 
 

@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 from avstack.config import MODELS, ConfigDict
 from avstack.datastructs import DataContainer
 from avstack.geometry import GlobalOrigin3D
-from avstack.geometry.utils import in_hull
+from avstack.geometry.utils import parallel_in_polygon
 from avstack.utils.decorators import apply_hooks
 
 from ..base import BaseModule
@@ -68,7 +68,8 @@ class MeasurementBasedMultiTracker(BaseModule):
                     else [
                         trk
                         for trk, in_h in zip(
-                            self.tracker.tracks_active, in_hull(pos_to_check, fovs[ID])
+                            self.tracker.tracks_active,
+                            parallel_in_polygon(pos_to_check, fovs[ID]),
                         )
                         if in_h
                     ]
