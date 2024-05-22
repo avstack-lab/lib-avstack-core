@@ -25,7 +25,9 @@ class MeasurementBasedMultiTracker(BaseModule):
     def __init__(self, tracker, name="multitracker", platform=GlobalOrigin3D, **kwargs):
         super().__init__(name=name, **kwargs)
         self.tracker = (
-            MODELS.build(tracker) if isinstance(tracker, ConfigDict) else tracker
+            MODELS.build(tracker, default_args={"name": "trackerformulti"})
+            if isinstance(tracker, ConfigDict)
+            else tracker
         )
         self.platform = platform
 

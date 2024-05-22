@@ -330,6 +330,7 @@ class TrackBase:
             F = self.F(self.x, dt)
             self.P = F @ self.P @ F.T + self.Q(dt)
             self.t_last_predict = t
+            self.t = t
             self.dt_coast += dt
 
     def _update(self, z, R):
