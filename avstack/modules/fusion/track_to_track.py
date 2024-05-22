@@ -16,7 +16,7 @@ from avstack.config import MODELS
 from avstack.datastructs import DataContainer
 from avstack.geometry import Box3D, Position, Velocity
 from avstack.modules.tracking.tracker3d import BasicBoxTrack3D
-from avstack.modules.tracking.tracks import _TrackBase
+from avstack.modules.tracking.tracks import TrackBase
 from avstack.utils.decorators import apply_hooks
 
 from ..base import BaseModule
@@ -72,7 +72,7 @@ class NoFusion(_BaseFusion):
                 if len(tracks_out) == 1
                 else list(tracks_out.values())
             )
-        elif isinstance(tracks_out, _TrackBase):
+        elif isinstance(tracks_out, TrackBase):
             tracks_out = [tracks_out]
         elif isinstance(tracks_out, Cluster):
             pass
@@ -94,7 +94,7 @@ class AggregatorFusion(_BaseFusion):
             elif isinstance(arg, dict):
                 for v in arg.values():
                     tracks_out += v
-            elif isinstance(arg, _TrackBase):
+            elif isinstance(arg, TrackBase):
                 tracks_out += [arg]
             else:
                 raise NotImplementedError(type(arg))
@@ -106,7 +106,7 @@ class CovarianceIntersectionFusion(_BaseFusion):
     """Covariance intersection to build a track from a cluster"""
 
     @apply_hooks
-    def __call__(self, tracks: Union[Cluster, List[_TrackBase]]):
+    def __call__(self, tracks: Union[Cluster, List[TrackBase]]):
         x_fuse = None
         P_fuse = None
 
