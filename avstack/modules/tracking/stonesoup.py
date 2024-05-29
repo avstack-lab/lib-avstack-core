@@ -313,12 +313,9 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
             reference,
         )
         hwl = np.array(track.state_vector[[6, 7, 8]]).reshape(3)
-        track.box3d = Box3D(position, attitude, hwl, where_is_t="bottom")
         track.position = position
         track.attitude = attitude
-        try:
-            if track.id not in cls.ID_register:
-                cls.ID_register[track.id] = len(cls.ID_register)
-            track.ID = cls.ID_register[track.id]
-        except AttributeError:
-            track.ID = None
+        if track.id not in cls.ID_register:
+            cls.ID_register[track.id] = len(cls.ID_register)
+        track.ID = cls.ID_register[track.id]
+        track.box3d = Box3D(position, attitude, hwl, where_is_t="bottom", ID=track.ID)
