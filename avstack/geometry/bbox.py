@@ -374,7 +374,7 @@ class Box3D:
 
     @property
     def box3d(self):
-        return np.array([self.t[0], self.t[1], self.t[2], *self.hwl, self.yaw])
+        return np.array([self.t[0], self.t[1], self.t[2], *self.hwl, *self.euler])
 
     @property
     def t(self):
@@ -384,6 +384,10 @@ class Box3D:
     def t(self, t):
         assert isinstance(t, Position)
         self.position = t
+
+    @property
+    def x(self):
+        return self.position
 
     @property
     def q(self):
@@ -453,7 +457,7 @@ class Box3D:
 
     @property
     def euler(self):
-        """Returns yaw, pitch roll"""
+        """Returns [roll, pitch, yaw]"""
         return tforms.transform_orientation(self.q.q, "quat", "euler")
 
     @property

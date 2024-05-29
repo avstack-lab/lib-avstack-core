@@ -872,20 +872,28 @@ class DataContainer:
 
     def apply(self, method, *args, **kwargs):
         for idx, item in enumerate(self):
-            if hasattr(item, method):
+            if method == "getattr":
+                self[idx] = getattr(item, args[0])
+            elif hasattr(item, method):
                 method_func = getattr(item, method)
                 inplace = kwargs.get("inplace", True)
                 if inplace:
                     method_func(*args, **kwargs)
                 else:
                     self[idx] = method_func(*args, **kwargs)
+            else:
+                raise AttributeError("No attribute {} found".format(method))
 
     def apply_and_return(self, method, *args, **kwargs):
         data = []
         for item in self:
-            if hasattr(item, method):
+            if method == "getattr":
+                data.append(getattr(item, args[0]))
+            elif hasattr(item, method):
                 method_func = getattr(item, method)
                 data.append(method_func(*args, **kwargs))
+            else:
+                raise AttributeError("No attribute {} found".format(method))
         return type(self)(
             frame=self.frame,
             timestamp=self.timestamp,

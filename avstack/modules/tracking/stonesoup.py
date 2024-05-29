@@ -201,9 +201,9 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
     def __init__(
         self,
         missed_distance=5,
-        qx=0.1,
+        qx=2.0,
         qb=0.01,
-        qy=0.1,
+        qy=0.2,
         px=5**2,
         pv=10**2,
         pb=2**2,
@@ -218,7 +218,7 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
     ):
         super().__init__(**kwargs)
         # track filtering
-        # state is: [x, xdot, y, ydot, z, zdot, height, width, length, yaw]
+        # state is: [x, xdot, y, ydot, z, zdot, height, width, length, pitch, roll, yaw]
         # CV noise parameter is 2*sigma_m^2*tau_m according to Blackman
         t_models = [
             ConstantVelocity(qx),  # x
@@ -227,14 +227,16 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
             RandomWalk(qb),  # height
             RandomWalk(qb),  # width
             RandomWalk(qb),  # length
+            RandomWalk(qy),  # pitch
+            RandomWalk(qy),  # roll
             RandomWalk(qy),  # yaw
         ]
         transition_model = CombinedLinearGaussianTransitionModel(t_models)
-        # detection is [x, y, z, height, width, length, yaw]
+        # detection is [x, y, z, height, width, length, pitch, roll, yaw]
         measurement_model = LinearGaussian(
-            ndim_state=10,
-            mapping=[0, 2, 4, 6, 7, 8, 9],
-            noise_covar=np.diag([*[rx] * 3, *[rb] * 3, ry]),
+            ndim_state=12,
+            mapping=[0, 2, 4, 6, 7, 8, 9, 10, 11],
+            noise_covar=np.diag([*[rx] * 3, *[rb] * 3, *[ry] * 3]),
         )
         predictor = KalmanPredictor(transition_model)
         updater = KalmanUpdater(measurement_model)
@@ -247,8 +249,8 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
 
         # track management
         prior_state = GaussianState(
-            StateVector(np.zeros((10, 1))),
-            CovarianceMatrix(np.diag([*[px, pv] * 3, *[pb] * 3, py])),
+            StateVector(np.zeros((12, 1))),
+            CovarianceMatrix(np.diag([*[px, pv] * 3, *[pb] * 3, *[py] * 3])),
         )
         deleter_init = UpdateTimeStepsDeleter(
             time_steps_since_update=init_deleter_steps
@@ -282,19 +284,20 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
             "class": cls.category_index[class_],
             "score": score,
         }
-        # Transform box to be in format (x, y, z, h, w, l, yaw)
+        # Transform box to be in format (x, y, z, h, w, l, roll, pitch, yaw)
         state_vector = StateVector(box)
         return state_vector, metadata
 
     @staticmethod
     def _augment_track(track, calibration):
-        # TODO: fix global origin usage
         position = Position(
             np.array(track.state_vector[[0, 2, 4]]).reshape(3),
             calibration.reference,
         )
         attitude = Attitude(
-            transform_orientation([0, 0, track.state_vector[9]], "euler", "quat"),
+            transform_orientation(
+                np.array(track.state_vector[[9, 10, 11]]).reshape(3), "euler", "quat"
+            ),
             calibration.reference,
         )
         hwl = np.array(track.state_vector[[6, 7, 8]]).reshape(3)
