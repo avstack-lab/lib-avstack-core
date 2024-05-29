@@ -36,6 +36,7 @@ from ..base import BaseModule
 
 @MODELS.register_module()
 class StoneSoupKalmanTrackerBase(BaseModule):
+    ID_register = {}
     category_index = {
         "car": {"id": 1, "name": "car"},
         "truck": {"id": 2, "name": "truck"},
@@ -43,13 +44,14 @@ class StoneSoupKalmanTrackerBase(BaseModule):
         "motorcycle": {"id": 4, "name": "motorcycle"},
     }
 
-    def __init__(self, t0=datetime.now(), **kwargs):
-        super().__init__(name="tracking", **kwargs)
+    def __init__(self, t0=datetime.now(), name="tracking", **kwargs):
+        super().__init__(name=name, **kwargs)
         self.iframe = -1
         self.frame = 0
         self.timestamp = 0
         # initial time
         self.t0 = t0
+        self.tracks = []
 
     @property
     def tracks_confirmed(self):
@@ -72,7 +74,10 @@ class StoneSoupKalmanTrackerBase(BaseModule):
         track_data = DataContainer(self.frame, self.timestamp, tracks, self.name)
         return track_data
 
-    def track(self, detections_in, platform, calibration, **kwargs):
+    def track(self, detections_in, platform, calibration=None, **kwargs):
+        if calibration is None:
+            calibration = platform  # HACK
+
         # wrap AVstack detections to SS detections
         detections = set()
         timestamp = self.t0 + timedelta(seconds=detections_in.timestamp)
@@ -97,7 +102,7 @@ class StoneSoupKalmanTrackerBase(BaseModule):
     def _convert_detection(cls, det):
         raise NotImplementedError
 
-    @staticmethod
+    @classmethod
     def _augment_track(track):
         raise NotImplementedError
 
@@ -187,8 +192,8 @@ class StoneSoupKalmanTracker2DBox(StoneSoupKalmanTrackerBase):
         )
         return state_vector, metadata
 
-    @staticmethod
-    def _augment_track(track, calibration):
+    @classmethod
+    def _augment_track(cls, track, calibration):
         x0, y0, w, h = np.array(track.state_vector[[0, 2, 4, 5]])
         box2d = [x0, y0, x0 + w, y0 + h]
         ID = track.id
@@ -231,21 +236,24 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
             RandomWalk(qy),  # roll
             RandomWalk(qy),  # yaw
         ]
-        transition_model = CombinedLinearGaussianTransitionModel(t_models)
+        self._transition_model = CombinedLinearGaussianTransitionModel(t_models)
         # detection is [x, y, z, height, width, length, pitch, roll, yaw]
-        measurement_model = LinearGaussian(
+        self._measurement_model = LinearGaussian(
             ndim_state=12,
             mapping=[0, 2, 4, 6, 7, 8, 9, 10, 11],
             noise_covar=np.diag([*[rx] * 3, *[rb] * 3, *[ry] * 3]),
         )
-        predictor = KalmanPredictor(transition_model)
-        updater = KalmanUpdater(measurement_model)
+        self._predictor = KalmanPredictor(self._transition_model)
+        self._updater = KalmanUpdater(self._measurement_model)
 
         # data association - missed dist is gate
-        hypothesiser = DistanceHypothesiser(
-            predictor, updater, Mahalanobis(), missed_distance=missed_distance
+        self._hypothesiser = DistanceHypothesiser(
+            self._predictor,
+            self._updater,
+            Mahalanobis(),
+            missed_distance=missed_distance,
         )
-        data_associator = GNNWith2DAssignment(hypothesiser)
+        self._data_associator = GNNWith2DAssignment(self._hypothesiser)
 
         # track management
         prior_state = GaussianState(
@@ -255,23 +263,23 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
         deleter_init = UpdateTimeStepsDeleter(
             time_steps_since_update=init_deleter_steps
         )
-        initiator = MultiMeasurementInitiator(
+        self._initiator = MultiMeasurementInitiator(
             prior_state,
             deleter_init,
-            data_associator,
-            updater,
-            measurement_model,
+            self._data_associator,
+            self._updater,
+            self._measurement_model,
             min_points=init_min_points,
         )
         deleter = UpdateTimeStepsDeleter(time_steps_since_update=deleter_steps)
 
         # attributes
         self.tracker = MultiTargetTracker(
-            initiator=initiator,
+            initiator=self._initiator,
             detector=None,
             deleter=deleter,
-            data_associator=data_associator,
-            updater=updater,
+            data_associator=self._data_associator,
+            updater=self._updater,
         )
 
     @classmethod
@@ -288,17 +296,29 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
         state_vector = StateVector(box)
         return state_vector, metadata
 
-    @staticmethod
-    def _augment_track(track, calibration):
+    @classmethod
+    def _augment_track(cls, track, calibration):
+        if isinstance(calibration, ReferenceFrame):
+            reference = calibration
+        else:
+            reference = calibration.reference
         position = Position(
             np.array(track.state_vector[[0, 2, 4]]).reshape(3),
-            calibration.reference,
+            reference,
         )
         attitude = Attitude(
             transform_orientation(
                 np.array(track.state_vector[[9, 10, 11]]).reshape(3), "euler", "quat"
             ),
-            calibration.reference,
+            reference,
         )
         hwl = np.array(track.state_vector[[6, 7, 8]]).reshape(3)
         track.box3d = Box3D(position, attitude, hwl, where_is_t="bottom")
+        track.position = position
+        track.attitude = attitude
+        try:
+            if track.id not in cls.ID_register:
+                cls.ID_register[track.id] = len(cls.ID_register)
+            track.ID = cls.ID_register[track.id]
+        except AttributeError:
+            track.ID = None
