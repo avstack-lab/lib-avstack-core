@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Union
 
 import numpy as np
 
@@ -29,6 +29,45 @@ class NoClustering(_BaseClustering):
         for agent_ID, tracks in objects.items():
             for track in tracks:
                 clusters.append(Cluster((agent_ID, track)))
+        return clusters
+
+
+@MODELS.register_module()
+class BasicClusterer(_BaseClustering):
+    """Cluster the objects in a list based on threshold"""
+
+    def __init__(self, assign_radius: float = 1.0, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.assign_radius = assign_radius
+
+    @apply_hooks
+    def __call__(
+        self,
+        objects: Union[list, DataContainer],
+        agent_ID: int,
+        frame: int = None,
+        timestamp: float = None,
+        check_reference: bool = False,
+        *args,
+        **kwargs,
+    ) -> ClusterSet:
+        clusters = ClusterSet(
+            frame=frame if frame is not None else objects.frame,
+            timestamp=timestamp if timestamp is not None else objects.timestamp,
+            data=[],
+            source_identifier="assignment-clustering",
+        )
+
+        # Check object to cluster distances
+        for obj in objects:
+            distances = []
+            for clust in clusters:
+                distances.append(clust.distance(obj, check_reference=check_reference))
+            if any(np.array(distances) <= self.assign_radius):
+                idx_min = np.argmin(distances)
+                clusters[idx_min].append((agent_ID, obj))
+            else:
+                clusters.append(Cluster((agent_ID, obj)))
         return clusters
 
 

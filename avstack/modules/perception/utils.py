@@ -153,8 +153,8 @@ def convert_mm3d_to_avstack(
     front_only=False,
     prune_low=False,
     thresh_low=-3,
-    prune_close=False,
-    thresh_close=1.5,
+    prune_duplicate=False,
+    thresh_duplicate=0.5,
     verbose=False,
     nominal_height=1.8,
     **kwargs,
@@ -273,16 +273,15 @@ def convert_mm3d_to_avstack(
                         print("Box registered uncharacteristically low...skipping")
                     continue
                 # ---- too close to another object
-                if len(prev_locs) > 0:
-                    too_close = False
-                    for p_loc in prev_locs:
-                        if box3d.t.distance(p_loc) < thresh_close:
-                            too_close = True
-                            break
-                    if too_close:
+                if prune_duplicate:
+                    distances = np.array(
+                        [box3d.t.distance(obj_loc) for obj_loc in prev_locs]
+                    )
+                    if any(distances <= thresh_duplicate):
                         if verbose:
                             print("Object was too close to another")
                         continue
+
                 # ---- we made it!
                 prev_locs.append(x_O_2_obj_in_O)
                 dets.append(

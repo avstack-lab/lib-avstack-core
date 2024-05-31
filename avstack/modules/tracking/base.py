@@ -2,6 +2,7 @@ from typing import List
 
 import numpy as np
 
+from avstack.config import MODELS, ConfigDict
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import VehicleState
 from avstack.geometry import Box2D, Box3D, PassiveReferenceFrame, ReferenceFrame
@@ -16,6 +17,7 @@ from avstack.utils.decorators import apply_hooks
 
 from ..assignment import gnn_single_frame_assign
 from ..base import BaseModule
+from .tracks import BasicBoxTrack3D
 
 
 class _TrackingAlgorithm(BaseModule):
@@ -26,6 +28,8 @@ class _TrackingAlgorithm(BaseModule):
         threshold_confirmed=3,
         threshold_coast=3,
         cost_threshold=-0.10,
+        clusterer: ConfigDict = {"type": "BasicClusterer", "assign_radius": 0.5},
+        run_clustering: bool = False,
         v_max=None,
         check_reference=True,
         ID=None,
@@ -58,6 +62,8 @@ class _TrackingAlgorithm(BaseModule):
         self.threshold_confirmed = threshold_confirmed
         self.threshold_coast = threshold_coast
         self.check_reference = check_reference
+        self.clusterer = MODELS.build(clusterer)
+        self.run_clustering = run_clustering
         self.v_max = v_max
 
     @property
@@ -97,7 +103,7 @@ class _TrackingAlgorithm(BaseModule):
         A = np.zeros((len(dets), len(tracks)))
         for i, det_ in enumerate(dets):
             # -- pull off detection state
-            if isinstance(det_, (VehicleState, BoxDetection)):
+            if isinstance(det_, (VehicleState, BoxDetection, BasicBoxTrack3D)):
                 det = det_.box
             elif isinstance(det_, (Box3D, Box2D)):
                 det = det_
@@ -119,7 +125,9 @@ class _TrackingAlgorithm(BaseModule):
 
             for j, trk_ in enumerate(tracks):
                 # -- pull off track state
-                if isinstance(det_, (VehicleState, BoxDetection, Box3D, Box2D)):
+                if isinstance(
+                    det_, (VehicleState, BasicBoxTrack3D, BoxDetection, Box3D, Box2D)
+                ):
                     try:
                         trk = trk_.as_object().box
                     except AttributeError:
@@ -166,7 +174,9 @@ class _TrackingAlgorithm(BaseModule):
 
                 # -- gating
                 if self.assign_radius is not None:
-                    if isinstance(det_, (VehicleState, BoxDetection, Box3D)):
+                    if isinstance(
+                        det_, (BasicBoxTrack3D, VehicleState, BoxDetection, Box3D)
+                    ):
                         dist = det.t.distance(
                             trk.t, check_reference=self.check_reference
                         )
@@ -200,16 +210,22 @@ class _TrackingAlgorithm(BaseModule):
         *args,
         **kwargs,
     ):
-        """ "Basic tracking implementation
+        """Basic tracking implementation
 
         Note: detections being None means only do a prediction but don't penalize misses
+
+        if we observe a track but technically it was in unobservable,
+        just go ahead and update it anyway....only use unobservable to
+        handle penalties for misses
         """
+
         t = detections.timestamp
+        tracks_active = self.tracks_active  # pull from the beginning
         if not trks_observable:
-            trks_observable = self.tracks_active
+            trks_observable = tracks_active
 
         # -- propagation
-        for trk in self.tracks_active:
+        for trk in tracks_active:
             if platform and check_reference:
                 trk.change_reference(platform, inplace=True)
             trk.predict(t)
@@ -233,8 +249,8 @@ class _TrackingAlgorithm(BaseModule):
                         for det in dets:
                             det.change_reference(platform, inplace=True)
 
-                # -- assignment with active and observable tracks
-                A = self.get_assignment_matrix(dets, trks_observable)
+                # -- assignment with active and ALL tracks
+                A = self.get_assignment_matrix(dets, tracks_active)
                 assign_sol = gnn_single_frame_assign(
                     A, cost_threshold=self.cost_threshold
                 )
@@ -242,7 +258,7 @@ class _TrackingAlgorithm(BaseModule):
 
                 # -- update tracks with associations
                 for i_det, j_trk in assign_sol.assignment_tuples:
-                    trks_observable[j_trk].update(dets[i_det].z)
+                    tracks_active[j_trk].update(dets[i_det].z)
 
                 # -- unassigned dets for new tracks
                 for i_det in assign_sol.unassigned_rows:
@@ -250,7 +266,26 @@ class _TrackingAlgorithm(BaseModule):
 
                 # -- tell unassigned tracks we missed them UNLESS they're whitelisted
                 for j_trk in assign_sol.unassigned_cols:
-                    trks_observable[j_trk].missed()
+                    if tracks_active[j_trk] in trks_observable:
+                        tracks_active[j_trk].missed()
+
+                # -- run clustering on tracks
+                if self.run_clustering:
+                    clusters = self.clusterer(
+                        objects=self.tracks,
+                        agent_ID="central",
+                        frame=self.frame,
+                        timestamp=self.timestamp,
+                    )
+                    # -- remove "duplicate" tracks based on clustering
+                    for clust in clusters:
+                        if len(clust) > 1:
+                            idx_max_updates = np.argmax(
+                                [trk.n_updates for trk in clust.objects]
+                            )
+                            for i, trk in enumerate(clust.objects):
+                                if i != idx_max_updates:
+                                    self.tracks.remove(trk)
 
             # -- prune dead tracks -- only in a non-predict_only state
             self.tracks = [

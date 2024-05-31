@@ -319,3 +319,4 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
             cls.ID_register[track.id] = len(cls.ID_register)
         track.ID = cls.ID_register[track.id]
         track.box3d = Box3D(position, attitude, hwl, where_is_t="bottom", ID=track.ID)
+        track.reference = reference

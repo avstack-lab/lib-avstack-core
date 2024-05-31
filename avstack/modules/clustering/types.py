@@ -83,7 +83,12 @@ class Cluster:
             return False
 
     def distance(self, obj, check_reference: bool = True) -> float:
-        return obj.distance(self.centroid(), check_reference=check_reference)
+        centroid = self.centroid()
+        try:
+            d = obj.distance(centroid, check_reference=check_reference)
+        except AttributeError:
+            d = obj.position.distance(centroid, check_reference=check_reference)
+        return d
 
     def get_objects_by_agent_ID(self, ID: int) -> list:
         return [

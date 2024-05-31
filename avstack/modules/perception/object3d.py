@@ -104,6 +104,8 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         epoch="latest",
         threshold=None,
         deploy_runtime="tensorrt",
+        prune_duplicate=True,
+        thresh_duplicate=0.5,
         **kwargs,
     ):
         super().__init__(
@@ -117,6 +119,8 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             **kwargs,
         )
         self.front_only = front_only
+        self.prune_duplicate = prune_duplicate
+        self.thresh_duplicate = thresh_duplicate
 
     def _execute(self, data, identifier, eval_method="file", **kwargs):
         from mmdet3d.utils import register_all_modules
@@ -147,7 +151,8 @@ class MMDetObjectDetector3D(_MMObjectDetector):
             do_projection=self._do_projection,
             front_only=self.front_only,
             prune_low=(self.model_name in ["pgd"]),
-            prune_close=(self.model_name in ["pgd"]),
+            prune_duplicate=self.prune_duplicate,
+            thresh_duplicate=self.thresh_duplicate,
             **kwargs,
         )
         return DataContainer(data.frame, data.timestamp, detections, identifier)
