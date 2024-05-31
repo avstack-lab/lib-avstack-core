@@ -275,7 +275,10 @@ def convert_mm3d_to_avstack(
                 # ---- too close to another object
                 if prune_duplicate:
                     distances = np.array(
-                        [box3d.t.distance(obj_loc) for obj_loc in prev_locs]
+                        [
+                            np.linalg.norm(x_O_2_obj_in_O - obj_loc)
+                            for obj_loc in prev_locs
+                        ]
                     )
                     if any(distances <= thresh_duplicate):
                         if verbose:
