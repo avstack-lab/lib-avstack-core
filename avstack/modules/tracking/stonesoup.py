@@ -44,7 +44,7 @@ class StoneSoupKalmanTrackerBase(BaseModule):
         "motorcycle": {"id": 4, "name": "motorcycle"},
     }
 
-    def __init__(self, t0=datetime.now(), name="tracking", **kwargs):
+    def __init__(self, t0, name="tracking", **kwargs):
         super().__init__(name=name, **kwargs)
         self.iframe = -1
         self.frame = 0
@@ -223,7 +223,7 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
     ):
         super().__init__(**kwargs)
         # track filtering
-        # state is: [x, xdot, y, ydot, z, zdot, height, width, length, pitch, roll, yaw]
+        # state is: [x, xdot, y, ydot, z, zdot, height, width, length, roll, pitch, yaw]
         # CV noise parameter is 2*sigma_m^2*tau_m according to Blackman
         t_models = [
             ConstantVelocity(qx),  # x
@@ -232,12 +232,12 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
             RandomWalk(qb),  # height
             RandomWalk(qb),  # width
             RandomWalk(qb),  # length
-            RandomWalk(qy),  # pitch
             RandomWalk(qy),  # roll
+            RandomWalk(qy),  # pitch
             RandomWalk(qy),  # yaw
         ]
         self._transition_model = CombinedLinearGaussianTransitionModel(t_models)
-        # detection is [x, y, z, height, width, length, pitch, roll, yaw]
+        # detection is [x, y, z, height, width, length, roll, pitch, yaw]
         self._measurement_model = LinearGaussian(
             ndim_state=12,
             mapping=[0, 2, 4, 6, 7, 8, 9, 10, 11],
