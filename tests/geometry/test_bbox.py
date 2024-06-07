@@ -1,9 +1,3 @@
-# @Author: Spencer Hallyburton <spencer>
-# @Date:   2021-02-24
-# @Filename: test_bbox_util.py
-# @Last modified by:   spencer
-# @Last modified time: 2021-08-10
-
 import json
 import sys
 from copy import deepcopy

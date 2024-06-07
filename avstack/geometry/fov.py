@@ -4,17 +4,22 @@ from typing import Dict, FrozenSet, Union
 import numpy as np
 
 from avstack.config import GEOMETRY
+from avstack.geometry.datastructs import PointMatrix3D
+from avstack.geometry.refchoc import ReferenceFrame
 from avstack.geometry.utils import in_polygon, parallel_in_polygon
 
 
 def points_in_fov(points, fov: Union["Shape", np.ndarray]):
     try:
         in_fov = fov.check_point(points)
-    except AttributeError:
-        if isinstance(points[0], (list, np.ndarray)):
-            in_fov = parallel_in_polygon(points, fov)
-        else:
-            in_fov = in_polygon(points, fov)
+    except AttributeError as e:
+        try:
+            if isinstance(points[0], (list, np.ndarray)):
+                in_fov = parallel_in_polygon(points, fov)
+            else:
+                in_fov = in_polygon(points, fov)
+        except Exception:
+            raise e
     return in_fov
 
 
@@ -91,8 +96,38 @@ class Shape:
     def area(self):
         raise NotImplementedError
 
+    def change_reference(self, reference: ReferenceFrame, inplace: bool):
+        raise NotImplementedError
+
     def check_point(self, point: np.ndarray) -> bool:
         raise NotImplementedError
+
+
+@GEOMETRY.register_module()
+class Polygon(Shape):
+    def __init__(self, boundary: np.ndarray, reference: ReferenceFrame):
+        self.boundary = boundary
+        self.reference = reference
+
+    def change_reference(self, reference: ReferenceFrame, inplace: bool):
+        """Change the polygon reference frame
+
+        HACK: Assumes that the boundary is a 2D BEV set of points in X-Y plane"""
+        boundary = np.concatenate(
+            (self.boundary, np.zeros((self.boundary.shape[0], 1))), axis=1
+        )
+        boundary = PointMatrix3D(x=boundary, calibration=self.reference)
+        boundary = boundary.change_reference(reference, inplace=False)[:, :2]
+
+        if inplace:
+            self.boundary = boundary.x
+            self.reference = reference
+        else:
+            return Polygon(boundary=boundary, reference=reference)
+
+    def check_point(self, point: np.ndarray) -> bool:
+        point_test = point[..., :2]
+        return in_polygon(point_test, self.boundary)
 
 
 @GEOMETRY.register_module()

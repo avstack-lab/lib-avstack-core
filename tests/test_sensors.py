@@ -4,7 +4,6 @@ import tempfile
 
 from avstack import sensors
 from avstack.datastructs import DataBucket, DataManager
-from avstack.geometry.utils import in_polygon
 
 
 sys.path.append("tests/")
@@ -139,9 +138,3 @@ def test_save_radar():
     with tempfile.TemporaryDirectory() as tmp:
         filepath = os.path.join(tmp, "temp_radar.txt")
         rad.save_to_file(filepath)
-
-
-def test_lidar_concave_hull():
-    hull = pc.concave_hull_bev()
-    assert in_polygon([0, 0], hull)
-    assert not in_polygon([200, 0], hull)

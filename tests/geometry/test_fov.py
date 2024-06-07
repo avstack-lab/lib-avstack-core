@@ -1,8 +1,54 @@
 import math
+import sys
 
 import numpy as np
 
-from avstack.geometry.fov import Circle, Vesica, Wedge
+from avstack.calibration import LidarCalibration
+from avstack.geometry import GlobalOrigin3D
+from avstack.geometry.fov import Circle, Polygon, Vesica, Wedge
+
+
+sys.path.append("tests/")
+from utilities import get_test_sensor_data
+
+
+(
+    obj,
+    box_calib,
+    lidar_calib,
+    pc,
+    camera_calib,
+    img,
+    radar_calib,
+    rad,
+    box_2d,
+    box_3d,
+) = get_test_sensor_data()
+
+
+def test_lidar_concave_hull():
+    hull = pc.concave_hull_bev()
+    assert hull.check_point(np.array([0, 0]))
+    assert not hull.check_point(np.array([200, 0]))
+
+
+def test_make_fov_from_pc_hull():
+    fov = pc.concave_hull_bev()
+    assert isinstance(fov, Polygon)
+
+
+def test_polygon_change_reference():
+    # add some translation to the sensor for testing...
+    pc.calibration.reference.x += np.random.rand(3)
+    calib_global = LidarCalibration(GlobalOrigin3D)
+    pc_global = pc.project(calib_global)
+    fov = pc.concave_hull_bev()
+    fov2 = fov.change_reference(GlobalOrigin3D, inplace=False)
+    fov3 = pc_global.concave_hull_bev()
+    assert fov.reference != fov2.reference
+    assert fov2.reference == fov3.reference
+    assert not np.allclose(fov.boundary, fov2.boundary)
+    assert np.allclose(fov2.boundary, fov3.boundary)
 
 
 def test_wedge():
@@ -53,11 +99,3 @@ def test_vesica_circle_overlap():
     ves = c1.intersection(c2)
     ves2 = ves.intersection(c3)
     assert ves2 is None
-
-
-# def test_get_disjoint_sets_two_circles_with_overlap():
-#     c1 = Circle(radius=1, center=np.array([1, 1]))
-#     c2 = Circle(radius=1, center=np.array([1, 1.5]))
-#     fovs = {1: c1, 2: c2}
-#     disjoint_sets = get_disjoint_fov_subsets(fovs)
-#     assert len(disjoint_sets) == 3
