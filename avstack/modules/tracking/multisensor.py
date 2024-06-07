@@ -26,7 +26,7 @@ class MeasurementBasedMultiTracker(BaseModule):
         super().__init__(name=name, **kwargs)
         self.tracker = (
             MODELS.build(tracker, default_args={"name": "trackerformulti"})
-            if isinstance(tracker, ConfigDict)
+            if isinstance(tracker, (dict, ConfigDict))
             else tracker
         )
         self.platform = platform

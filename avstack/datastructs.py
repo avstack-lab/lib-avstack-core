@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-04-21
-# @Last Modified by:   spencer@primus
-# @Last Modified date: 2022-09-29
-# @Description:
-"""
-Custom data structures. Some based on the heapq library.
-"""
 from __future__ import annotations
 
 import heapq

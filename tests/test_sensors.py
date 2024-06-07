@@ -138,9 +138,3 @@ def test_save_radar():
     with tempfile.TemporaryDirectory() as tmp:
         filepath = os.path.join(tmp, "temp_radar.txt")
         rad.save_to_file(filepath)
-
-
-def test_lidar_concave_hull():
-    hull = pc.concave_hull_bev()
-    assert hull.check_point([0, 0])
-    assert not hull.check_point([200, 0])

@@ -26,6 +26,12 @@ from utilities import get_test_sensor_data
 ) = get_test_sensor_data()
 
 
+def test_lidar_concave_hull():
+    hull = pc.concave_hull_bev()
+    assert hull.check_point(np.array([0, 0]))
+    assert not hull.check_point(np.array([200, 0]))
+
+
 def test_make_fov_from_pc_hull():
     fov = pc.concave_hull_bev()
     assert isinstance(fov, Polygon)

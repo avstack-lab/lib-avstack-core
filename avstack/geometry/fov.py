@@ -12,11 +12,14 @@ from avstack.geometry.utils import in_polygon, parallel_in_polygon
 def points_in_fov(points, fov: Union["Shape", np.ndarray]):
     try:
         in_fov = fov.check_point(points)
-    except AttributeError:
-        if isinstance(points[0], (list, np.ndarray)):
-            in_fov = parallel_in_polygon(points, fov)
-        else:
-            in_fov = in_polygon(points, fov)
+    except AttributeError as e:
+        try:
+            if isinstance(points[0], (list, np.ndarray)):
+                in_fov = parallel_in_polygon(points, fov)
+            else:
+                in_fov = in_polygon(points, fov)
+        except Exception:
+            raise e
     return in_fov
 
 
@@ -123,7 +126,8 @@ class Polygon(Shape):
             return Polygon(boundary=boundary, reference=reference)
 
     def check_point(self, point: np.ndarray) -> bool:
-        return in_polygon(point, self.boundary)
+        point_test = point[..., :2]
+        return in_polygon(point_test, self.boundary)
 
 
 @GEOMETRY.register_module()
