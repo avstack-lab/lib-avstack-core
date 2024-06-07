@@ -18,6 +18,7 @@ from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration, LidarCalibration
 from avstack.geometry import GlobalOrigin3D, PointMatrix3D
 from avstack.geometry import transformations as tforms
+from avstack.geometry.fov import Polygon
 
 
 class SensorData:
@@ -350,7 +351,8 @@ class LidarData(SensorData):
         hull_pts = concave_hull(
             cls.data[:, :2], concavity=concavity, length_threshold=length_threshold
         )
-        return hull_pts
+        hull_poly = Polygon(boundary=hull_pts, reference=cls.reference)
+        return hull_poly
 
     def filter_by_range(self, min_range: float, max_range: float, inplace=True):
         if (min_range is not None) or (max_range is not None):

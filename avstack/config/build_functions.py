@@ -127,8 +127,9 @@ def build_from_cfg(
         or inspect.isfunction(obj_cls)
         or inspect.ismethod(obj_cls)
     ):
+        article = "An" if obj_cls.__name__[0] in "aeiou" else "A"
         print_log(
-            f"An `{obj_cls.__name__}` instance is built from "  # type: ignore # noqa: E501
+            f"{article} `{obj_cls.__name__}` instance is built from "  # type: ignore # noqa: E501
             "registry, and its implementation can be found in "
             f"{obj_cls.__module__}",  # type: ignore
             logger="current",

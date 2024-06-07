@@ -70,8 +70,8 @@ class StoneSoupKalmanTrackerBase(BaseModule):
         self.timestamp = float(detections.timestamp)
         self.frame = int(detections.frame)
         self.iframe += 1
-        tracks = self.track(detections, platform, **kwargs)
-        track_data = DataContainer(self.frame, self.timestamp, tracks, self.name)
+        self.tracks = self.track(detections, platform, **kwargs)
+        track_data = DataContainer(self.frame, self.timestamp, self.tracks, self.name)
         return track_data
 
     def track(self, detections_in, platform, calibration=None, **kwargs):
@@ -111,6 +111,7 @@ class StoneSoupKalmanTrackerBase(BaseModule):
 class StoneSoupKalmanTracker2DBox(StoneSoupKalmanTrackerBase):
     def __init__(
         self,
+        t0: datetime,
         missed_distance=30,
         qx=20**2,
         qb=20**2,
@@ -124,7 +125,7 @@ class StoneSoupKalmanTracker2DBox(StoneSoupKalmanTrackerBase):
         deleter_steps=10,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(t0=t0, **kwargs)
         # track filtering
         # state is: [x, xdot, y, ydot, width, height] where x, y are top left, coordinates
         t_models = [
@@ -205,6 +206,7 @@ class StoneSoupKalmanTracker2DBox(StoneSoupKalmanTrackerBase):
 class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
     def __init__(
         self,
+        t0: datetime,
         missed_distance=5,
         qx=2.0**2,
         qb=0.1**2,
@@ -221,7 +223,7 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
         deleter_steps=10,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(t0=t0, **kwargs)
         # track filtering
         # state is: [x, xdot, y, ydot, z, zdot, height, width, length, roll, pitch, yaw]
         # CV noise parameter is 2*sigma_m^2*tau_m according to Blackman
@@ -320,3 +322,12 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
         track.ID = cls.ID_register[track.id]
         track.box3d = Box3D(position, attitude, hwl, where_is_t="bottom", ID=track.ID)
         track.reference = reference
+
+    def predict_tracks(self, timestamp, platform, check_reference):
+        tracks_predicted = []
+        for track in self.tracks:
+            track_predicted = self._predictor.predict(track, timestamp=timestamp)
+            track_predicted.id = track.id
+            self._augment_track(track_predicted, track.box3d.reference)
+            tracks_predicted.append(track_predicted.box3d)
+        return tracks_predicted

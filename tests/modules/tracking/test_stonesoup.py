@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 
 import numpy as np
 
@@ -12,7 +13,7 @@ from track_utils import make_2d_tracking_data
 
 
 def test_stone_soup_2d_box_tracker():
-    tracker = StoneSoupKalmanTracker2DBox()
+    tracker = StoneSoupKalmanTracker2DBox(t0=datetime.now())
 
     platform = GlobalOrigin3D
     n_targs = 4

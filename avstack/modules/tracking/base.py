@@ -200,6 +200,17 @@ class _TrackingAlgorithm(BaseModule):
     def spawn_track_from_detection(self, detection):
         raise NotImplementedError
 
+    def predict_tracks(self, timestamp, platform, check_reference):
+        tracks_active = self.tracks_active  # pull from the beginning
+        for trk in tracks_active:
+            if platform and check_reference:
+                trk.change_reference(platform, inplace=True)
+            trk.predict(timestamp)
+            if self.v_max is not None:
+                if trk.velocity.norm() > self.v_max:
+                    trk.active = False
+        return tracks_active
+
     def track(
         self,
         detections: DataContainer,
@@ -220,18 +231,21 @@ class _TrackingAlgorithm(BaseModule):
         """
 
         t = detections.timestamp
-        tracks_active = self.tracks_active  # pull from the beginning
+
+        # -- propagation
+        tracks_active = self.predict_tracks(
+            t, platform=platform, check_reference=check_reference
+        )
         if not trks_observable:
             trks_observable = tracks_active
 
-        # -- propagation
-        for trk in tracks_active:
-            if platform and check_reference:
-                trk.change_reference(platform, inplace=True)
-            trk.predict(t)
-            if self.v_max is not None:
-                if trk.velocity.norm() > self.v_max:
-                    trk.active = False
+        # for trk in tracks_active:
+        #     if platform and check_reference:
+        #         trk.change_reference(platform, inplace=True)
+        #     trk.predict(t)
+        #     if self.v_max is not None:
+        #         if trk.velocity.norm() > self.v_max:
+        #             trk.active = False
 
         # -- loop over each sensor providing detections
         if detections is not None:
