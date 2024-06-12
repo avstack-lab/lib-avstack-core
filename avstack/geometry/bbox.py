@@ -69,7 +69,7 @@ class BoxEncoder(json.JSONEncoder):
             }
             return {"segmask2d": seg_dict}
         else:
-            raise NotImplementedError(f"{type(0)}, {o}")
+            raise NotImplementedError(f"{type(o)}, {o}")
 
 
 class BoxDecoder(json.JSONDecoder):

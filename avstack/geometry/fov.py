@@ -92,7 +92,7 @@ def get_disjoint_fov_subsets(fovs: Dict[int, "Shape"]) -> Dict[FrozenSet[int], "
     return fov_subsets
 
 
-class FovEncoder(json.JSONEncoder):
+class FieldOfViewEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Polygon):
             fov_dict = {
@@ -103,10 +103,10 @@ class FovEncoder(json.JSONEncoder):
             }
             return {"polygon": fov_dict}
         else:
-            raise NotImplementedError(f"{type(0)}, {o}")
+            raise NotImplementedError(f"{type(o)}, {o}")
 
 
-class FovDecoder(json.JSONDecoder):
+class FieldOfViewDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
 
@@ -171,7 +171,7 @@ class Polygon(Shape):
         return in_polygon(point_test, self.boundary)
 
     def encode(self):
-        return json.dumps(self, cls=FovEncoder)
+        return json.dumps(self, cls=FieldOfViewEncoder)
 
 
 @GEOMETRY.register_module()
