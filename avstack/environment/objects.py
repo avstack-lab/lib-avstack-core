@@ -145,6 +145,10 @@ class ObjectState:
         return self.__str__()
 
     @property
+    def timestamp(self):
+        return self.t
+
+    @property
     def occlusion(self):
         return self._occlusion
 
