@@ -1,5 +1,7 @@
 import numpy as np
 
+from avstack.config import MODELS
+from avstack.environment import ObjectState
 from avstack.utils.decorators import apply_hooks
 
 from ..base import BaseModule
@@ -7,7 +9,7 @@ from ..base import BaseModule
 
 class _LocalizationAlgorithm(BaseModule):
     def __init__(
-        self, t_init, ego_init, rate=100, name="localization", *args, **kwargs
+        self, t_init, ego_init=None, rate=100, name="localization", *args, **kwargs
     ):
         super().__init__(name=name, *args, **kwargs)
         self.t_last_exec = -np.inf
@@ -100,11 +102,16 @@ class _LocalizationAlgorithm(BaseModule):
         raise NotImplementedError
 
 
+@MODELS.register_module()
 class GroundTruthLocalizer(_LocalizationAlgorithm):
-    def __init__(self, rate, t_init, ego_init, *args, **kwargs):
+    def __init__(self, t_init, ego_init=None, rate=100, *args, **kwargs):
         super().__init__(t_init, ego_init, rate, *args, **kwargs)
 
     def execute(self, t, ground_truth, *args, **kwargs):
-        assert t == ground_truth.timestamp, (t, ground_truth.timestamp)
-        self.assign_from_ego(ground_truth.timestamp, ground_truth.ego_state)
-        return ground_truth.ego_state
+        assert np.isclose(t, ground_truth.timestamp), (t, ground_truth.timestamp)
+        if isinstance(ground_truth, ObjectState):
+            self.assign_from_ego(ground_truth.timestamp, ground_truth)
+            return ground_truth
+        else:
+            self.assign_from_ego(ground_truth.timestamp, ground_truth.ego_state)
+            return ground_truth.ego_state

@@ -351,7 +351,12 @@ class LidarData(SensorData):
         hull_pts = concave_hull(
             cls.data[:, :2], concavity=concavity, length_threshold=length_threshold
         )
-        hull_poly = Polygon(boundary=hull_pts, reference=cls.reference)
+        hull_poly = Polygon(
+            boundary=hull_pts,
+            reference=cls.reference,
+            frame=self.frame,
+            timestamp=self.timestamp,
+        )
         return hull_poly
 
     def filter_by_range(self, min_range: float, max_range: float, inplace=True):
