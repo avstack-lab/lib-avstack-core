@@ -3,7 +3,7 @@ from numba import jit
 from numba.types import float64, int64
 
 
-def q_mult_vec(q, v):
+def q_mult_vec(q, v, n_prec=None):
     """
     v' = v + 2 * r x (s * v + r x v) / m
     where x represents the cross product, s and r are the scalar and vector parts
@@ -19,9 +19,14 @@ def q_mult_vec(q, v):
     m = q.w**2 + q.x**2 + q.y**2 + q.z**2
     try:
         v2x = _q_mult_vec(s, r, m, v.x)
+        if n_prec is not None:
+            v2x = np.round(v2x, n_prec)
         return v.factory()(v2x, v.reference)
     except AttributeError:
-        return _q_mult_vec(s, r, m, v)
+        v2x = _q_mult_vec(s, r, m, v)
+        if n_prec is not None:
+            v2x = np.round(v2x, n_prec)
+        return v2x
 
 
 @jit(nopython=True, fastmath=False)

@@ -115,20 +115,6 @@ def filter_boxes_extent(boxes, extent):
     return box_filter
 
 
-def filter_points_in_image(point_cloud, im_size, calib):
-    """Filter points based on if they fall within the image specified"""
-    # Filter points based on the image coordinates
-    point_in_im = calib.project_velo_to_image(point_cloud[:, 0:3])
-    point_in_im_mask = (
-        (point_in_im[:, 0] > 0)
-        & (point_in_im[:, 0] < im_size[1])
-        & (point_in_im[:, 1] > 0)
-        & (point_in_im[:, 1] < im_size[0])
-        & (point_cloud[:, 0] > 0)
-    )
-    return point_in_im_mask
-
-
 def filter_points_in_cone(point_cloud, v_unit, half_angle):
     """Filter points defined by a cone"""
     assert np.isclose(np.linalg.norm(v_unit), 1)
@@ -318,7 +304,7 @@ def filter_points_in_image(points, P):
     """
     Filter which points are in view for an image
     """
-    im_size = [2 * P[1, 2], 2 * P[0, 2]]  # size is [h, w]
+    im_size = [2 * P[0, 2], 2 * P[1, 2]]  # size is [w, h]
     points_in_img = tforms.project_to_image(points, P)
     points_in_im_mask = (
         (points_in_img[:, 0] > 0)

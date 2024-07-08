@@ -401,7 +401,7 @@ def euler_to_R(euler: np.ndarray):
 # ===========================================
 
 
-def transform_orientation(x, a_from, a_to):
+def transform_orientation(x, a_from, a_to, n_prec=None):
     """
     Transform angles from different representations
     eulers must be represented in (roll, pitch, yaw) order
@@ -472,6 +472,10 @@ def transform_orientation(x, a_from, a_to):
 
         pdb.set_trace()
         raise RuntimeError(x_out)
+    
+    # rounding errors
+    if n_prec is not None:
+        x_out = np.round(x_out, n_prec)
 
     return x_out
 
