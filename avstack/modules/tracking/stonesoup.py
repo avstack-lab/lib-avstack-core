@@ -75,6 +75,7 @@ class StoneSoupKalmanTrackerBase(BaseModule):
         return track_data
 
     def track(self, detections_in, platform, calibration=None, **kwargs):
+        """NOTE: tracks observable is not currently used..."""
         if calibration is None:
             calibration = platform  # HACK
 
@@ -321,6 +322,7 @@ class StoneSoupKalmanTracker3DBox(StoneSoupKalmanTrackerBase):
             cls.ID_register[track.id] = len(cls.ID_register)
         track.ID = cls.ID_register[track.id]
         track.box3d = Box3D(position, attitude, hwl, where_is_t="bottom", ID=track.ID)
+        track.box = track.box3d
         track.reference = reference
 
     def predict_tracks(self, timestamp, platform, check_reference):
