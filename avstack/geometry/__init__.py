@@ -16,7 +16,7 @@ from .datastructs import (
     VectorDecoder,
     Velocity,
 )
-from .fov import Circle, Shape, Sphere, Vesica, Wedge
+from .fov import Circle, Polygon, Shape, Sphere, Vesica, Wedge
 from .planes import GroundPlane, plane_2_transform
 from .refchoc import (
     GlobalOrigin2D,
@@ -57,6 +57,7 @@ __all__ = [
     "Position",
     "q_mult_vec",
     "PassiveReferenceFrame",
+    "Polygon",
     "ReferenceDecoder",
     "ReferenceFrame",
     "Rotation",

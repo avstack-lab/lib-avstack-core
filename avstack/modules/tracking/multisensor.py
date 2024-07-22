@@ -45,7 +45,7 @@ class MeasurementBasedMultiTracker(BaseModule):
         **kwargs,
     ) -> DataContainer:
         """Run the multi-platform, multi-target tracking
-        
+
         NOTE: all inputs must be in common reference frame
         """
 
@@ -124,8 +124,9 @@ class MeasurementBasedMultiTracker(BaseModule):
                         continue
                     dists.append(track_i.box.distance(track_j.box))
             if any([d < 1 for d in dists]):
-                import pdb; pdb.set_trace()
+                import pdb
 
+                pdb.set_trace()
 
         # format as data container
         tracks_out = DataContainer(
@@ -134,8 +135,6 @@ class MeasurementBasedMultiTracker(BaseModule):
             data=self.tracker.tracks_confirmed,
             source_identifier=self.name,
         )
-
-
 
         return tracks_out
 

@@ -20,7 +20,7 @@ class ConcaveHullLidarFOVEstimator(BaseModule):
         self.length_threshold = length_threshold
 
     @apply_hooks
-    def __call__(self, pc, in_global: bool=False, *args: Any, **kwds: Any) -> Any:
+    def __call__(self, pc, in_global: bool = False, *args: Any, **kwds: Any) -> Any:
         fov = pc.concave_hull_bev(
             concavity=self.concavity,
             length_threshold=self.length_threshold,

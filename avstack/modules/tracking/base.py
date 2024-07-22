@@ -1,6 +1,6 @@
+import datetime
 from typing import List
 
-import datetime
 import numpy as np
 
 from avstack.config import MODELS, ConfigDict
