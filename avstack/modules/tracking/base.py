@@ -1,3 +1,4 @@
+import datetime
 from typing import List
 
 import numpy as np
@@ -33,6 +34,7 @@ class _TrackingAlgorithm(BaseModule):
         v_max=None,
         check_reference=True,
         ID=None,
+        t0=0.0,
         name="tracking",
         **kwargs,
     ):
@@ -46,7 +48,7 @@ class _TrackingAlgorithm(BaseModule):
         self.tracks = []
         self.iframe = -1
         self.frame = 0
-        self.timestamp = 0
+        self.timestamp = t0.timestamp() if isinstance(t0, datetime.datetime) else t0
         self.assign_metric = assign_metric
         self.assign_radius = assign_radius
         if assign_metric == "center_dist":
@@ -98,6 +100,13 @@ class _TrackingAlgorithm(BaseModule):
         tracks = self.track(detections, platform, **kwargs)
         track_data = DataContainer(self.frame, self.timestamp, tracks, self.name)
         return track_data
+
+    def reset(self):
+        self.tracks = []
+        self.iframe = -1
+        self.frame = 0
+        self.timestamp = 0
+        self.last_assignment = None
 
     def get_assignment_matrix(self, dets, tracks):
         A = np.zeros((len(dets), len(tracks)))
@@ -201,6 +210,8 @@ class _TrackingAlgorithm(BaseModule):
         raise NotImplementedError
 
     def predict_tracks(self, timestamp, platform, check_reference):
+        if isinstance(timestamp, datetime.datetime):
+            timestamp = timestamp.timestamp()
         tracks_active = self.tracks_active  # pull from the beginning
         for trk in tracks_active:
             if platform and check_reference:

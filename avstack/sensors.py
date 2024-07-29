@@ -346,12 +346,24 @@ class LidarData(SensorData):
         else:
             raise NotImplementedError(key)
 
-    def concave_hull_bev(self, concavity=2, length_threshold=1, in_global=False):
+    def concave_hull_bev(
+        self,
+        concavity=2,
+        length_threshold=1,
+        in_global=False,
+        max_height: float = np.inf,
+    ):
         cls = self if not in_global else self.project(LidarCalibration(GlobalOrigin3D))
+        data = cls.data[cls.data[:, 2] <= max_height, :2]
         hull_pts = concave_hull(
-            cls.data[:, :2], concavity=concavity, length_threshold=length_threshold
+            data, concavity=concavity, length_threshold=length_threshold
         )
-        hull_poly = Polygon(boundary=hull_pts, reference=cls.reference)
+        hull_poly = Polygon(
+            boundary=hull_pts,
+            reference=cls.reference,
+            frame=self.frame,
+            timestamp=self.timestamp,
+        )
         return hull_poly
 
     def filter_by_range(self, min_range: float, max_range: float, inplace=True):

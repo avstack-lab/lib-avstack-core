@@ -472,7 +472,7 @@ def transform_orientation(x, a_from, a_to, n_prec=None):
 
         pdb.set_trace()
         raise RuntimeError(x_out)
-    
+
     # rounding errors
     if n_prec is not None:
         x_out = np.round(x_out, n_prec)

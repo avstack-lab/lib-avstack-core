@@ -58,6 +58,5 @@ def test_msmt_based_multitracker():
         tracker(
             detections=dets_all[frame],
             fovs=fovs,
-            platforms=platforms,
         )
     assert n_dets[0] < len(tracker.tracker.tracks_active) < sum(n_dets)

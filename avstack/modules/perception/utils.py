@@ -174,7 +174,8 @@ def convert_mm3d_to_avstack(
 
     # -- convert boxes
     prev_locs = []
-    gp_reference = calib.reference.get_ground_projected_reference()
+    if do_projection:
+        gp_reference = calib.reference.get_ground_projected_reference()
     for box, label, score in zip(bboxes, labels, scores):
         obj_type = class_maps[dataset][obj_map[label]]
         if obj_type in whitelist:

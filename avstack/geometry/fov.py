@@ -1,11 +1,12 @@
 import itertools
+import json
 from typing import Dict, FrozenSet, Union
 
 import numpy as np
 
 from avstack.config import GEOMETRY
 from avstack.geometry.datastructs import PointMatrix3D
-from avstack.geometry.refchoc import ReferenceFrame
+from avstack.geometry.refchoc import ReferenceDecoder, ReferenceFrame
 from avstack.geometry.utils import in_polygon, parallel_in_polygon
 
 
@@ -91,6 +92,38 @@ def get_disjoint_fov_subsets(fovs: Dict[int, "Shape"]) -> Dict[FrozenSet[int], "
     return fov_subsets
 
 
+class FieldOfViewEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Polygon):
+            fov_dict = {
+                "boundary": o.boundary.tolist(),
+                "reference": o.reference.encode(),
+                "frame": o.frame,
+                "timestamp": o.timestamp,
+            }
+            return {"polygon": fov_dict}
+        else:
+            raise NotImplementedError(f"{type(o)}, {o}")
+
+
+class FieldOfViewDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def object_hook(json_object):
+        if "polygon" in json_object:
+            json_object = json_object["polygon"]
+            return Polygon(
+                boundary=np.array(json_object["boundary"]),
+                reference=json.loads(json_object["reference"], cls=ReferenceDecoder),
+                frame=int(json_object["frame"]),
+                timestamp=float(json_object["timestamp"]),
+            )
+        else:
+            return json_object
+
+
 class Shape:
     @property
     def area(self):
@@ -105,9 +138,17 @@ class Shape:
 
 @GEOMETRY.register_module()
 class Polygon(Shape):
-    def __init__(self, boundary: np.ndarray, reference: ReferenceFrame):
+    def __init__(
+        self,
+        boundary: np.ndarray,
+        reference: ReferenceFrame,
+        frame: int = None,
+        timestamp: float = None,
+    ):
         self.boundary = boundary
         self.reference = reference
+        self.frame = frame
+        self.timestamp = timestamp
 
     def change_reference(self, reference: ReferenceFrame, inplace: bool):
         """Change the polygon reference frame
@@ -128,6 +169,9 @@ class Polygon(Shape):
     def check_point(self, point: np.ndarray) -> bool:
         point_test = point[..., :2]
         return in_polygon(point_test, self.boundary)
+
+    def encode(self):
+        return json.dumps(self, cls=FieldOfViewEncoder)
 
 
 @GEOMETRY.register_module()

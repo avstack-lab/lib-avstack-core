@@ -4,7 +4,7 @@ import numpy as np
 
 
 if TYPE_CHECKING:
-    from avstack.geometry import ReferenceFrame, Shape
+    from avstack.geometry import Shape
 
 from avstack.config import MODELS, ConfigDict
 from avstack.datastructs import DataContainer
@@ -39,43 +39,47 @@ class MeasurementBasedMultiTracker(BaseModule):
         self,
         detections: Dict[int, DataContainer],
         fovs: Dict[int, Union["Shape", np.ndarray]],
-        platforms: Dict[int, "ReferenceFrame"],
         check_reference: bool = True,
         *args,
         **kwargs,
     ) -> DataContainer:
+        """Run the multi-platform, multi-target tracking
+
+        NOTE: all inputs must be in common reference frame
+        """
 
         for ID in detections:
-            # align reference frame for checking observables
-            pts_ref = [
-                trk.position.change_reference(platforms[ID], inplace=False)
-                if check_reference
-                else trk.position
-                for trk in self.tracker.tracks_active
-            ]
-
-            # use the FOV model to filter for observable tracks
             if detections[ID] is None:
                 continue
-            try:
-                trks_observable = []
-                for trk, pos in zip(self.tracker.tracks_active, pts_ref):
-                    if fovs[ID].check_point(pos.x):
-                        trks_observable.append(trk)
-            except AttributeError:
-                pos_to_check = [pos.x[:2] for pos in pts_ref]
-                trks_observable = (
-                    []
-                    if len(pos_to_check) == 0
-                    else [
-                        trk
-                        for trk, in_h in zip(
-                            self.tracker.tracks_active,
-                            parallel_in_polygon(pos_to_check, fovs[ID]),
-                        )
-                        if in_h
-                    ]
-                )
+
+            # NOTE: no need to align frames since all inputs are global
+            pts_ref = [trk.position for trk in self.tracker.tracks_active]
+
+            # use the FOV model to filter for observable tracks
+            if fovs[ID] is None:
+                trks_observable = self.tracker.tracks_active
+            else:
+                try:
+                    # for fov shape that has a check point method
+                    trks_observable = []
+                    for trk, pos in zip(self.tracker.tracks_active, pts_ref):
+                        if fovs[ID].check_point(pos.x):
+                            trks_observable.append(trk)
+                except AttributeError:
+                    # for an array of points that needs a polygon method
+                    pos_to_check = [pos.x[:2] for pos in pts_ref]
+                    trks_observable = (
+                        []
+                        if len(pos_to_check) == 0
+                        else [
+                            trk
+                            for trk, in_h in zip(
+                                self.tracker.tracks_active,
+                                parallel_in_polygon(pos_to_check, fovs[ID]),
+                            )
+                            if in_h
+                        ]
+                    )
 
             # update the tracks with the new detections
             self.tracker(
@@ -94,6 +98,7 @@ class MeasurementBasedMultiTracker(BaseModule):
             data=self.tracker.tracks_confirmed,
             source_identifier=self.name,
         )
+
         return tracks_out
 
 

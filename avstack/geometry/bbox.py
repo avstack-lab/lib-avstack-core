@@ -69,7 +69,7 @@ class BoxEncoder(json.JSONEncoder):
             }
             return {"segmask2d": seg_dict}
         else:
-            raise NotImplementedError(f"{type(0)}, {o}")
+            raise NotImplementedError(f"{type(o)}, {o}")
 
 
 class BoxDecoder(json.JSONDecoder):
@@ -439,8 +439,11 @@ class Box3D:
     def center(self):
         if self.where_is_t == "center":
             return self.t
+        elif self.where_is_t == "bottom":
+            # HACK: assumes in ground plane...
+            return self.t + np.array([0, 0, self.h / 2])
         else:
-            raise NotImplementedError("Need to do this")
+            raise NotImplementedError
 
     @property
     def center_global(self):
