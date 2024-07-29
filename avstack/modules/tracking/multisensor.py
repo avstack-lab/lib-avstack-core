@@ -51,7 +51,7 @@ class MeasurementBasedMultiTracker(BaseModule):
         for ID in detections:
             if detections[ID] is None:
                 continue
-    
+
             # NOTE: no need to align frames since all inputs are global
             pts_ref = [trk.position for trk in self.tracker.tracks_active]
 
@@ -90,20 +90,6 @@ class MeasurementBasedMultiTracker(BaseModule):
                 *args,
                 **kwargs,
             )
-
-            # check if two tracks are too close to each other
-            tracks_out_tmp = DataContainer(
-                frame=self.tracker.frame,
-                timestamp=self.tracker.timestamp,
-                data=self.tracker.tracks_confirmed,
-                source_identifier=self.name,
-            )
-            dists = []
-            for i, track_i in enumerate(tracks_out_tmp):
-                for j, track_j in enumerate(tracks_out_tmp):
-                    if j <= i:
-                        continue
-                    dists.append(track_i.box.distance(track_j.box, check_reference=check_reference))
 
         # format as data container
         tracks_out = DataContainer(
