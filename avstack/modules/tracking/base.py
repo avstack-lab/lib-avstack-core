@@ -101,6 +101,13 @@ class _TrackingAlgorithm(BaseModule):
         track_data = DataContainer(self.frame, self.timestamp, tracks, self.name)
         return track_data
 
+    def reset(self):
+        self.tracks = []
+        self.iframe = -1
+        self.frame = 0
+        self.timestamp = 0
+        self.last_assignment = None
+
     def get_assignment_matrix(self, dets, tracks):
         A = np.zeros((len(dets), len(tracks)))
         for i, det_ in enumerate(dets):

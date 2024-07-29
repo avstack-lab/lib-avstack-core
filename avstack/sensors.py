@@ -346,9 +346,15 @@ class LidarData(SensorData):
         else:
             raise NotImplementedError(key)
 
-    def concave_hull_bev(self, concavity=2, length_threshold=1, in_global=False, max_height: float=np.inf):
+    def concave_hull_bev(
+        self,
+        concavity=2,
+        length_threshold=1,
+        in_global=False,
+        max_height: float = np.inf,
+    ):
         cls = self if not in_global else self.project(LidarCalibration(GlobalOrigin3D))
-        data = cls.data[cls.data[:,2] <= max_height, :2]
+        data = cls.data[cls.data[:, 2] <= max_height, :2]
         hull_pts = concave_hull(
             data, concavity=concavity, length_threshold=length_threshold
         )
