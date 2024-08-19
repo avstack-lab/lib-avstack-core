@@ -1,6 +1,10 @@
 import itertools
 import json
-from typing import Dict, FrozenSet, Union
+from typing import TYPE_CHECKING, Dict, FrozenSet, Union
+
+
+if TYPE_CHECKING:
+    from avstack.geometry.bbox import Box3D
 
 import numpy as np
 
@@ -10,9 +14,18 @@ from avstack.geometry.refchoc import ReferenceDecoder, ReferenceFrame
 from avstack.geometry.utils import in_polygon, parallel_in_polygon
 
 
+def box_in_fov(box: "Box3D", fov: Union["Shape", np.ndarray]):
+    # get the corner points as a list of vectors then run fov
+    corners = [corner for corner in box.corners]
+    return any(points_in_fov(corners, fov))
+
+
 def points_in_fov(points, fov: Union["Shape", np.ndarray]):
     try:
-        in_fov = fov.check_point(points)
+        if isinstance(points[0], (list, np.ndarray)):
+            in_fov = [fov.check_point(point) for point in points]
+        else:
+            in_fov = fov.check_point(points)
     except AttributeError as e:
         try:
             if isinstance(points[0], (list, np.ndarray)):

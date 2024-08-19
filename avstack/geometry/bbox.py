@@ -506,7 +506,7 @@ class Box3D:
             self.t.change_reference(self.reference, inplace=True)
             self.where_is_t = "center"
 
-    def change_reference(self, reference_new, inplace=True):
+    def change_reference(self, reference_new, inplace: bool):
         if inplace:
             self.t.change_reference(reference_new, inplace=inplace)
             self.q.change_reference(reference_new, inplace=inplace)

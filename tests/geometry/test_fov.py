@@ -5,7 +5,14 @@ import numpy as np
 
 from avstack.calibration import LidarCalibration
 from avstack.geometry import GlobalOrigin3D
-from avstack.geometry.fov import Circle, Polygon, Vesica, Wedge
+from avstack.geometry.fov import (
+    Circle,
+    Polygon,
+    Vesica,
+    Wedge,
+    box_in_fov,
+    points_in_fov,
+)
 
 
 sys.path.append("tests/")
@@ -35,6 +42,18 @@ def test_lidar_concave_hull():
 def test_make_fov_from_pc_hull():
     fov = pc.concave_hull_bev()
     assert isinstance(fov, Polygon)
+
+
+def test_point_in_fov():
+    fov = pc.concave_hull_bev()
+    in_fov = points_in_fov(np.array([0, 0, 0]), fov)
+    assert in_fov
+
+
+def test_box_in_polygon_fov():
+    fov = pc.concave_hull_bev()
+    in_fov = box_in_fov(box_3d, fov)
+    assert in_fov
 
 
 def test_polygon_change_reference():
