@@ -467,6 +467,9 @@ class OneEdgeBipartiteGraph(BipartiteGraph):
         super().__init__(r2c, nrow, ncol, cost)
         self.assignment_tuples = tuple([(r, list(r2c[r].keys())[0]) for r in r2c])
 
+    def rows_and_cols(self):
+        return [a[0] for a in self.assignment_tuples], [a[1] for a in self.assignment_tuples]
+
     def copy(self):
         return OneEdgeBipartiteGraph(self._row_to_col, self.nrow, self.ncol, self.cost)
 
