@@ -1,3 +1,10 @@
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from avstack.datastructs import DataContainer
+
+
 import itertools
 import os
 
@@ -16,7 +23,7 @@ class _PerceptionAlgorithm(BaseModule):
         self.iframe = -1
 
     @apply_hooks
-    def __call__(self, data, frame=-1, *args, **kwargs):
+    def __call__(self, data, frame=-1, *args, **kwargs) -> "DataContainer":
         self.iframe += 1
         if data is None:
             return None

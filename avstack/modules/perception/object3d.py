@@ -122,7 +122,7 @@ class MMDetObjectDetector3D(_MMObjectDetector):
         self.prune_duplicate = prune_duplicate
         self.thresh_duplicate = thresh_duplicate
 
-    def _execute(self, data, identifier, eval_method="file", **kwargs):
+    def _execute(self, data, identifier, eval_method="file", **kwargs) -> DataContainer:
         from mmdet3d.utils import register_all_modules
 
         register_all_modules(init_default_scope=True)
