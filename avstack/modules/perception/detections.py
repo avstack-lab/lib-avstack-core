@@ -166,7 +166,7 @@ class Detection_:
         raise NotImplementedError
 
     def __str__(self):
-        return f"{self.obj_type} detection from sensor {self.source_identifier}\n{self.data}"
+        return f"{self.obj_type} detection with score {self.score} from sensor {self.source_identifier}\n{self.data}"
 
     def __repr__(self):
         return self.__str__()

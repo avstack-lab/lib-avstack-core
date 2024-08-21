@@ -328,7 +328,9 @@ class ReferenceFrame:
             ref.set_reupdate()
 
     def get_ground_projected_reference(self):
-        if self.reference != GlobalOrigin3D:
+        if self == GlobalOrigin3D:
+            return self
+        elif self.reference != GlobalOrigin3D:
             ref = self.integrate(start_at=GlobalOrigin3D)
         else:
             ref = self

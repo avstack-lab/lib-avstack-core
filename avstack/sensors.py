@@ -16,7 +16,7 @@ except ModuleNotFoundError:
 
 from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration, LidarCalibration
-from avstack.geometry import GlobalOrigin3D, PointMatrix3D
+from avstack.geometry import GlobalOrigin3D, PointMatrix3D, ReferenceFrame
 from avstack.geometry import transformations as tforms
 from avstack.geometry.fov import Polygon
 
@@ -398,7 +398,11 @@ class LidarData(SensorData):
                 depth=depth,
             )
         else:
-            if not isinstance(calib_other, LidarCalibration):
+            if isinstance(calib_other, ReferenceFrame):
+                calib_other = LidarCalibration(reference=calib_other)
+            elif isinstance(calib_other, LidarCalibration):
+                pass
+            else:
                 raise NotImplementedError(type(calib_other))
             data = self.data.change_calibration(calib_other, inplace=False)
             return LidarData(
