@@ -895,6 +895,18 @@ class DataContainer:
             source_identifier=self.source_identifier,
         )
 
+    def filter(self, func, *args, **kwargs):
+        data = []
+        for item in self:
+            if func(item, *args, **kwargs):
+                data.append(item)
+        return type(self)(
+            frame=self.frame,
+            timestamp=self.timestamp,
+            data=data,
+            source_identifier=self.source_identifier,
+        )
+
     def _check_fundamentals(self, other):
         if isinstance(other, DataContainer):
             if (self.frame != other.frame) or (self.timestamp != other.timestamp):
