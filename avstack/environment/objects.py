@@ -122,10 +122,10 @@ class ObjectStateDecoder(json.JSONDecoder):
 class ObjectState:
     _ids = itertools.count()
 
-    def __init__(self, obj_type, ID=None):
+    def __init__(self, obj_type, ID=None, score: float=1.0):
         self.ID = ID if ID is not None else next(self._ids)
         self.obj_type = obj_type
-        self.score = 1.0
+        self.score = score
         self.set(
             t=0,
             position=None,
@@ -303,49 +303,54 @@ class ObjectState:
         else:
             raise NotImplementedError(type(reference))
 
-        # transforms
-        if self.position is not None:
-            position = self.position.change_reference(reference, inplace=inplace)
+        # perform transformation
+        if self.reference.allclose(reference):
+            if not inplace:
+                return self
         else:
-            position = None
-        if self.velocity is not None:
-            velocity = self.velocity.change_reference(reference, inplace=inplace)
-        else:
-            velocity = None
-        if self.acceleration is not None:
-            acceleration = self.acceleration.change_reference(
-                reference, inplace=inplace
-            )
-        else:
-            acceleration = None
-        if self.box is not None:
-            box = self.box.change_reference(reference, inplace=inplace)
-        else:
-            box = None
-        if self.attitude is not None:
-            attitude = self.attitude.change_reference(reference, inplace=inplace)
-        else:
-            attitude = None
-        if self.angular_velocity is not None:
-            angular_velocity = self.angular_velocity.change_reference(
-                reference, inplace=inplace
-            )
-        else:
-            angular_velocity = None
+            # transforms
+            if self.position is not None:
+                position = self.position.change_reference(reference, inplace=inplace)
+            else:
+                position = None
+            if self.velocity is not None:
+                velocity = self.velocity.change_reference(reference, inplace=inplace)
+            else:
+                velocity = None
+            if self.acceleration is not None:
+                acceleration = self.acceleration.change_reference(
+                    reference, inplace=inplace
+                )
+            else:
+                acceleration = None
+            if self.box is not None:
+                box = self.box.change_reference(reference, inplace=inplace)
+            else:
+                box = None
+            if self.attitude is not None:
+                attitude = self.attitude.change_reference(reference, inplace=inplace)
+            else:
+                attitude = None
+            if self.angular_velocity is not None:
+                angular_velocity = self.angular_velocity.change_reference(
+                    reference, inplace=inplace
+                )
+            else:
+                angular_velocity = None
 
-        if not inplace:
-            obj_out = ObjectState(self.obj_type, self.ID)
-            obj_out.set(
-                t=self.t,
-                position=position,
-                box=box,
-                velocity=velocity,
-                acceleration=acceleration,
-                attitude=attitude,
-                angular_velocity=angular_velocity,
-                occlusion=Occlusion.UNKNOWN,
-            )
-            return obj_out
+            if not inplace:
+                obj_out = ObjectState(self.obj_type, self.ID)
+                obj_out.set(
+                    t=self.t,
+                    position=position,
+                    box=box,
+                    velocity=velocity,
+                    acceleration=acceleration,
+                    attitude=attitude,
+                    angular_velocity=angular_velocity,
+                    occlusion=Occlusion.UNKNOWN,
+                )
+                return obj_out
 
     def set_occlusion_by_depth(self, depth_image, check_reference=True):
         """sets occlusion level using depth image

@@ -868,6 +868,12 @@ class DataContainer:
         for idx, item in enumerate(self):
             if method == "getattr":
                 self[idx] = getattr(item, args[0])
+            elif callable(method):
+                inplace = kwargs.get("inplace", True)
+                if inplace:
+                    method(item, *args, **kwargs)
+                else:
+                    self[idx] = method(item, *args, **kwargs)
             elif hasattr(item, method):
                 method_func = getattr(item, method)
                 inplace = kwargs.get("inplace", True)
@@ -876,18 +882,20 @@ class DataContainer:
                 else:
                     self[idx] = method_func(*args, **kwargs)
             else:
-                raise AttributeError("No attribute {} found".format(method))
+                raise AttributeError("No attribute {} found and is not callable".format(method))
 
     def apply_and_return(self, method, *args, **kwargs):
         data = []
         for item in self:
             if method == "getattr":
                 data.append(getattr(item, args[0]))
+            elif callable(method):
+                data.append(method(item, *args, **kwargs))
             elif hasattr(item, method):
                 method_func = getattr(item, method)
                 data.append(method_func(*args, **kwargs))
             else:
-                raise AttributeError("No attribute {} found".format(method))
+                raise AttributeError("No attribute {} found and is not callable".format(method))
         return type(self)(
             frame=self.frame,
             timestamp=self.timestamp,
