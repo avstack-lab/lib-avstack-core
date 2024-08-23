@@ -468,7 +468,9 @@ class OneEdgeBipartiteGraph(BipartiteGraph):
         self.assignment_tuples = tuple([(r, list(r2c[r].keys())[0]) for r in r2c])
 
     def rows_and_cols(self):
-        return [a[0] for a in self.assignment_tuples], [a[1] for a in self.assignment_tuples]
+        return [a[0] for a in self.assignment_tuples], [
+            a[1] for a in self.assignment_tuples
+        ]
 
     def copy(self):
         return OneEdgeBipartiteGraph(self._row_to_col, self.nrow, self.ncol, self.cost)
@@ -882,7 +884,9 @@ class DataContainer:
                 else:
                     self[idx] = method_func(*args, **kwargs)
             else:
-                raise AttributeError("No attribute {} found and is not callable".format(method))
+                raise AttributeError(
+                    "No attribute {} found and is not callable".format(method)
+                )
 
     def apply_and_return(self, method, *args, **kwargs):
         data = []
@@ -895,7 +899,9 @@ class DataContainer:
                 method_func = getattr(item, method)
                 data.append(method_func(*args, **kwargs))
             else:
-                raise AttributeError("No attribute {} found and is not callable".format(method))
+                raise AttributeError(
+                    "No attribute {} found and is not callable".format(method)
+                )
         return type(self)(
             frame=self.frame,
             timestamp=self.timestamp,

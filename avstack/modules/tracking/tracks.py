@@ -209,6 +209,12 @@ class TrackBase:
         self.check_reference = check_reference
         self.attitude = None
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __str__(self) -> str:
+        return f"{type(self)} at position {self.position}"
+
     @property
     def reference(self):
         return self._reference

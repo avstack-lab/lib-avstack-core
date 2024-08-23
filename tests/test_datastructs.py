@@ -75,6 +75,9 @@ def test_datacontainer_apply():
     ref2 = ReferenceFrame(
         x=np.array([1, 2, 3]), q=np.quaternion(1), reference=GlobalOrigin3D
     )
+    ref3 = ReferenceFrame(
+        x=np.array([1, 1, 1]), q=np.quaternion(1), reference=GlobalOrigin3D
+    )
 
     # check the initial
     ids = []
@@ -91,9 +94,9 @@ def test_datacontainer_apply():
     assert id(dc1) == id_dc1
 
     # use the apply version -- not inplace
-    dc1.apply("change_reference", reference=ref2, inplace=False)
+    dc1.apply("change_reference", reference=ref3, inplace=False)
     for idx, item in enumerate(dc1):
-        assert item.reference == ref2
+        assert item.reference == ref3
         assert id(item) != ids[idx]
     assert id(dc1) == id_dc1
 

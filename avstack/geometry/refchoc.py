@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import List
 
 import json
+from typing import List
 
 import numpy as np
 
@@ -330,19 +330,11 @@ class ReferenceFrame:
 
     def get_ground_projected_plane(self) -> List[np.ndarray]:
         ref_gp = self.get_ground_projected_reference()
-        v1 = np.array([np.sqrt(2)/2, 0, 0])
-        v2 = np.array([0, np.sqrt(2)/2, 0])
+        v1 = np.array([np.sqrt(2) / 2, 0, 0])
+        v2 = np.array([0, np.sqrt(2) / 2, 0])
         plane = [
-            Vector(v1, ref_gp).change_reference(
-                self,
-                inplace=False,
-                angle_only=True
-            ).x,
-            Vector(v2, ref_gp).change_reference(
-                self,
-                inplace=False,
-                angle_only=True
-            ).x,
+            Vector(v1, ref_gp).change_reference(self, inplace=False, angle_only=True).x,
+            Vector(v2, ref_gp).change_reference(self, inplace=False, angle_only=True).x,
         ]
         return plane
 

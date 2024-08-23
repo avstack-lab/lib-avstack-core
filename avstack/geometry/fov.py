@@ -138,6 +138,9 @@ class FieldOfViewDecoder(json.JSONDecoder):
 
 
 class Shape:
+    def __repr__(self) -> str:
+        return self.__str__()
+
     @property
     def area(self):
         raise NotImplementedError
@@ -225,9 +228,17 @@ class Circle(Shape):
     def __init__(self, radius: float, center: np.ndarray = np.zeros((2,))) -> None:
         self.radius = radius
         self.center = center
+        if len(center) != 2:
+            raise ValueError(f"Cannot handle center of len {len(center)}")
+
+    def __str__(self) -> str:
+        return f"Circle with radius {self.radius} at center {self.center}"
 
     def check_point(self, point: np.ndarray):
-        return np.linalg.norm(point - self.center, axis=0) <= self.radius
+        return (
+            np.linalg.norm(point[: len(self.center)] - self.center, axis=0)
+            <= self.radius
+        )
 
     def intersection(self, other: "Shape") -> Union["Shape", None]:
         if isinstance(other, (Sphere, Circle)):

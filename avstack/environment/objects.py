@@ -122,7 +122,7 @@ class ObjectStateDecoder(json.JSONDecoder):
 class ObjectState:
     _ids = itertools.count()
 
-    def __init__(self, obj_type, ID=None, score: float=1.0):
+    def __init__(self, obj_type, ID=None, score: float = 1.0):
         self.ID = ID if ID is not None else next(self._ids)
         self.obj_type = obj_type
         self.score = score
