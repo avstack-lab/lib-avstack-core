@@ -62,8 +62,15 @@ download_models "cityscapes" "v2.0" "cityscapes" "$CITYSCAPES_FRCNN"
 CITYSCAPES_MRCNN="mask_rcnn_r50_fpn_1x_cityscapes/mask_rcnn_r50_fpn_1x_cityscapes_20201211_133733-d2858245.pth"
 download_models "cityscapes" "v2.0" "cityscapes" "$CITYSCAPES_MRCNN"
 
+RTMDET_T="rtmdet_tiny_8xb32-300e_coco/rtmdet_tiny_8xb32-300e_coco_20220902_112414-78e30dcc.pth"
+download_models "rtmdet" "v3.0" "rtmdet" "$RTMDET_T"
 RTMDET_M="rtmdet_m_8xb32-300e_coco/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth"
-download_models "coco" "v3.0" "rtmdet" "$RTMDET_M"
+download_models "rtmdet" "v3.0" "rtmdet" "$RTMDET_M"
+
+RTMDET_INS_T="rtmdet-ins_tiny_8xb32-300e_coco/rtmdet-ins_tiny_8xb32-300e_coco_20221130_151727-ec670f7e.pth"
+download_models "rtmdet" "v3.0" "rtmdet" "$RTMDET_INS_T"
+RTMDET_INS_M="rtmdet-ins_m_8xb32-300e_coco/rtmdet-ins_m_8xb32-300e_coco_20221123_001039-6eba602e.pth"
+download_models "rtmdet" "v3.0" "rtmdet" "$RTMDET_INS_M"
 
 COCO_CRCNN="cascade_rcnn_r50_fpn_1x_coco/cascade_rcnn_r50_fpn_1x_coco_20200316-3dc56deb.pth"
 download_models "coco" "v2.0" "cascade_rcnn" "$COCO_CRCNN"
