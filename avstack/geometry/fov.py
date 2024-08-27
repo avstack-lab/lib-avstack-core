@@ -140,6 +140,9 @@ class FieldOfViewDecoder(json.JSONDecoder):
 class Shape:
     def __repr__(self) -> str:
         return self.__str__()
+    
+    def __str__(self) -> str:
+        return "Shape"
 
     @property
     def area(self):
@@ -165,6 +168,9 @@ class Polygon(Shape):
         self.reference = reference
         self.frame = frame
         self.timestamp = timestamp
+
+    def __str__(self) -> str:
+        return f"Polygon with boundary {self.boundary} at reference {self.reference}"
 
     def change_reference(self, reference: ReferenceFrame, inplace: bool):
         """Change the polygon reference frame

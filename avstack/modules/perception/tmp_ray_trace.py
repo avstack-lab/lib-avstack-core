@@ -47,7 +47,7 @@ class ConcaveHullLidarFOVEstimator(_LidarFovEstimator):
 
 
 @MODELS.register_module()
-class FastRayTraceBevLidarFovEstimator(_LidarFovEstimator):
+class RayTraceBevLidarFovEstimator(_LidarFovEstimator):
     def __init__(
         self,
         z_min: float = -3.0,
@@ -127,7 +127,7 @@ class FastRayTraceBevLidarFovEstimator(_LidarFovEstimator):
 
 
 @MODELS.register_module()
-class SlowRayTraceBevLidarFovEstimator(_LidarFovEstimator):
+class RayTraceBevLidarFovEstimator(_LidarFovEstimator):
     def __init__(
         self,
         z_min: float = -3.0,
@@ -172,7 +172,7 @@ class SlowRayTraceBevLidarFovEstimator(_LidarFovEstimator):
         pc_bev_range = np.linalg.norm(pc_bev.data.x, axis=1)
 
         # NOTE: arctan2 output is on [-pi, pi] so ensure az queries are the same
-        az_query = np.linspace(-np.pi, np.pi, num=50)
+        az_query = np.linspace(-np.pi, np.pi, num=100)
         az_out = []
         rng_out = []
         for az_q in az_query:
@@ -212,3 +212,41 @@ class SlowRayTraceBevLidarFovEstimator(_LidarFovEstimator):
             timestamp=pc.timestamp
         )
         return fov
+    
+
+# query the spline at regular azimuths to get the polygon
+# construct a smoothing spline interpolation of rng = f(az)
+# we must sort the data for the input to the spline
+
+# az_out = az_edges
+# rng_out = rng_edges[np.argmax]
+
+# az_query = np.linspace(-np.pi, np.pi, num=100)
+# az_out = []
+# rng_out = []
+# for az_q in az_query:
+#     # NOTE: this currently doesn't handle the wrap around condition
+#     # look for azimuths within the tolerance
+#     idx_az_valid = (pc_bev_azimuth >= az_q-self.az_tol) & \
+#         (pc_bev_azimuth <= az_q+self.az_tol)
+#     if sum(idx_az_valid) == 0:
+#         continue
+#     # take the max range over these azimuths
+#     rng_out.append(max(pc_bev_range[idx_az_valid]))
+#     az_out.append(az_q)
+# az_out = np.asarray(az_out)
+# rng_out = np.asarray(rng_out)
+
+# # Construct a polygon model
+# # add small amount of noise to prevent for duplicate x
+
+
+# # If we have a smoothing parameter, run a B-spline on the output
+# if self.smoothing is not None:
+#     idx_sort = x_out.argsort()
+#     spline = make_smoothing_spline(
+#         x_out[idx_sort],
+#         y_out[idx_sort],
+#         lam=self.smoothing
+#     )
+#     y_out = spline(x_out)

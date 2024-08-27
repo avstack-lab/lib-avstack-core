@@ -208,7 +208,7 @@ class _PointMatrix:
         self.calibration = calibration
 
     @property
-    def x(self):
+    def x(self) -> np.ndarray:
         return self._x
 
     @x.setter

@@ -16,7 +16,7 @@ except ModuleNotFoundError:
 
 from avstack import datastructs, maskfilters, messages
 from avstack.calibration import CameraCalibration, LidarCalibration
-from avstack.geometry import GlobalOrigin3D, PointMatrix3D, ReferenceFrame
+from avstack.geometry import GlobalOrigin3D, PointMatrix2D, PointMatrix3D, ReferenceFrame
 from avstack.geometry import transformations as tforms
 from avstack.geometry.fov import Polygon
 
@@ -346,13 +346,28 @@ class LidarData(SensorData):
         else:
             raise NotImplementedError(key)
 
+    def project_to_2d_bev(self, z_min: float = -3.0, z_max: float = 3.0) -> ProjectedLidarData:
+        ref_new = self.reference.get_ground_projected_reference()
+        calib_new = LidarCalibration(reference=ref_new)
+        lidar_gp = self.project(calib_new)
+        z_valid = (z_min <= lidar_gp.data.x[:,2]) & (lidar_gp.data.x[:,2] <= z_max)
+        data_bev = PointMatrix2D(lidar_gp.data.x[z_valid, :2], calib_new)
+        lidar_bev = ProjectedLidarData(
+            self.timestamp,
+            self.frame,
+            data_bev,
+            calib_new,
+            self.source_ID,
+        )
+        return lidar_bev
+
     def concave_hull_bev(
         self,
         concavity=2,
         length_threshold=1,
         in_global=False,
         max_height: float = np.inf,
-    ):
+    ) -> Polygon:
         cls = self if not in_global else self.project(LidarCalibration(GlobalOrigin3D))
         data = cls.data[cls.data[:, 2] <= max_height, :2]
         hull_pts = concave_hull(
