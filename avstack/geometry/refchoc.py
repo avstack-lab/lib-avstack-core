@@ -350,7 +350,14 @@ class ReferenceFrame:
         q_new = tforms.transform_orientation(
             [0, 0, yaw_old], "euler", "quat"
         )  # keep old yaw
-        ref_new = ReferenceFrame(x_new, q_new, reference=ref.reference)
+        ref_new = ReferenceFrame(
+            x=x_new,
+            q=q_new,
+            reference=ref.reference,
+            from_frame=self.from_frame,
+            to_frame=self.to_frame + "/ground",
+            timestamp=self.timestamp,
+        )
         return ref_new
 
     def encode(self):

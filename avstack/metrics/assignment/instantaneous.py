@@ -18,6 +18,7 @@ class SingleFrameMetrics(NamedTuple):
 
 
 class ConfusionMatrix(NamedTuple):
+    """Container for confusion matrix for assignment"""
     n_true_positives: int
     n_true_negatives: int
     n_false_positives: int
