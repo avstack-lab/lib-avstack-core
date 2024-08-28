@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-04-08
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-08-09
-# @Description:
-"""
-
-"""
 import sys
 
 from avstack.geometry import GlobalOrigin3D

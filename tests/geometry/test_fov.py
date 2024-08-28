@@ -35,8 +35,8 @@ from utilities import get_test_sensor_data
 
 def test_lidar_concave_hull():
     hull = pc.concave_hull_bev()
-    assert hull.check_point(np.array([0, 0]))
-    assert not hull.check_point(np.array([200, 0]))
+    assert hull.check_point(np.array([0, 0], dtype=float))
+    assert not hull.check_point(np.array([200, 0], dtype=float))
 
 
 def test_make_fov_from_pc_hull():
@@ -46,7 +46,7 @@ def test_make_fov_from_pc_hull():
 
 def test_point_in_fov():
     fov = pc.concave_hull_bev()
-    in_fov = points_in_fov(np.array([0, 0, 0]), fov)
+    in_fov = points_in_fov(np.array([0, 0, 0], dtype=float), fov)
     assert in_fov
 
 

@@ -860,7 +860,7 @@ class Rotation:
         # y = np.empty_like(q.vec)
         self._q = np.quaternion(
             q.w,
-            *q.vec
+            *q.vec,
             # np.round(q.w, self.n_prec), *fastround(q.vec, self.n_prec, y)
         )
 

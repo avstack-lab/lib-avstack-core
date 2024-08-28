@@ -140,7 +140,7 @@ class FieldOfViewDecoder(json.JSONDecoder):
 class Shape:
     def __repr__(self) -> str:
         return self.__str__()
-    
+
     def __str__(self) -> str:
         return "Shape"
 
@@ -183,12 +183,17 @@ class Polygon(Shape):
         boundary = boundary.change_reference(reference, inplace=False)[:, :2]
 
         if inplace:
-            self.boundary = boundary.x
+            self.boundary = boundary
             self.reference = reference
         else:
             return Polygon(boundary=boundary, reference=reference)
 
     def check_point(self, point: np.ndarray) -> bool:
+        """Checks whether a point is within the polygon
+
+        Args:
+            point: can be a 1D or 2D array, Nx2
+        """
         point_test = point[..., :2]
         return in_polygon(point_test, self.boundary)
 

@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-11
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-08-08
-# @Description:
-"""
-
-"""
-
 import logging
 import sys
 

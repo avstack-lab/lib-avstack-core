@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-05-11
-# @Last Modified by:   spencer@primus
-# @Last Modified date: 2022-09-08
-# @Description:
-"""
-
-"""
-
 import sys
 
 from avstack.datastructs import DataContainer

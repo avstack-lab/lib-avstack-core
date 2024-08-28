@@ -58,13 +58,13 @@ class ObjectStateEncoder(json.JSONEncoder):
             "box": o.box.encode() if o.box is not None else None,
             "position": o.position.encode() if o.position is not None else None,
             "velocity": o.velocity.encode() if o.velocity is not None else None,
-            "acceleration": o.acceleration.encode()
-            if o.acceleration is not None
-            else None,
+            "acceleration": (
+                o.acceleration.encode() if o.acceleration is not None else None
+            ),
             "attitude": o.attitude.encode() if o.attitude is not None else None,
-            "angular_velocity": o.angular_velocity.encode()
-            if o.angular_velocity is not None
-            else None,
+            "angular_velocity": (
+                o.angular_velocity.encode() if o.angular_velocity is not None else None
+            ),
             "visible_fraction": o.visible_fraction,
         }
         return {"objectstate": o_dict}
@@ -93,24 +93,38 @@ class ObjectStateDecoder(json.JSONDecoder):
 
             obj.set(
                 t=json_object["t"],
-                box=None
-                if json_object["box"] is None
-                else json.loads(json_object["box"], cls=bbox.BoxDecoder),
-                position=None
-                if json_object["position"] is None
-                else json.loads(json_object["position"], cls=VectorDecoder),
-                velocity=None
-                if json_object["velocity"] is None
-                else json.loads(json_object["velocity"], cls=VectorDecoder),
-                acceleration=None
-                if json_object["acceleration"] is None
-                else json.loads(json_object["acceleration"], cls=VectorDecoder),
-                attitude=None
-                if json_object["attitude"] is None
-                else json.loads(json_object["attitude"], cls=RotationDecoder),
-                angular_velocity=None
-                if json_object["angular_velocity"] is None
-                else json.loads(json_object["angular_velocity"], cls=RotationDecoder),
+                box=(
+                    None
+                    if json_object["box"] is None
+                    else json.loads(json_object["box"], cls=bbox.BoxDecoder)
+                ),
+                position=(
+                    None
+                    if json_object["position"] is None
+                    else json.loads(json_object["position"], cls=VectorDecoder)
+                ),
+                velocity=(
+                    None
+                    if json_object["velocity"] is None
+                    else json.loads(json_object["velocity"], cls=VectorDecoder)
+                ),
+                acceleration=(
+                    None
+                    if json_object["acceleration"] is None
+                    else json.loads(json_object["acceleration"], cls=VectorDecoder)
+                ),
+                attitude=(
+                    None
+                    if json_object["attitude"] is None
+                    else json.loads(json_object["attitude"], cls=RotationDecoder)
+                ),
+                angular_velocity=(
+                    None
+                    if json_object["angular_velocity"] is None
+                    else json.loads(
+                        json_object["angular_velocity"], cls=RotationDecoder
+                    )
+                ),
                 occlusion=Occlusion(json_object["occlusion"]),
                 visible_fraction=vis_frac,
             )

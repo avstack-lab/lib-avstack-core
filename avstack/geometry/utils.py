@@ -1,17 +1,19 @@
+from typing import List, Tuple
+
 import numba
 import numpy as np
 from numba import jit, njit
 from scipy.spatial import ConvexHull, Delaunay
 
 
-def in_convex_hull(p, hull):
+def in_convex_hull(p, hull) -> bool:
     if not isinstance(hull, Delaunay):
         hull = Delaunay(hull)
     return hull.find_simplex(p) >= 0
 
 
 @jit(nopython=True)
-def in_polygon(xy, poly):
+def in_polygon(xy: Tuple[float, float], poly: np.ndarray[float]) -> bool:
     n = len(poly)
     inside = False
     p2x = 0.0
@@ -34,14 +36,16 @@ def in_polygon(xy, poly):
 
 
 @njit(parallel=True)
-def parallel_in_polygon(points, polygon):
+def parallel_in_polygon(
+    points: List[Tuple[float, float]], poly: np.ndarray[float]
+) -> List[bool]:
     D = np.empty(len(points), dtype=numba.boolean)
     for i in numba.prange(0, len(D)):
-        D[i] = in_polygon(points[i], polygon)
+        D[i] = in_polygon(points[i], poly)
     return D
 
 
-def wrap_minus_pi_to_pi(phases):
+def wrap_minus_pi_to_pi(phases: float) -> float:
     phases = (phases + np.pi) % (2 * np.pi) - np.pi
     return phases
 

@@ -45,10 +45,12 @@ class _TrackingAlgorithm(BaseModule):
         super().__init__(name=name, **kwargs)
 
         self.ID = ID
-        self.tracks = []
         self.iframe = -1
         self.frame = 0
         self.timestamp = t0.timestamp() if isinstance(t0, datetime.datetime) else t0
+        self.tracks = DataContainer(
+            frame=self.frame, timestamp=self.timestamp, source_identifier="", data=[]
+        )
         self.assign_metric = assign_metric
         self.assign_radius = assign_radius
         if assign_metric == "center_dist":
@@ -82,11 +84,13 @@ class _TrackingAlgorithm(BaseModule):
 
     @property
     def tracks_confirmed(self):
-        return [trk for trk in self.tracks if trk.confirmed]
+        trks_confirmed = [trk for trk in self.tracks if trk.confirmed]
+        return DataContainer(self.frame, self.timestamp, trks_confirmed, self.name)
 
     @property
     def tracks_active(self):
-        return [trk for trk in self.tracks if trk.active]
+        trks_active = [trk for trk in self.tracks if trk.active]
+        return DataContainer(self.frame, self.timestamp, trks_active, self.name)
 
     @apply_hooks
     def __call__(self, detections, platform: ReferenceFrame, **kwargs):
@@ -98,8 +102,7 @@ class _TrackingAlgorithm(BaseModule):
         self.frame = int(detections.frame)
         self.iframe += 1
         tracks = self.track(detections, platform, **kwargs)
-        track_data = DataContainer(self.frame, self.timestamp, tracks, self.name)
-        return track_data
+        return tracks
 
     def reset(self):
         self.tracks = []

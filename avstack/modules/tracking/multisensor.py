@@ -5,6 +5,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from avstack.geometry import Shape
+    from avstack.modules.tracking.base import _TrackingAlgorithm
 
 from avstack.config import MODELS, ConfigDict
 from avstack.datastructs import DataContainer
@@ -22,7 +23,13 @@ from ..base import BaseModule
 
 @MODELS.register_module()
 class MeasurementBasedMultiTracker(BaseModule):
-    def __init__(self, tracker, name="multitracker", platform=GlobalOrigin3D, **kwargs):
+    def __init__(
+        self,
+        tracker: "_TrackingAlgorithm",
+        name="multitracker",
+        platform=GlobalOrigin3D,
+        **kwargs,
+    ):
         super().__init__(name=name, **kwargs)
         self.tracker = (
             MODELS.build(tracker, default_args={"name": "trackerformulti"})

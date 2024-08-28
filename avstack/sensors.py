@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Union
 
 import cv2
 import numpy as np
@@ -15,8 +16,13 @@ except ModuleNotFoundError:
     pass
 
 from avstack import datastructs, maskfilters, messages
-from avstack.calibration import CameraCalibration, LidarCalibration
-from avstack.geometry import GlobalOrigin3D, PointMatrix2D, PointMatrix3D, ReferenceFrame
+from avstack.calibration import Calibration, CameraCalibration, LidarCalibration
+from avstack.geometry import (
+    GlobalOrigin3D,
+    PointMatrix2D,
+    PointMatrix3D,
+    ReferenceFrame,
+)
 from avstack.geometry import transformations as tforms
 from avstack.geometry.fov import Polygon
 
@@ -346,12 +352,28 @@ class LidarData(SensorData):
         else:
             raise NotImplementedError(key)
 
-    def project_to_2d_bev(self, z_min: float = -3.0, z_max: float = 3.0) -> ProjectedLidarData:
-        ref_new = self.reference.get_ground_projected_reference()
-        calib_new = LidarCalibration(reference=ref_new)
+    def project_to_2d_bev(
+        self, z_min: float = -3.0, z_max: float = 3.0
+    ) -> ProjectedLidarData:
+        """Projects the lidar data into a top-down BEV representation
+
+        Args:
+            z_min: minimum height to allow for projected data
+            z_max: maximum height to allow for projected data
+            center: boolean on whether to center the lidar data on the data centroid
+        """
+        # get ground projected reference frame
+        ref_gp = self.reference.get_ground_projected_reference()
+
+        # project the lidar into the new frame
+        calib_new = LidarCalibration(reference=ref_gp)
         lidar_gp = self.project(calib_new)
-        z_valid = (z_min <= lidar_gp.data.x[:,2]) & (lidar_gp.data.x[:,2] <= z_max)
+
+        # filter based on the upper and lower z limits
+        z_valid = (z_min <= lidar_gp.data.x[:, 2]) & (lidar_gp.data.x[:, 2] <= z_max)
         data_bev = PointMatrix2D(lidar_gp.data.x[z_valid, :2], calib_new)
+
+        # form the new projected lidar data in bev
         lidar_bev = ProjectedLidarData(
             self.timestamp,
             self.frame,
@@ -400,7 +422,17 @@ class LidarData(SensorData):
                 self.timestamp, self.frame, data, self.calibration, self.source_ID
             )
 
-    def project(self, calib_other):
+    def change_reference(self, ref_other: ReferenceFrame, inplace: bool) -> "LidarData":
+        return self.project(calib_other=ref_other, inplace=inplace)
+
+    def change_calibration(
+        self, calib_other: Calibration, inplace: bool
+    ) -> "LidarData":
+        return self.project(calib_other=calib_other, inplace=inplace)
+
+    def project(
+        self, calib_other: Union[Calibration, ReferenceFrame], inplace: bool = False
+    ) -> "LidarData":
         if isinstance(calib_other, CameraCalibration):
             depth = np.linalg.norm(self.data[:, :3], axis=1)
             data = self.data.project_to_2d(calib_other)
@@ -419,7 +451,7 @@ class LidarData(SensorData):
                 pass
             else:
                 raise NotImplementedError(type(calib_other))
-            data = self.data.change_calibration(calib_other, inplace=False)
+            data = self.data.change_calibration(calib_other, inplace=inplace)
             return LidarData(
                 self.timestamp, self.frame, data, calib_other, self.source_ID
             )
