@@ -50,8 +50,13 @@ download_custom_models () {
     fi
 }
 
+############################################
 PSPNET_R50="pspnet_r50-d8_512x1024_40k_cityscapes/pspnet_r50-d8_512x1024_40k_cityscapes_20200605_003338-2966598c.pth"
 download_models "Cityscapes" "v0.5" "pspnet" "$PSPNET_R50"
+
+############################################
+DEEPLAB="deeplabv3plus_r50-d8_512x1024_40k_cityscapes/deeplabv3plus_r50-d8_512x1024_40k_cityscapes_20200605_094610-d222ffcd.pth"
+download_models "Cityscapes" "v0.5" "deeplabv3plus" "$DEEPLAB"
 
 
 echo "Adding symbolic link to mmseg directory"
