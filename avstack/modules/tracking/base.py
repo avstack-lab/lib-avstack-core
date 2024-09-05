@@ -29,7 +29,7 @@ class _TrackingAlgorithm(BaseModule):
         threshold_confirmed=3,
         threshold_coast=3,
         cost_threshold=-0.10,
-        clusterer: ConfigDict = {"type": "BasicClusterer", "assign_radius": 0.5},
+        clusterer: ConfigDict = {"type": "BasicClusterer", "assign_radius": 1.0},
         run_clustering: bool = False,
         v_max=None,
         check_reference=True,

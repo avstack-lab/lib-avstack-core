@@ -98,6 +98,8 @@ class MeasurementBasedMultiTracker(BaseModule):
                 **kwargs,
             )
 
+        # run a clustering and prefer tracks with older age
+
         # format as data container
         tracks_out = DataContainer(
             frame=self.tracker.frame,

@@ -312,6 +312,13 @@ class ReferenceFrame:
                 f"Cannot check equality between reference frame and {type(other)}"
             )
 
+    def deepcopy(self):
+        return ReferenceFrame(
+            x=self.x.copy(),
+            q=self.q.copy(),
+            reference=self.reference.copy(),
+        )
+
     def copy(self):
         if self.is_global_origin:
             return self
@@ -694,6 +701,9 @@ class Vector:
         # Perform dot product
         return self.x @ other
 
+    def deepcopy(self):
+        return self.factory()(self.x.copy(), self.reference.copy())
+
     def copy(self):
         return self.factory()(self.x, self.reference)
 
@@ -757,6 +767,13 @@ class Vector:
             s2 = self.change_reference(other, inplace=False)
             return s2.norm()
         else:
+            # try to pull off "position" first
+            try:
+                other = other.position
+            except AttributeError:
+                pass
+
+            # compute the distance
             if check_reference:
                 return (self - other).norm()
             else:
@@ -930,6 +947,9 @@ class Rotation:
 
     def __matmul__(self, other):
         raise NotImplementedError
+
+    def deepcopy(self):
+        return self.factory()(self.q.copy(), self.reference.copy())
 
     def copy(self):
         return self.factory()(self.q, self.reference)

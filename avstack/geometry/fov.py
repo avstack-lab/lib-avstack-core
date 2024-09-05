@@ -20,6 +20,10 @@ def box_in_fov(box: "Box3D", fov: Union["Shape", np.ndarray]):
     return any(points_in_fov(corners, fov))
 
 
+def box_center_in_fov(box: "Box3D", fov: Union["Shape", np.ndarray]):
+    return points_in_fov(box.position.x, fov)
+
+
 def points_in_fov(points, fov: Union["Shape", np.ndarray]):
     try:
         if isinstance(points[0], (list, np.ndarray)):

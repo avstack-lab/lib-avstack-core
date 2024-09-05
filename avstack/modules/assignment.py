@@ -53,7 +53,10 @@ def build_A_from_iou(boxes1, boxes2, **kwargs):
 
 
 def gnn_single_frame_assign(
-    A: np.ndarray, algorithm: str="JVC", all_assigned: bool=False, cost_threshold: float =np.inf
+    A: np.ndarray,
+    algorithm: str = "JVC",
+    all_assigned: bool = False,
+    cost_threshold: float = np.inf,
 ) -> OneEdgeBipartiteGraph:
     """
     Run linear-sum assignment algorithm

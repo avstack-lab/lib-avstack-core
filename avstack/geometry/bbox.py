@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-from copy import copy, deepcopy
 from typing import Union
 
 import numpy as np
@@ -207,7 +206,12 @@ class Box2D:
         )
 
     def deepcopy(self):
-        return deepcopy(self)
+        return Box2D(
+            box2d=self.box2d,
+            calibration=self.calibration.copy(),
+            ID=self.ID,
+            obj_type=self.obj_type,
+        )
 
     def check_valid(self, im_h, im_w):
         return self._x_valid(im_w) and self._y_valid(im_h)
@@ -315,8 +319,7 @@ class Box2D:
         )
 
     def change_reference(self, reference, inplace: bool):
-        if not inplace:
-            return deepcopy(self)
+        raise NotImplementedError
 
 
 class Box3D:
@@ -411,7 +414,12 @@ class Box3D:
         return json.dumps(self, cls=BoxEncoder)
 
     def deepcopy(self):
-        return deepcopy(self)
+        return Box3D(
+            self.position.deepcopy(),
+            self.attitude.deepcopy(),
+            self.hwl,
+            self.where_is_t,
+        )
 
     def allclose(self, other):
         c1 = (
@@ -632,7 +640,7 @@ class Box3D:
             self.attitude = q * self.q
         else:
             rot = q * self.q
-            return Box3D(deepcopy(self.position), rot, self.size, ID=self.ID)
+            return Box3D(self.position.copy(), rot, self.size, ID=self.ID)
 
     def translate(self, L, inplace):
         """Translates the position of the box"""
@@ -644,9 +652,7 @@ class Box3D:
         if inplace:
             self.position += L
         else:
-            return Box3D(
-                self.position + L, deepcopy(self.attitude), self.size, ID=self.ID
-            )
+            return Box3D(self.position + L, self.attitude.copy(), self.size, ID=self.ID)
 
     def project_to_2d_bbox(self, calib, check_reference=True):
         """Project 3D bounding box into a 2D bounding box"""
@@ -767,7 +773,7 @@ def _box_intersection_3d(corners1, corners2, up="+z"):
 
     # Add some very small noise
     noise = 1e-12 * np.linalg.norm(corners2[0, :] - corners2[1, :])
-    corners2 = copy(corners2) + noise
+    corners2 = corners2 + noise
 
     # Put in the right coordinate frame
     if up == "-y":

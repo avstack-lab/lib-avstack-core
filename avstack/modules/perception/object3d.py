@@ -228,11 +228,11 @@ class MMDetObjectDetector3D(_MMObjectDetector):
                 config_file = "work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-joint/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-joint.py"
                 checkpoint_file = f"work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-joint/{epoch_str}.pth"
             elif dataset == "carla-vehicle":
-                threshold = 0.5
+                threshold = 0.3
                 config_file = "work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle.py"
                 checkpoint_file = f"work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-vehicle/{epoch_str}.pth"
             elif dataset == "carla-infrastructure":
-                threshold = 0.5
+                threshold = 0.3
                 config_file = "work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure.py"
                 checkpoint_file = f"work_dirs/pointpillars_hv_fpn_sbn-all_8xb4-2x_carla-3d-infrastructure/{epoch_str}.pth"
                 do_projection = True

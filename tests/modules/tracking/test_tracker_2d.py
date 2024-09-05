@@ -38,6 +38,7 @@ def test_basic_box_tracker_2d():
             detections=dets_2d,
             platform=platform,
             identifier="tracker-1",
+            check_reference=False,
         )
 
     assert len(tracker.tracks_active) == len(dets_2d_all[-1])

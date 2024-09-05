@@ -16,9 +16,17 @@ class SingleFrameMetrics(NamedTuple):
     ospa: float
     timestamp: float = 0.0
 
+    @property
+    def f1_score(self) -> float:
+        if self.precision + self.recall > 0:
+            return 2 * self.precision * self.recall / (self.precision + self.recall)
+        else:
+            return np.nan
+
 
 class ConfusionMatrix(NamedTuple):
     """Container for confusion matrix for assignment"""
+
     n_true_positives: int
     n_true_negatives: int
     n_false_positives: int
@@ -47,16 +55,23 @@ class ConfusionMatrix(NamedTuple):
     @property
     def precision(self) -> float:
         if (self._ntp + self._nfp) == 0:
-            return 0.0
+            return np.nan
         else:
             return self._ntp / (self._ntp + self._nfp)
 
     @property
     def recall(self) -> float:
         if (self._ntp + self._nfn) == 0:
-            return 0.0
+            return np.nan
         else:
             return self._ntp / (self._ntp + self._nfn)
+
+    @property
+    def f1_score(self) -> float:
+        if self.precision + self.recall > 0:
+            return 2 * self.precision * self.recall / (self.precision + self.recall)
+        else:
+            return np.nan
 
     def __getitem__(self, idx0: int, idx1: int) -> int:
         return self.matrix[idx0, idx1]
@@ -70,7 +85,7 @@ class OspaMetric:
         n = len(list_longer)
         m = len(list_shorter)
         if n == 0:
-            return 0.0
+            return np.nan
         A = np.array(
             [[np.linalg.norm(l1 - l2) for l1 in list_shorter] for l2 in list_longer]
         )
@@ -93,7 +108,7 @@ class OspaMetric:
 def get_instantaneous_metrics(
     tracks: List,
     truths: List,
-    assign_radius: float = 2.0,
+    assign_radius: float = 4.0,
     timestamp: float = 0.0,
 ) -> SingleFrameMetrics:
     # convert to avstack types

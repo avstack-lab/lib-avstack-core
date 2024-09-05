@@ -1,17 +1,7 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-28
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-27
-# @Description:
-"""
-
-"""
 from __future__ import annotations
 
 import itertools
 import json
-from copy import deepcopy
 from enum import IntEnum
 
 import numpy as np
@@ -212,7 +202,7 @@ class ObjectState:
         return json.dumps(self, cls=ObjectStateEncoder)
 
     def deepcopy(self):
-        return deepcopy(self)
+        return self.predict(0)
 
     def allclose(self, other):
         return self.as_reference().allclose(other.as_reference())  # HACK
@@ -280,15 +270,25 @@ class ObjectState:
 
     def predict(self, dt):
         assert dt >= 0
-        pos = self.position + self.velocity * dt
+        pos = self.position
         vel = self.velocity
+        if self.velocity is not None:
+            pos = self.position + self.velocity * dt
         if (self.acceleration is not None) and self.acceleration.finite:
             pos += self.acceleration * (dt**2 / 2)
             vel += self.acceleration * dt
-        box = deepcopy(self.box)
-        acc = deepcopy(self.acceleration)
-        att = deepcopy(self.attitude)
-        ang = deepcopy(self.angular_velocity)
+        if self.box is not None:
+            box = self.box.deepcopy()
+            box.position = pos
+        else:
+            box = None
+        acc = self.acceleration.deepcopy() if self.acceleration is not None else None
+        att = self.attitude.deepcopy() if self.attitude is not None else None
+        ang = (
+            self.angular_velocity.deepcopy()
+            if self.angular_velocity is not None
+            else None
+        )
         VS = VehicleState(self.obj_type, ID=self.ID)
         VS.set(
             self.t + dt,

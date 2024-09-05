@@ -158,6 +158,9 @@ class TrackBase:
 
     N_UPDATES_CONFIRMED = 10
     SCORE_INIT = -2.7080502011  # -ln(15), NLLR
+    # FC is false confirmations allowed on timescale
+    # FA is false alarms realized on same timescale as FC
+    # BETA_C is true track deletion probability
     ALPHA_C = 1e-4  # N_FC / N_FA
     BETA_C = 1e-2
     SCORE_CONFIRM_THRESH = -np.log((1 - BETA_C) / ALPHA_C) + SCORE_INIT

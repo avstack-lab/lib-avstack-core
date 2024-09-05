@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-08-07
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-09-29
-# @Description:
-"""
-
-"""
 from __future__ import annotations
 
 import json
@@ -114,6 +105,12 @@ class Calibration:
 
     def __str__(self):
         return f"{self.__class__.__name__} with reference: {self.reference}"
+
+    def copy(self):
+        raise NotImplementedError
+
+    def deepcopy(self):
+        raise NotImplementedError
 
     def encode(self):
         return json.dumps(self, cls=CalibrationEncoder)
