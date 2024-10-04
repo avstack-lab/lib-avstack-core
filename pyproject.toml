@@ -17,6 +17,7 @@ include = ["CHANGELOG.md"]
 
 [tool.poetry.dependencies]
 python = "~3.10"
+shapely = "~2.0"
 addict = "~2.4.0"
 numpy = ">=1.20, <1.26"
 filterpy = "^1"

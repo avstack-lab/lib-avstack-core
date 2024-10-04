@@ -371,7 +371,11 @@ class LidarData(SensorData):
 
         # filter based on the upper and lower z limits
         z_valid = (z_min <= lidar_gp.data.x[:, 2]) & (lidar_gp.data.x[:, 2] <= z_max)
-        data_bev = PointMatrix2D(lidar_gp.data.x[z_valid, :2], calib_new)
+
+        # maintain any features by just dropping z column
+        data_bev = PointMatrix2D(
+            x=np.delete(lidar_gp.data.x[z_valid, :], 2, axis=1), calibration=calib_new
+        )
 
         # form the new projected lidar data in bev
         lidar_bev = ProjectedLidarData(
@@ -403,15 +407,11 @@ class LidarData(SensorData):
         )
         return hull_poly
 
-    def filter_by_range(self, min_range: float, max_range: float, inplace=True):
-        if (min_range is not None) or (max_range is not None):
-            min_range = 0 if min_range is None else min_range
-            max_range = np.inf if max_range is None else max_range
-            mask = maskfilters.filter_points_range(self, min_range, max_range)
-            return self.filter(mask, inplace=inplace)
-        else:
-            if not inplace:
-                return self.duplicate()
+    def filter_by_range(self, min_range: float, max_range: float, inplace: bool = True):
+        min_range = 0 if min_range is None else min_range
+        max_range = np.inf if max_range is None else max_range
+        mask = maskfilters.filter_points_range(self, min_range, max_range)
+        return self.filter(mask, inplace=inplace)
 
     def filter(self, mask, inplace: bool = True):
         if inplace:

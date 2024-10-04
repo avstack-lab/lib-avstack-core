@@ -7,6 +7,9 @@ if TYPE_CHECKING:
     from avstack.geometry.bbox import Box3D
 
 import numpy as np
+from shapely import Point as ShapelyPoint
+from shapely import Polygon as ShapelyPolygon
+from shapely.prepared import prep
 
 from avstack.config import GEOMETRY
 from avstack.geometry.datastructs import PointMatrix3D
@@ -27,10 +30,10 @@ def box_center_in_fov(box: "Box3D", fov: Union["Shape", np.ndarray]):
 def points_in_fov(points, fov: Union["Shape", np.ndarray]):
     try:
         if isinstance(points[0], (list, np.ndarray)):
-            in_fov = [fov.check_point(point) for point in points]
+            in_fov = fov.check_points(points)
         else:
             in_fov = fov.check_point(points)
-    except AttributeError as e:
+    except (TypeError, AttributeError) as e:
         try:
             if isinstance(points[0], (list, np.ndarray)):
                 in_fov = parallel_in_polygon(points, fov)
@@ -158,6 +161,9 @@ class Shape:
     def check_point(self, point: np.ndarray) -> bool:
         raise NotImplementedError
 
+    def check_points(self, point: np.ndarray) -> np.ndarray[bool]:
+        raise NotImplementedError
+
 
 @GEOMETRY.register_module()
 class Polygon(Shape):
@@ -168,13 +174,17 @@ class Polygon(Shape):
         frame: int = None,
         timestamp: float = None,
     ):
-        self.boundary = boundary
+        self.polygon = ShapelyPolygon(boundary)
         self.reference = reference
         self.frame = frame
         self.timestamp = timestamp
 
     def __str__(self) -> str:
         return f"Polygon with boundary {self.boundary} at reference {self.reference}"
+
+    @property
+    def boundary(self):
+        return self.polygon.boundary.coords._coords
 
     def change_reference(self, reference: ReferenceFrame, inplace: bool):
         """Change the polygon reference frame
@@ -187,19 +197,27 @@ class Polygon(Shape):
         boundary = boundary.change_reference(reference, inplace=False)[:, :2]
 
         if inplace:
-            self.boundary = boundary
+            self.polygon = ShapelyPolygon(boundary)
             self.reference = reference
         else:
             return Polygon(boundary=boundary, reference=reference)
 
     def check_point(self, point: np.ndarray) -> bool:
-        """Checks whether a point is within the polygon
+        """Checks whether a point is within the polygon"""
+        return self.polygon.contains(ShapelyPoint(*point))
 
-        Args:
-            point: can be a 1D or 2D array, Nx2
-        """
-        point_test = point[..., :2]
-        return in_polygon(point_test, self.boundary)
+    def check_points(self, points: np.ndarray) -> np.ndarray[bool]:
+        """Checks a batch of points to be in a polygon"""
+        prep_poly = prep(self.polygon)
+        points_shape = [ShapelyPoint(*point) for point in points]
+        return filter(prep_poly.contains, points_shape)
+
+    def distance_point(self, point: np.ndarray) -> float:
+        return self.polygon.exterior.distance(ShapelyPoint(*point))
+
+    def distance_points(self, points: np.ndarray) -> np.ndarray[float]:
+        """Checks distance of a batch of points"""
+        return np.array([self.distance_point(point) for point in points])
 
     def encode(self):
         return json.dumps(self, cls=FieldOfViewEncoder)

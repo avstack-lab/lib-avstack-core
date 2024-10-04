@@ -70,6 +70,20 @@ def test_polygon_change_reference():
     assert np.allclose(fov2.boundary, fov3.boundary)
 
 
+def test_polygon_point_distance():
+    boundary = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    poly = Polygon(boundary, reference=GlobalOrigin3D)
+    assert poly.distance_point([0, 0]) == 0.0
+    assert poly.distance_point([0.5, 0.5]) == 0.5
+    assert poly.distance_point([-1, 0]) == 1
+
+
+def test_polygon_points_distance():
+    boundary = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    poly = Polygon(boundary, reference=GlobalOrigin3D)
+    assert np.allclose(poly.distance_points([[0, 0], [-1, 0]]), [0, 1])
+
+
 def test_wedge():
     fov = Wedge(radius=2, angle_start=-math.pi / 4, angle_stop=math.pi / 4)
     assert fov.check_point(np.array([2, 0]))

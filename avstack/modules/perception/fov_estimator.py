@@ -1,22 +1,34 @@
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Tuple, Union
 
 
 if TYPE_CHECKING:
-    from avstack.geometry import Polygon
+    from avstack.geometry import ReferenceFrame
     from avstack.sensors import LidarData
 
 import numpy as np
 from scipy.interpolate import make_smoothing_spline
+from concave_hull import concave_hull
 
 from avstack.config import MODELS
 from avstack.geometry import GlobalOrigin3D, Polygon
 from avstack.modules import BaseModule
+from avstack.sensors import ProjectedLidarData
 from avstack.utils.decorators import apply_hooks
 
 
 class _LidarFovEstimator(BaseModule):
     def __init__(self, name: str, *args, **kwargs):
         super().__init__(name=name, *args, **kwargs)
+
+    def _execute_on_array(
+        self, data: np.ndarray, reference: "ReferenceFrame"
+    ) -> "Polygon":
+        raise NotImplementedError
+
+    def _execute_on_bev_array(
+        self, data: np.ndarray, reference: "ReferenceFrame"
+    ) -> "Polygon":
+        raise NotImplementedError
 
 
 @MODELS.register_module()
@@ -47,15 +59,23 @@ class ConcaveHullLidarFOVEstimator(_LidarFovEstimator):
         )
         return fov
 
+    def call_on_array(self, pc: np.ndarray):
+        boundary = concave_hull(
+            pc[:, :2], concavity=self.concavity, length_threshold=self.length_threshold
+        )
+        return boundary
+
 
 class _RayTraceFovEstimator(_LidarFovEstimator):
     def __init__(
         self,
         z_min: float = -3.0,
         z_max: float = 3.0,
-        az_bin: float = 0.05,
-        rng_bin: float = 0.50,
-        rng_max: float = 100,
+        n_azimuth_bins: int = 100,
+        n_range_bins: int = 1000,
+        range_max: float = 100,
+        az_tol: float = 0.05,
+        smoothing: float = None,
         name: str = "fov_estimator",
         *args,
         **kwargs
@@ -78,14 +98,16 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
         super().__init__(name=name, *args, **kwargs)
         self.z_min = z_min
         self.z_max = z_max
-        self.az_bin = az_bin
-        self.rng_bin = rng_bin
-        self.rng_max = rng_max
+        self.n_azimuth_bins = n_azimuth_bins
+        self.n_range_bins = n_range_bins
+        self.range_max = range_max
+        self.az_tol = az_tol
+        self.smoothing = smoothing
 
     @apply_hooks
     def __call__(
         self,
-        pc: "LidarData",
+        pc: Union[ProjectedLidarData, "LidarData"],
         in_global: bool = False,
         centering: bool = True,
         *args: Any,
@@ -93,43 +115,22 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
     ) -> "Polygon":
         """Common call method for ray trace fov estimators"""
         # project into BEV
-        pc_bev = pc.project_to_2d_bev(
-            z_min=self.z_min,
-            z_max=self.z_max,
+        if not isinstance(pc, ProjectedLidarData):
+            pc_bev = pc.project_to_2d_bev(
+                z_min=self.z_min,
+                z_max=self.z_max,
+            )
+        else:
+            pc_bev = pc
+
+        # get the boundary
+        boundary = self._estimate_fov_from_cartesian_lidar(
+            pc_bev=pc_bev.data.x[:, :2],
+            n_range_bins=self.n_range_bins,
+            n_azimuth_bins=self.n_azimuth_bins,
+            range_max=self.range_max,
+            centering=centering,
         )
-
-        # center the lidar data
-        if centering:
-            centroid = np.mean(pc_bev.data.x[:, :2], axis=0)
-            pc_bev.data.x -= centroid
-            pc_bev.reference.x[:2] += centroid
-
-        # transform to polar coordinates
-        # azimuth defined here as zero along positive x axis
-        pc_bev_azimuth = np.arctan2(pc_bev.data.x[:, 1], pc_bev.data.x[:, 0])
-        pc_bev_range = np.linalg.norm(pc_bev.data.x, axis=1)
-
-        # NOTE: arctan2 output is on [-pi, pi] so ensure az queries are the same
-        # make edges for the bins
-        min_az = min(pc_bev_azimuth)
-        max_az = max(pc_bev_azimuth)
-        num_az = int((max_az - min_az) // self.az_bin)
-        az_edges = np.linspace(min_az, max_az, num=num_az)
-        num_rng = int(self.rng_max // self.rng_bin)
-        rng_edges = np.linspace(0, self.rng_max, num=num_rng)
-
-        # run the subclass method
-        boundary = self._estimate_fov_from_polar_lidar(
-            pc_bev_azimuth=pc_bev_azimuth,
-            pc_bev_range=pc_bev_range,
-            az_edges=az_edges,
-            rng_edges=rng_edges,
-        )
-
-        # uncenter the boundary
-        if centering:
-            boundary += centroid
-            pc_bev.reference.x[:2] -= centroid
 
         # transform to global if desired
         fov = Polygon(
@@ -143,26 +144,97 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
 
         return fov
 
+    def call_on_array(self, pc: np.ndarray):
+        boundary = self._estimate_fov_from_cartesian_lidar(
+            pc_bev=pc,
+            n_range_bins=self.n_range_bins,
+            n_azimuth_bins=self.n_azimuth_bins,
+            range_max=self.range_max,
+            centering=True,
+        )
+        return boundary
+
+    @staticmethod
+    def n_bins_to_edges(
+        pc_bev_azimuth: np.ndarray,
+        pc_bev_range: np.ndarray,
+        n_range_bins: int,
+        n_azimuth_bins: int,
+        range_max: float,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        min_az = min(pc_bev_azimuth)
+        max_az = max(pc_bev_azimuth)
+        range_upper = min(range_max, max(pc_bev_range))
+        rng_edges = np.linspace(0, range_upper, num=n_range_bins)
+        az_edges = np.linspace(min_az, max_az, num=n_azimuth_bins)
+        return rng_edges, az_edges
+
+    def _estimate_fov_from_cartesian_lidar(
+        self,
+        pc_bev: np.ndarray[float],
+        n_range_bins: int,
+        n_azimuth_bins: int,
+        range_max: float,
+        centering: bool,
+    ) -> np.ndarray:
+        """Wrapper to feed the polar estimator"""
+
+        # center the lidar data
+        if centering:
+            centroid = np.mean(pc_bev[:, :2], axis=0)
+            pc_bev[:, :2] -= centroid
+
+        # convert to polar coordinates
+        pc_bev_azimuth = np.arctan2(pc_bev[:, 1], pc_bev[:, 0])
+        pc_bev_range = np.linalg.norm(pc_bev[:, :2], axis=1)
+
+        # estimate the boundary
+        boundary = self._estimate_fov_from_polar_lidar(
+            pc_bev_range=pc_bev_range,
+            pc_bev_azimuth=pc_bev_azimuth,
+            n_range_bins=n_range_bins,
+            n_azimuth_bins=n_azimuth_bins,
+            range_max=range_max,
+        )
+
+        # uncenter the boundary
+        if centering:
+            pc_bev[:, :2] += centroid
+            boundary += centroid
+
+        return boundary
+
     def _estimate_fov_from_polar_lidar(
         self,
-        pc_bev_azimuth: np.ndarray[float],
         pc_bev_range: np.ndarray[float],
-        az_edges: np.ndarray[float],
-        rng_edges: np.ndarray[float],
-    ) -> "Polygon":
+        pc_bev_azimuth: np.ndarray[float],
+        n_range_bins: int,
+        n_azimuth_bins: int,
+        range_max: float,
+    ) -> np.ndarray:
         """To be implemented in subclass"""
         raise NotImplementedError
 
 
 @MODELS.register_module()
 class FastRayTraceBevLidarFovEstimator(_RayTraceFovEstimator):
+    @staticmethod
     def _estimate_fov_from_polar_lidar(
-        self,
         pc_bev_azimuth: np.ndarray[float],
         pc_bev_range: np.ndarray[float],
-        az_edges: np.ndarray[float],
-        rng_edges: np.ndarray[float],
-    ) -> "Polygon":
+        n_range_bins: int,
+        n_azimuth_bins: int,
+        range_max: float,
+    ) -> np.ndarray:
+
+        # map bins to edges
+        rng_edges, az_edges = _RayTraceFovEstimator.n_bins_to_edges(
+            pc_bev_azimuth=pc_bev_azimuth,
+            pc_bev_range=pc_bev_range,
+            n_range_bins=n_range_bins,
+            n_azimuth_bins=n_azimuth_bins,
+            range_max=range_max,
+        )
 
         # populate a grid
         col_indices = np.array([list(range(len(rng_edges) - 1))] * (len(az_edges) - 1))
@@ -186,48 +258,33 @@ class FastRayTraceBevLidarFovEstimator(_RayTraceFovEstimator):
 
 @MODELS.register_module()
 class SlowRayTraceBevLidarFovEstimator(_RayTraceFovEstimator):
-    def __init__(
-        self,
-        az_tolerance: float = 0.05,
-        smoothing: Union[None, float] = None,
-        *args,
-        **kwargs
-    ):
-        """Uses ray tracing to estimate a field of view from lidar data
-
-        Args:
-            z_min: minimum z value in ground frame for bev filtering
-            z_min: maximum z value i n ground frame for bev filtering
-            az_tolerance: azimuth tolerance to consider for max range
-            smoothing: a parameter that controls smooth vs. fit tradeoff
-                larger = smoother, smaller = more fit to data
-
-        Projects the data into the ground plane then filters into the birds
-        eye view based on vertical axis thresholds.
-
-        Builds a semi-smooth non-parametric model of range = f(azimuth)
-        with B-splines.
-        """
-        super().__init__(*args, **kwargs)
-        self.smoothing = smoothing
-        self.az_tol = az_tolerance
-
+    @staticmethod
     def _estimate_fov_from_polar_lidar(
-        self,
         pc_bev_azimuth: np.ndarray[float],
         pc_bev_range: np.ndarray[float],
-        az_edges: np.ndarray[float],
-        rng_edges: np.ndarray[float],
-    ) -> "Polygon":
+        n_range_bins: int,
+        n_azimuth_bins: int,
+        range_max: float,
+        az_tolerance: float = 0.05,
+        smoothing: Union[None, float] = None,
+    ) -> np.ndarray:
 
         # NOTE: arctan2 output is on [-pi, pi] so ensure az queries are the same
+        # make edges for the bins
+        rng_edges, az_edges = _RayTraceFovEstimator.n_bins_to_edges(
+            pc_bev_azimuth=pc_bev_azimuth,
+            pc_bev_range=pc_bev_range,
+            range_max=range_max,
+            n_range_bins=n_range_bins,
+            n_azimuth_bins=n_azimuth_bins,
+        )
         az_out = []
         rng_out = []
         for az_q in az_edges:
             # NOTE: this currently doesn't handle the wrap around condition
             # look for azimuths within the tolerance
-            idx_az_valid = (pc_bev_azimuth >= az_q - self.az_tol) & (
-                pc_bev_azimuth <= az_q + self.az_tol
+            idx_az_valid = (pc_bev_azimuth >= az_q - az_tolerance) & (
+                pc_bev_azimuth <= az_q + az_tolerance
             )
             if sum(idx_az_valid) == 0:
                 continue
@@ -243,10 +300,10 @@ class SlowRayTraceBevLidarFovEstimator(_RayTraceFovEstimator):
         y_out = rng_out * np.sin(az_out)
 
         # If we have a smoothing parameter, run a B-spline on the output
-        if self.smoothing is not None:
+        if smoothing is not None:
             idx_sort = x_out.argsort()
             spline = make_smoothing_spline(
-                x_out[idx_sort], y_out[idx_sort], lam=self.smoothing
+                x_out[idx_sort], y_out[idx_sort], lam=smoothing
             )
             y_out = spline(x_out)
 
@@ -254,3 +311,44 @@ class SlowRayTraceBevLidarFovEstimator(_RayTraceFovEstimator):
         boundary = np.concatenate((x_out[:, None], y_out[:, None]), axis=1)
 
         return boundary
+
+
+# @MODELS.register_module()
+# class MMSegBevFovSegmenter(_MMSegmenter):
+#     MODE = "semseg"
+
+#     def __init__(
+#         self,
+#         model="unet",
+#         dataset="carla",
+#         gpu=0,
+#         iteration="latest",
+#         *args,
+#         **kwargs,
+#     ):
+#         super().__init__(model=model, dataset=dataset, gpu=gpu, iteration=iteration, **kwargs)
+
+#     def _execute(self, data: Union[np.ndarray, ImageData], **kwargs) -> SemSegImageData:
+#         from mmseg.apis import inference_model
+
+#         d_in = data if isinstance(data, np.ndarray) else data.data
+#         result = inference_model(self.model, d_in)
+#         return result
+
+#     @staticmethod
+#     def parse_mm_model_from_checkpoint(model, dataset, iteration):
+#         # set the dataset strings
+#         dataset = dataset.lower()
+#         iter_str = "iter_{}.pth".format(iteration) if iteration != "latest" else "last_checkpoint"
+
+#         # parse the model
+#         if model == "unet":
+#             if dataset == "carla":
+#                 config_file = "work_dirs/unet_fov/unet_fov.py"
+#                 checkpoint_file = f"work_dirs/unet_fov/{iter_str}"
+#             else:
+#                 raise NotImplementedError(f"{model}, {dataset} not compatible yet")
+#         else:
+#             raise NotImplementedError(model)
+
+#         return config_file, checkpoint_file

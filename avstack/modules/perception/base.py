@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 
 if TYPE_CHECKING:
@@ -46,9 +46,69 @@ mm2d_root = os.path.join(
 mm3d_root = os.path.join(
     os.path.dirname(os.path.dirname(avfile)), "third_party", "mmdetection3d"
 )
+mmseg_root = os.path.join(
+    os.path.dirname(os.path.dirname(avfile)), "third_party", "mmsegmentation"
+)
 
 
-class _MMObjectDetector(_PerceptionAlgorithm):
+class _MMBase(_PerceptionAlgorithm):
+    @staticmethod
+    def map_checkpoint_to_latest(mm_root, checkpoint_file):
+        if os.path.exists(os.path.dirname(os.path.join(mm_root, checkpoint_file))):
+            with open(
+                os.path.join(
+                    os.path.dirname(os.path.join(mm_root, checkpoint_file)),
+                    "last_checkpoint",
+                ),
+                "r",
+            ) as f:
+                chk_path = f.readlines()[0].rstrip()
+            return chk_path
+        else:
+            return None
+
+    def parse_mm_model(self):
+        raise NotImplementedError("Implement this in the subclass.")
+
+
+class _MMSegmenter(_MMBase):
+    def __init__(
+        self,
+        model: str,
+        dataset: str,
+        gpu: int = 0,
+        iteration: Union[str, int] = "latest",
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        config_file, checkpoint_file = self.parse_mm_model_from_checkpoint(
+            model, dataset, iteration
+        )
+        self.model = self.load_model_from_checkpoint(
+            config_file=config_file,
+            checkpoint_file=checkpoint_file,
+            gpu=gpu,
+        )
+
+    @staticmethod
+    def parse_mm_model_from_checkpoint(model, dataset, iteration):
+        raise NotImplementedError
+
+    def load_model_from_checkpoint(self, config_file, checkpoint_file, gpu):
+        from mmseg.apis import init_model
+
+        # load the model
+        if "last_checkpoint" in checkpoint_file:
+            chk_path = self.map_checkpoint_to_latest(mmseg_root, checkpoint_file)
+        else:
+            chk_path = os.path.join(mmseg_root, checkpoint_file)
+        cfg_path = os.path.join(mmseg_root, config_file)
+        model = init_model(cfg_path, chk_path)
+        return model
+
+
+class _MMObjectDetector(_MMBase):
     def __init__(
         self,
         model,
@@ -95,6 +155,10 @@ class _MMObjectDetector(_PerceptionAlgorithm):
             self.model = self.load_model_from_checkpoint(
                 config_file, checkpoint_file, gpu
             )
+
+    @staticmethod
+    def parse_mm_model_from_checkpoint(model, dataset, epoch):
+        raise NotImplementedError
 
     def load_model_from_deploy(self, model, dataset, deploy_runtime, gpu):
         from mmdeploy_runtime import Detector
@@ -319,21 +383,3 @@ class _MMObjectDetector(_PerceptionAlgorithm):
         else:
             raise NotImplementedError(dataset)
         return all_objs, whitelist
-
-    @staticmethod
-    def map_checkpoint_to_latest(mm_root, checkpoint_file):
-        if os.path.exists(os.path.dirname(os.path.join(mm_root, checkpoint_file))):
-            with open(
-                os.path.join(
-                    os.path.dirname(os.path.join(mm_root, checkpoint_file)),
-                    "last_checkpoint",
-                ),
-                "r",
-            ) as f:
-                chk_path = f.readlines()[0].rstrip()
-            return chk_path
-        else:
-            return None
-
-    def parse_mm_model(self):
-        raise NotImplementedError("Implement this in the subclass.")

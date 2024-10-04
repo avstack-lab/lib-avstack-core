@@ -51,3 +51,7 @@ def test_fast_raytrace():
     # run fov estimator in a different frame
     fov_far = fov_estimator(pc_far, in_global=False)
     assert fov_far.check_point(pt_far.x)
+
+
+def test_slow_raytrace():
+    pass
