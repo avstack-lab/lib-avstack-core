@@ -122,16 +122,21 @@ def convert_mm2d_to_avstack(
             box_2d = Box2D(bbox, calib)
             if segm is None:
                 det = BoxDetection(
-                    source_identifier, box_2d, calib.reference, obj_type, score
+                    data=box_2d,
+                    noise=np.array([5, 5, 5, 5]) ** 2,
+                    source_identifier=source_identifier,
+                    reference=calib.reference,
+                    obj_type=obj_type,
+                    score=score,
                 )
             else:
                 det = MaskDetection(
-                    source_identifier,
-                    box_2d,
-                    SegMask2D(segm, calib),
-                    calib.reference,
-                    obj_type,
-                    score,
+                    box=box_2d,
+                    mask=SegMask2D(segm, calib),
+                    source_identifier=source_identifier,
+                    reference=calib.reference,
+                    obj_type=obj_type,
+                    score=score,
                 )
             dets.append(det)
 
@@ -290,7 +295,12 @@ def convert_mm3d_to_avstack(
                 prev_locs.append(x_O_2_obj_in_O)
                 dets.append(
                     BoxDetection(
-                        source_identifier, box3d, box3d.reference, obj_type, score
+                        data=box3d,
+                        noise=np.array([1, 1, 1, 0.25, 0.25, 0.25]) ** 2,
+                        source_identifier=source_identifier,
+                        reference=box3d.reference,
+                        obj_type=obj_type,
+                        score=score,
                     )
                 )
 

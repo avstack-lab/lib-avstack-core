@@ -68,6 +68,9 @@ class BasicXyTracker(_BaseCenterTracker):
             xy=detection.xy,
             reference=detection.reference,
             obj_type=detection.obj_type,
+            P=self.P0,
+            threshold_confirmed=self.threshold_confirmed,
+            threshold_coast=self.threshold_coast,
         )
 
 
@@ -81,6 +84,9 @@ class BasicRazTracker(_BaseCenterTracker):
             raz=detection.raz,
             reference=detection.reference,
             obj_type=detection.obj_type,
+            P=self.P0,
+            threshold_confirmed=self.threshold_confirmed,
+            threshold_coast=self.threshold_coast,
         )
 
 
@@ -114,6 +120,9 @@ class BasicBoxTracker2D(_BaseBoxTracker2D):
             box2d=detection.box2d,
             reference=detection.reference,
             obj_type=detection.obj_type,
+            P=self.P0,
+            threshold_confirmed=self.threshold_confirmed,
+            threshold_coast=self.threshold_coast,
         )
 
 

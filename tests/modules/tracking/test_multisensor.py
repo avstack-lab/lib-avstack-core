@@ -37,8 +37,9 @@ def test_msmt_based_multitracker():
             for j in range(n_dets[i]):
                 dets.append(
                     detections.CentroidDetection(
+                        data=np.array([j / 2, 0, 0]),
+                        noise=np.array([1, 1, 1]) ** 2,
                         source_identifier=f"platform-{i}",
-                        centroid=np.array([j / 2, 0, 0]),
                         reference=platforms[i],
                     )
                 )

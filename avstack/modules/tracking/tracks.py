@@ -172,7 +172,7 @@ class TrackBase:
     PD = 0.9
     PFA = 1e-7
     VC = 1.0
-    MISSED_DET_SCORE = np.log(1 - PD)
+    MISSED_DET_SCORE = -np.log(1 - PD)
     BETA_FT = PFA / VC  # false target density
     BETA_NT = 15 * BETA_FT / PD  # new target density
 
@@ -189,6 +189,8 @@ class TrackBase:
         n_updates=1,
         score_force=None,
         check_reference=False,
+        threshold_coast=None,
+        threshold_confirmed=None,
     ) -> None:
         if ID_force is None:
             ID = TrackBase.ID_counter
@@ -211,6 +213,10 @@ class TrackBase:
         self.confirmed = False
         self.check_reference = check_reference
         self.attitude = None
+        self.threshold_coast = threshold_coast if threshold_coast else self.MAX_dt_coast
+        self.threshold_confirmed = (
+            threshold_confirmed if threshold_confirmed else self.N_UPDATES_CONFIRMED
+        )
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -290,12 +296,12 @@ class TrackBase:
     def confirmed(self):
         if (
             (self.score > self.SCORE_DELETE_THRESH)
-            or (self.dt_coast > self.MAX_dt_coast)
+            or (self.dt_coast > self.threshold_coast)
             or (self.n_missed > self.MAX_MISS)
         ):
             self.confirmed = False
         elif (self.score < self.SCORE_CONFIRM_THRESH) or (
-            self.n_updates > self.N_UPDATES_CONFIRMED
+            self.n_updates > self.threshold_confirmed
         ):
             self.confirmed = True
         else:
@@ -503,6 +509,8 @@ class XyFromXyTrack(_XYVxVyTrack):
         t=None,
         dt_coast=0,
         n_updates=1,
+        threshold_coast=None,
+        threshold_confirmed=None,
         *args,
         **kwargs,
     ):
@@ -521,7 +529,17 @@ class XyFromXyTrack(_XYVxVyTrack):
         self.idx_pos = [0, 1]
         self.idx_vel = [2, 3]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0=t0,
+            x=x,
+            P=P,
+            reference=reference,
+            obj_type=obj_type,
+            ID_force=ID_force,
+            t=t,
+            dt_coast=dt_coast,
+            n_updates=n_updates,
+            threshold_coast=threshold_coast,
+            threshold_confirmed=threshold_confirmed,
         )
 
     @staticmethod
@@ -541,7 +559,8 @@ class XyFromXyTrack(_XYVxVyTrack):
         """
         return x[:2]
 
-    def update(self, z, R=np.diag([2, 2]) ** 2):
+    def update(self, z, R):
+        # R=np.diag([2, 2]) ** 2
         self._update(z, R)
 
 
@@ -562,6 +581,8 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
         t=None,
         dt_coast=0,
         n_updates=1,
+        threshold_coast=None,
+        threshold_confirmed=None,
         *args,
         **kwargs,
     ):
@@ -580,7 +601,17 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0=t0,
+            x=x,
+            P=P,
+            reference=reference,
+            obj_type=obj_type,
+            ID_force=ID_force,
+            t=t,
+            dt_coast=dt_coast,
+            n_updates=n_updates,
+            threshold_coast=threshold_coast,
+            threshold_confirmed=threshold_confirmed,
         )
 
     @staticmethod
@@ -600,7 +631,8 @@ class XyzFromXyzTrack(_XYZVxVyVzTrack):
         """
         return x[:3]
 
-    def update(self, z, R=np.diag([2, 2, 2]) ** 2):
+    def update(self, z, R):
+        # R=np.diag([2, 2, 2]) ** 2
         self._update(z, R)
 
 
@@ -628,6 +660,8 @@ class XyFromRazTrack(_XYVxVyTrack):
         t=None,
         dt_coast=0,
         n_updates=1,
+        threshold_coast=None,
+        threshold_confirmed=None,
         *args,
         **kwargs,
     ):
@@ -646,7 +680,17 @@ class XyFromRazTrack(_XYVxVyTrack):
         self.idx_pos = [0, 1]
         self.idx_vel = [2, 3]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0=t0,
+            x=x,
+            P=P,
+            reference=reference,
+            obj_type=obj_type,
+            ID_force=ID_force,
+            t=t,
+            dt_coast=dt_coast,
+            n_updates=n_updates,
+            threshold_coast=threshold_coast,
+            threshold_confirmed=threshold_confirmed,
         )
 
     @staticmethod
@@ -670,7 +714,8 @@ class XyFromRazTrack(_XYVxVyTrack):
         """
         return np.array([np.linalg.norm(x[:2]), np.arctan2(x[1], x[0])])
 
-    def update(self, z, R=np.diag([10, 1e-2]) ** 2):
+    def update(self, z, R):
+        #  R=np.diag([10, 1e-2]) ** 2
         self._update(z, R)
 
 
@@ -698,6 +743,8 @@ class XyzFromRazelTrack(_XYZVxVyVzTrack):
         t=None,
         dt_coast=0,
         n_updates=1,
+        threshold_coast=None,
+        threshold_confirmed=None,
         *args,
         **kwargs,
     ):
@@ -716,7 +763,17 @@ class XyzFromRazelTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0=t0,
+            x=x,
+            P=P,
+            reference=reference,
+            obj_type=obj_type,
+            ID_force=ID_force,
+            t=t,
+            dt_coast=dt_coast,
+            n_updates=n_updates,
+            threshold_coast=threshold_coast,
+            threshold_confirmed=threshold_confirmed,
         )
 
     @staticmethod
@@ -744,7 +801,8 @@ class XyzFromRazelTrack(_XYZVxVyVzTrack):
         """
         return cartesian_to_spherical(x[:3])
 
-    def update(self, z, R=np.diag([4, 1e-2, 5e-2]) ** 2):
+    def update(self, z, R):
+        # R = =np.diag([4, 1e-2, 5e-2]) ** 2
         self._update(z, R)
 
 
@@ -784,6 +842,8 @@ class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
         t=None,
         dt_coast=0,
         n_updates=1,
+        threshold_coast=None,
+        threshold_confirmed=None,
         *args,
         **kwargs,
     ):
@@ -816,7 +876,17 @@ class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
         self.idx_pos = [0, 1, 2]
         self.idx_vel = [3, 4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0=t0,
+            x=x,
+            P=P,
+            reference=reference,
+            obj_type=obj_type,
+            ID_force=ID_force,
+            t=t,
+            dt_coast=dt_coast,
+            n_updates=n_updates,
+            threshold_coast=threshold_coast,
+            threshold_confirmed=threshold_confirmed,
         )
 
     @property
@@ -856,8 +926,9 @@ class XyzFromRazelRrtTrack(_XYZVxVyVzTrack):
         zhat[3] = zhat[0] * zhat[3]
         return zhat
 
-    def update(self, z, R=np.diag([1, 1e-2, 5e-2, 10]) ** 2):
+    def update(self, z, R):
         """Construct the pseudo measurement for range rate"""
+        # R = np.diag([1, 1e-2, 5e-2, 10]) ** 2
         z = z.copy()  # copy bc we are doing pseudo measurement manipulation
         z[3] = z[0] * z[3]
         self._update(z, R)
@@ -980,22 +1051,23 @@ class BasicBoxTrack3D(TrackBase):
     def yaw(self):
         return self.box3d.yaw
 
-    def update(self, box3d, R=np.diag([1, 1, 1, 0.25, 0.25, 0.25]) ** 2):
+    def update(self, z, R):
+        # R=np.diag([1, 1, 1, 0.25, 0.25, 0.25]) ** 2
         if self.check_reference:
-            if box3d.reference != self.reference:
+            if z.reference != self.reference:
                 raise RuntimeError(
                     "Should have converted the box location before this..."
                 )
-        if self.where_is_t != box3d.where_is_t:
+        if self.where_is_t != z.where_is_t:
             raise NotImplementedError(
                 "Differing t locations not implemented: {}, {}".format(
-                    self.where_is_t, box3d.where_is_t
+                    self.where_is_t, z.where_is_t
                 )
             )
-        det = np.array([box3d.t[0], box3d.t[1], box3d.t[2], box3d.h, box3d.w, box3d.l])
+        det = np.array([z.t[0], z.t[1], z.t[2], z.h, z.w, z.l])
         self._update(det, R)
-        self.attitude = box3d.attitude
-        self.q = box3d.q
+        self.attitude = z.attitude
+        self.q = z.q
 
     def as_box_detection(self):
         return BoxDetection(
@@ -1050,6 +1122,8 @@ class BasicBoxTrack2D(TrackBase):
         t=None,
         dt_coast=0,
         n_updates=1,
+        threshold_coast=None,
+        threshold_confirmed=None,
     ):
         """Box state is: [x, y, w, h, vx, vy]"""
         if v is None:
@@ -1069,7 +1143,17 @@ class BasicBoxTrack2D(TrackBase):
         self.idx_pos = [0, 1]
         self.idx_vel = [4, 5]
         super().__init__(
-            t0, x, P, reference, obj_type, ID_force, t, dt_coast, n_updates
+            t0=t0,
+            x=x,
+            P=P,
+            reference=reference,
+            obj_type=obj_type,
+            ID_force=ID_force,
+            t=t,
+            dt_coast=dt_coast,
+            n_updates=n_updates,
+            threshold_coast=threshold_coast,
+            threshold_confirmed=threshold_confirmed,
         )
         self.calibration = box2d.calibration
 
@@ -1136,10 +1220,11 @@ class BasicBoxTrack2D(TrackBase):
         else:
             raise NotImplementedError
 
-    def update(self, box2d, R=np.diag([5, 5, 5, 5]) ** 2):
+    def update(self, z, R):
+        # R=np.diag([5, 5, 5, 5]) ** 2
         # if box2d.source_identifier != self.source_identifier:
         #     raise NotImplementedError("Sensor sources must be the same for now")
-        det = np.array([box2d.center[0], box2d.center[1], box2d.w, box2d.h])
+        det = np.array([z.center[0], z.center[1], z.w, z.h])
         self._update(det, R)
 
 

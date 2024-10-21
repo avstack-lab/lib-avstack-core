@@ -110,7 +110,8 @@ def test_inline_razelrrt_tracker_3d():
             source_identifier="radar",
             data=[
                 RazelRrtDetection(
-                    razelrrt=xyzvel_to_razelrrt(target_xyzvel),
+                    data=xyzvel_to_razelrrt(target_xyzvel),
+                    noise=np.array([1, 0.1, 0.1, 1]) ** 2,
                     source_identifier="radar",
                     reference=platform,
                     obj_type=None,
@@ -140,7 +141,8 @@ def tests_transverse_razelrrt_tracker_3d():
             source_identifier="radar",
             data=[
                 RazelRrtDetection(
-                    razelrrt=xyzvel_to_razelrrt(target_xyzvel),
+                    data=xyzvel_to_razelrrt(target_xyzvel),
+                    noise=np.array([1, 0.1, 0.1, 1]) ** 2,
                     source_identifier="radar",
                     reference=platform,
                     obj_type=None,
@@ -170,7 +172,8 @@ def tests_full_razelrrt_tracker_3d():
             source_identifier="radar",
             data=[
                 RazelRrtDetection(
-                    razelrrt=xyzvel_to_razelrrt(target_xyzvel),
+                    data=xyzvel_to_razelrrt(target_xyzvel),
+                    noise=np.array([1, 1e-2, 5e-2, 10]) ** 2,
                     source_identifier="radar",
                     reference=platform,
                     obj_type=None,
@@ -198,7 +201,10 @@ def test_box_tracker_moving_reference():
             source_identifier="radar",
             data=[
                 BoxDetection(
-                    "boxes", box1.change_reference(reference, inplace=False), reference
+                    data=box1.change_reference(reference, inplace=False),
+                    noise=np.array([1, 1, 1, 1, 1, 1]) ** 2,
+                    source_identifier="boxes",
+                    reference=reference,
                 )
             ],
         )

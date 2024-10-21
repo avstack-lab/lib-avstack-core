@@ -93,5 +93,12 @@ class Lidar2dCentroidDetector(_PerceptionAlgorithm):
     def _wrap(self, centroids, reference, alg_name):
         dets = []
         for cent in centroids:
-            dets.append(CentroidDetection(alg_name, cent, reference))
+            dets.append(
+                CentroidDetection(
+                    data=cent,
+                    noise=np.array([1] * len(cent)),
+                    source_identifier=alg_name,
+                    reference=reference,
+                )
+            )
         return dets

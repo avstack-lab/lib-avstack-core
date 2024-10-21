@@ -37,7 +37,8 @@ class GroupTracker(BaseModule):
             if isinstance(fuse_out, BasicBoxTrack3D):
                 fuse_as_det = BoxDetection(
                     source_identifier="cluster",
-                    box=fuse_out.box3d,
+                    data=fuse_out.box3d,
+                    noise=np.array([1, 1, 1, 0.5, 0.5, 0.5]) ** 2,
                     reference=cluster.reference,
                     obj_type=fuse_out.obj_type,
                     score=None,
@@ -46,7 +47,8 @@ class GroupTracker(BaseModule):
                 if isinstance(fuse_out[0], np.ndarray):
                     fuse_as_det = CentroidDetection(
                         source_identifier="cluster",
-                        centroid=fuse_out[0][: len(cluster[0].position)],
+                        data=fuse_out[0][: len(cluster[0].position)],
+                        noise=np.array([1] * len(cluster[0].position)),
                         reference=cluster[0].reference,
                         obj_type=cluster[0].obj_type,
                         score=None,

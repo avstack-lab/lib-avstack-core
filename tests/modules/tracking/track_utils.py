@@ -71,24 +71,56 @@ def make_kitti_tracking_data(
             reference = lidar_calib.reference
             det.change_reference(reference, inplace=True)
             if det_type == "box":
-                det = BoxDetection(name_3d, det.box3d, reference, det.obj_type)
+                det = BoxDetection(
+                    data=det.box3d,
+                    noise=np.array([1, 1, 1, 0.5, 0.5, 0.5]) ** 2,
+                    source_identifier=name_3d,
+                    reference=reference,
+                    obj_type=det.obj_type,
+                )
             elif det_type in ["xy", "xyz", "centroid"]:
                 if det_type in ["xy"]:
                     centroid = det.box3d.t.x[:2]
+                    noise = np.array([1, 1]) ** 2
                 else:
                     centroid = det.box3d.t.x
-                det = CentroidDetection(name_3d, centroid, reference, det.obj_type)
+                    noise = np.array([1, 1, 1]) ** 2
+                det = CentroidDetection(
+                    data=centroid,
+                    noise=noise,
+                    source_identifier=name_3d,
+                    reference=reference,
+                    obj_type=det.obj_type,
+                )
             elif det_type == "raz":
                 razel = cartesian_to_spherical(det.box3d.t.x)
-                det = RazDetection(name_3d, razel[:2], reference, det.obj_type)
+                det = RazDetection(
+                    data=razel[:2],
+                    noise=np.array([1, 0.1]) ** 2,
+                    source_identifier=name_3d,
+                    reference=reference,
+                    obj_type=det.obj_type,
+                )
             elif det_type == "razel":
                 razel = cartesian_to_spherical(det.box3d.t.x)
-                det = RazelDetection(name_3d, razel, reference, det.obj_type)
+                det = RazelDetection(
+                    data=razel,
+                    noise=np.array([1, 0.1, 0.1]) ** 2,
+                    source_identifier=name_3d,
+                    reference=reference,
+                    obj_type=det.obj_type,
+                )
             elif det_type == "razelrrt":
                 razelrrt = xyzvel_to_razelrrt(
                     np.array([*det.box3d.t.x, *det.velocity.x])
                 )
-                det = RazelRrtDetection(name_3d, razelrrt, reference, det.obj_type)
+                det = RazelRrtDetection(
+                    data=razelrrt,
+                    noise=np.array([1, 1e-2, 5e-2, 10]) ** 2,
+                    source_identifier=name_3d,
+                    reference=reference,
+                    obj_type=det.obj_type,
+                )
             else:
                 raise NotImplementedError
             dets_class.append(det)
@@ -157,6 +189,7 @@ def make_3d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
                         ),
                         hwl=det[6:9],
                     ),
+                    noise=np.array([1, 1, 1, 0.5, 0.5, 0.5]) ** 2,
                     reference=GlobalOrigin3D,
                     obj_type="car",
                 )
@@ -236,11 +269,12 @@ def make_2d_tracking_data(dt=0.1, n_frames=50, n_targs=4):
             timestamp=frame * dt,
             data=[
                 BoxDetection(
-                    source_identifier="detector-2d",
-                    box=Box2D(
+                    data=Box2D(
                         box2d=[det[0], det[2], det[0] + det[4], det[2] + det[5]],
                         calibration=cam_calib,
                     ),
+                    noise=np.array([10, 10, 5, 5]) ** 2,
+                    source_identifier="detector-2d",
                     reference=GlobalOrigin3D,
                     obj_type="car",
                 )
@@ -260,10 +294,11 @@ def make_kitti_2d_3d_tracking_data(dt=0.1, n_frames=10, n_targs=4):
     for i, dets_3d in enumerate(dets_3d_all):
         d_2d = [
             BoxDetection(
-                "detector-2d",
-                d.box.project_to_2d_bbox(camera_calib),
-                reference,
-                d.obj_type,
+                data=d.box.project_to_2d_bbox(camera_calib),
+                noise=np.array([10, 10, 5, 5]) ** 2,
+                source_identifier="detector-2d",
+                reference=reference,
+                obj_type=d.obj_type,
             )
             for d in dets_3d
             if box_in_fov(d.box, camera_calib)
@@ -298,4 +333,4 @@ def run_tracker(tracker, det_type, dt=0.25):
                 if np.linalg.norm(trk.box.center.x - det.box.center.x) < 5:
                     break
         else:
-            raise
+            raise RuntimeError(trk)

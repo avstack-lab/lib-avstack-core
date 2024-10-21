@@ -1,5 +1,7 @@
 import sys
 
+import numpy as np
+
 from avstack.geometry import GlobalOrigin3D
 from avstack.modules.tracking import tracks
 
@@ -15,7 +17,9 @@ def test_score_tracks():
     )
     assert not track.confirmed
     for _ in range(20):
-        track.update(razel)
+        z = razel
+        R = np.diag([1, 0.1, 0.1]) ** 2
+        track.update(z, R)
     assert track.confirmed
     assert track.probability > 0.99
 

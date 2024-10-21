@@ -35,6 +35,7 @@ class _TrackingAlgorithm(BaseModule):
         check_reference=True,
         ID=None,
         t0=0.0,
+        P0=None,
         name="tracking",
         **kwargs,
     ):
@@ -69,6 +70,7 @@ class _TrackingAlgorithm(BaseModule):
         self.clusterer = MODELS.build(clusterer)
         self.run_clustering = run_clustering
         self.v_max = v_max
+        self.P0 = P0
 
     @property
     def tracks(self):
@@ -286,7 +288,7 @@ class _TrackingAlgorithm(BaseModule):
 
                 # -- update tracks with associations
                 for i_det, j_trk in assign_sol.assignment_tuples:
-                    tracks_active[j_trk].update(dets[i_det].z)
+                    tracks_active[j_trk].update(z=dets[i_det].z, R=dets[i_det].R)
 
                 # -- unassigned dets for new tracks
                 for i_det in assign_sol.unassigned_rows:

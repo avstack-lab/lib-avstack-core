@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 
+import numpy as np
 from cv2 import imwrite
 
 from avstack.config import MODELS
@@ -55,28 +56,32 @@ class Passthrough3DObjectDetector(_PerceptionAlgorithm):
                 det = obj
             elif isinstance(obj, ObjectState):
                 det = detections.BoxDetection(
+                    data=obj.box,
+                    noise=np.array([1, 1, 1, 0.25, 0.25, 0.25]) ** 2,
                     source_identifier=self.MODE,
-                    box=obj.box,
                     reference=obj.reference,
                     obj_type=obj.obj_type,
                 )
             elif isinstance(obj, Box3D):
                 det = detections.BoxDetection(
+                    data=obj,
+                    noise=np.array([1, 1, 1, 0.25, 0.25, 0.25]) ** 2,
                     source_identifier=self.MODE,
-                    box=obj,
                     reference=obj.reference,
                     obj_type=obj.obj_type,
                 )
             elif hasattr(obj, "box"):
                 det = detections.BoxDetection(
                     source_identifier=self.MODE,
-                    box=obj.box,
+                    data=obj.box,
+                    noise=np.array([10, 10, 5, 5]) ** 2,
                     reference=obj.reference,
                     obj_type=obj.obj_type,
                 )
             else:
                 det = detections.CentroidDetection(
-                    centroid=obj.x,
+                    data=obj.x,
+                    noise=np.array([1] * len(obj.x)) ** 2,
                     source_identifier=self.MODE,
                     reference=obj.reference,
                     obj_type=obj.obj_type if hasattr(obj, "obj_type") else None,

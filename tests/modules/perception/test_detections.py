@@ -35,14 +35,22 @@ def make_data_container(n_datas, dtype="centroid"):
     if dtype == "centroid":
         dets = [
             detections.CentroidDetection(
-                alg_name, np.random.randn(3), GlobalOrigin3D, obj_type="Car"
+                data=np.random.randn(3),
+                noise=np.array([1, 1, 1]) ** 2,
+                source_identifier=alg_name,
+                reference=GlobalOrigin3D,
+                obj_type="Car",
             )
             for _ in range(n_datas)
         ]
     elif dtype == "box":
         dets = [
             detections.BoxDetection(
-                alg_name, make_box(i), GlobalOrigin3D, obj_type="Car"
+                data=make_box(i),
+                noise=np.array([1, 1, 1, 0.5, 0.5, 0.5]) ** 2,
+                source_identifier=alg_name,
+                reference=GlobalOrigin3D,
+                obj_type="Car",
             )
             for i in range(n_datas)
         ]
@@ -75,8 +83,9 @@ def test_detection_container_encode_decode_box():
 def test_centroid_detection():
     centroid = np.array([10, -20, 2])
     d = detections.CentroidDetection(
+        data=centroid,
+        noise=np.array([1, 1, 1]) ** 2,
         source_identifier=alg_name,
-        centroid=centroid,
         reference=GlobalOrigin3D,
         obj_type="Car",
     )
@@ -86,7 +95,11 @@ def test_centroid_detection():
 def test_razel_detection():
     raz = np.array([100, 1.0])
     d = detections.RazDetection(
-        source_identifier=alg_name, raz=raz, reference=GlobalOrigin3D, obj_type="Car"
+        raz=raz,
+        noise=np.array([1, 1e-2]),
+        source_identifier=alg_name,
+        reference=GlobalOrigin3D,
+        obj_type="Car",
     )
     assert np.all(d.raz == raz)
 
@@ -94,8 +107,9 @@ def test_razel_detection():
 def test_razel_detection():
     razel = np.array([100, 1.0, -0.3])
     d = detections.RazelDetection(
+        data=razel,
+        noise=np.array([1, 1e-2, 5e-2]) ** 2,
         source_identifier=alg_name,
-        razel=razel,
         reference=GlobalOrigin3D,
         obj_type="Car",
     )
@@ -105,8 +119,9 @@ def test_razel_detection():
 def test_razelrrt_detection():
     razelrrt = np.array([100, 1.0, -0.3, 1.23])
     d = detections.RazelRrtDetection(
+        data=razelrrt,
+        noise=np.array([1, 1e-2, 5e-2, 10]) ** 2,
         source_identifier=alg_name,
-        razelrrt=razelrrt,
         reference=GlobalOrigin3D,
         obj_type="Car",
     )
@@ -122,7 +137,11 @@ def test_box_detection():
     rot = Attitude(np.quaternion(1), GlobalOrigin3D)
     box = Box3D(pos, rot, [h, w, l])
     d = detections.BoxDetection(
-        source_identifier=alg_name, box=box, reference=GlobalOrigin3D, obj_type="Car"
+        data=box,
+        noise=np.array([1, 1, 1, 0.5, 0.5, 0.5]) ** 2,
+        source_identifier=alg_name,
+        reference=GlobalOrigin3D,
+        obj_type="Car",
     )
     assert d.box == box
 

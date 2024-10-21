@@ -37,6 +37,7 @@ class DetectionEncoder(json.JSONEncoder):
             "obj_type": str(o.obj_type) if o.obj_type is not None else None,
             "score": float(o.score) if o.score is not None else None,
             "data": data,
+            "noise": o.noise.tolist(),
             "reference": o.reference.encode(),
         }
         return {type(o).__name__.lower(): d_dict}
@@ -56,50 +57,34 @@ class DetectionDecoder(json.JSONDecoder):
             pass
         if "centroiddetection" in json_object:
             json_object = json_object["centroiddetection"]
-            out = CentroidDetection(
-                source_identifier=json_object["source_identifier"],
-                centroid=np.array(json_object["data"]),
-                obj_type=json_object["obj_type"],
-                score=json_object["score"],
-                reference=reference,
-            )
+            factory = CentroidDetection
+            data = np.array(json_object["data"])
         elif "razdetection" in json_object:
             json_object = json_object["razdetection"]
-            out = RazDetection(
-                source_identifier=json_object["source_identifier"],
-                raz=np.array(json_object["data"]),
-                obj_type=json_object["obj_type"],
-                score=json_object["score"],
-            )
+            factory = RazDetection
+            data = np.array(json_object["data"])
         elif "razeldetection" in json_object:
             json_object = json_object["razeldetection"]
-            out = RazelDetection(
-                source_identifier=json_object["source_identifier"],
-                razel=np.array(json_object["data"]),
-                obj_type=json_object["obj_type"],
-                score=json_object["score"],
-                reference=reference,
-            )
+            factory = RazelDetection
+            data = np.array(json_object["data"])
         elif "razelrrtdetection" in json_object:
             json_object = json_object["razelrrtdetection"]
-            out = RazelRrtDetection(
-                source_identifier=json_object["source_identifier"],
-                razelrrt=np.array(json_object["data"]),
-                obj_type=json_object["obj_type"],
-                score=json_object["score"],
-                reference=reference,
-            )
+            factory = RazelRrtDetection
+            data = np.array(json_object["data"])
         elif "boxdetection" in json_object:
             json_object = json_object["boxdetection"]
-            out = BoxDetection(
-                source_identifier=json_object["source_identifier"],
-                box=json.loads(json_object["data"], cls=bbox.BoxDecoder),
-                obj_type=json_object["obj_type"],
-                score=json_object["score"],
-                reference=reference,
-            )
+            factory = BoxDetection
+            data = json.loads(json_object["data"], cls=bbox.BoxDecoder)
         else:
             return json_object
+        out = factory(
+            source_identifier=json_object["source_identifier"],
+            data=data,
+            noise=np.array(json_object["noise"]),
+            obj_type=json_object["obj_type"],
+            score=json_object["score"],
+            reference=reference,
+        )
         return out
 
 
@@ -108,12 +93,41 @@ class DetectionContainerDecoder(DataContainerDecoder):
 
 
 class Detection_:
-    def __init__(self, source_identifier, reference, obj_type, score):
+    def __init__(
+        self,
+        data: np.ndarray,
+        noise: np.ndarray,
+        source_identifier: str,
+        reference: ReferenceFrame,
+        obj_type: str = None,
+        score: float = 0.0,
+    ):
+        self.data = data
+        self.noise = noise
         self.reference = reference
         self.source_identifier = source_identifier
         self.obj_type = obj_type
         self.score = score
         self.ID = None
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        self._check_data(data)
+        self._data = data
+
+    def _check_data(self, data):
+        raise NotImplementedError
+
+    @property
+    def R(self):
+        if len(self.noise.shape) == 2:
+            return self.noise
+        else:
+            return np.diag(self.noise)
 
     @property
     def reference(self):
@@ -155,9 +169,10 @@ class Detection_:
         else:
             data = self._change_reference(reference, inplace=inplace)
             return self.factory()(
-                self.source_identifier,
-                data,
-                reference,
+                data=data,
+                noise=self.noise,
+                source_identifier=self.source_identifier,
+                reference=reference,
                 obj_type=self.obj_type,
                 score=self.score,
             )
@@ -173,19 +188,12 @@ class Detection_:
 
 
 class CentroidDetection(Detection_):
-    def __init__(
-        self, source_identifier, centroid, reference, obj_type=None, score=None
-    ):
-        super().__init__(source_identifier, reference, obj_type, score)
-        self.centroid = centroid
-
-    @property
-    def data(self):
-        return self.centroid
+    def _check_data(self, data):
+        assert len(data.shape) == 1
 
     @property
     def centroid(self):
-        return self._centroid
+        return self.data
 
     @property
     def z(self):
@@ -237,17 +245,12 @@ class CentroidDetection(Detection_):
 
 
 class RazDetection(Detection_):
-    def __init__(self, source_identifier, raz, reference, obj_type=None, score=None):
-        super().__init__(source_identifier, reference, obj_type, score)
-        self.raz = raz
-
-    @property
-    def data(self):
-        return self.raz
+    def _check_data(self, data):
+        assert len(data) == 2
 
     @property
     def raz(self):
-        return self._raz
+        return self.data
 
     @property
     def z(self):
@@ -285,17 +288,12 @@ class RazDetection(Detection_):
 
 
 class RazelDetection(Detection_):
-    def __init__(self, source_identifier, razel, reference, obj_type=None, score=None):
-        super().__init__(source_identifier, reference, obj_type, score)
-        self.razel = razel
-
-    @property
-    def data(self):
-        return self.razel
+    def _check_data(self, data):
+        assert len(data) == 3
 
     @property
     def razel(self):
-        return self._razel
+        return self.data
 
     @property
     def z(self):
@@ -338,27 +336,12 @@ class RazelDetection(Detection_):
 class RazelRrtDetection(Detection_):
     """NOTE: range rate is defined as positive away from sensor"""
 
-    def __init__(
-        self, source_identifier, razelrrt, reference, obj_type=None, score=None
-    ):
-        super().__init__(source_identifier, reference, obj_type, score)
-        self.razelrrt = razelrrt
-
-    @property
-    def data(self):
-        return self.razelrrt
+    def _check_data(self, data):
+        assert len(data) == 4
 
     @property
     def razelrrt(self):
-        return self._razelrrt
-
-    @razelrrt.setter
-    def razelrrt(self, razelrrt):
-        if not isinstance(razelrrt, np.ndarray):
-            raise TypeError(
-                f"Input razelrrt of type {type(razelrrt)} is not of an acceptable type"
-            )
-        self._razelrrt = razelrrt
+        return self.data
 
     @property
     def z(self):
@@ -372,7 +355,7 @@ class RazelRrtDetection(Detection_):
     @xyzrrt.setter
     def xyzrrt(self, xyzrrt):
         rng, az, el = cartesian_to_spherical(xyzrrt[:3])
-        self.razelrrt = np.array([rng, az, el, xyzrrt[3]])
+        self.data = np.array([rng, az, el, xyzrrt[3]])
 
     @property
     def xyz(self):
@@ -411,25 +394,15 @@ class RazelRrtDetection(Detection_):
 
 
 class BoxDetection(Detection_):
-    def __init__(self, source_identifier, box, reference, obj_type=None, score=None):
-        super().__init__(source_identifier, reference, obj_type, score)
-        self.box = box
-
-    @property
-    def data(self):
-        return self.box
+    def _check_data(self, data):
+        if not (isinstance(data, (Box2D, Box3D))):
+            raise TypeError(
+                f"Input box of type {type(data)} is not of an acceptable type"
+            )
 
     @property
     def box(self):
-        return self._box
-
-    @box.setter
-    def box(self, box):
-        if not (isinstance(box, Box2D) or isinstance(box, Box3D)):
-            raise TypeError(
-                f"Input box of type {type(box)} is not of an acceptable type"
-            )
-        self._box = box
+        return self.data
 
     @property
     def box3d(self):
