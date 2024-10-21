@@ -272,13 +272,14 @@ class PointMatrix3D(_PointMatrix):
     def filter(self, mask):
         return PointMatrix3D(self.x[mask, :], self.calibration)
 
-    def project_to_2d(self, calibration):
-        pts_3d_img = self.change_calibration(calibration, inplace=False).x[:, :3]
+    def project_to_2d(self, calibration) -> "PointMatrix2D":
+        matrix_3d = self.change_calibration(calibration, inplace=False)
+        pts_3d_img = matrix_3d.x[:, :3]
         pts_3d_hom = tforms.cart2hom(pts_3d_img)
         pts_2d = np.dot(pts_3d_hom, np.transpose(calibration.P))  # nx3
         pts_2d[:, 0] /= pts_2d[:, 2]
         pts_2d[:, 1] /= pts_2d[:, 2]
-        pts_2d_cam = pts_2d[:, 0:2]
+        pts_2d_cam = np.concatenate((pts_2d[:, 0:2], matrix_3d.x[:, 3:]), axis=1)
         return PointMatrix2D(pts_2d_cam, calibration)
 
 
