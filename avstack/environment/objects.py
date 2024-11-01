@@ -366,7 +366,7 @@ class ObjectState:
                 )
                 return obj_out
 
-    def set_occlusion_by_depth(self, depth_image, check_reference=True):
+    def set_occlusion_by_depth(self, depth_image, d_close=3.0, check_reference=True):
         """sets occlusion level using depth image
 
         Note that the depth image will capture the front-edge of the object
@@ -385,15 +385,20 @@ class ObjectState:
                 depth_image.calibration.width,
                 inplace=False,
             )
+
+            # get the depths within the bounding box
             depths = depth_image.depths[
                 int(box_2d.ymin) : int(box_2d.ymax), int(box_2d.xmin) : int(box_2d.xmax)
             ]
+
+            # assume depth is the last coordinate along the position (img coords)
             centered_depths = np.reshape(depths, -1) - (
-                self.position.norm() - self.box.l / 2
+                abs(self.position[2]) - self.box.l / 2
             )
 
+            # map the fraction viewable to the occlusion designation
             if len(centered_depths) > 0:
-                frac_viewable = sum(np.abs(centered_depths) < 5) / len(centered_depths)
+                frac_viewable = sum(np.abs(centered_depths) < d_close) / len(centered_depths)
                 if frac_viewable > 0.5:
                     occ = Occlusion.NONE
                 elif frac_viewable > 0.25:
