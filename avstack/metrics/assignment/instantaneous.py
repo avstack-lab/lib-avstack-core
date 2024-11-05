@@ -2,6 +2,7 @@ from typing import List, NamedTuple
 
 import numpy as np
 
+from avstack.geometry import GlobalOrigin3D
 from avstack.modules.assignment import gnn_single_frame_assign
 
 
@@ -110,12 +111,25 @@ def get_instantaneous_metrics(
     truths: List,
     assign_radius: float = 4.0,
     timestamp: float = 0.0,
+    transform_to_global: bool = True,
 ) -> SingleFrameMetrics:
-    # convert to avstack types
-    trks_position = [track.position.x for track in tracks]
-    trus_position = [
-        truth.position.x for truth in truths if "static" not in truth.obj_type
-    ]
+
+    # check if reference frame mod needed
+    if transform_to_global:
+        trks_position = [
+            track.position.change_reference(GlobalOrigin3D, inplace=False).x
+            for track in tracks
+        ]
+        trus_position = [
+            truth.position.change_reference(GlobalOrigin3D, inplace=False).x
+            for truth in truths
+            if "static" not in truth.obj_type
+        ]
+    else:
+        trks_position = [track.position.x for track in tracks]
+        trus_position = [
+            truth.position.x for truth in truths if "static" not in truth.obj_type
+        ]
 
     # compute metrics
     A = np.array(

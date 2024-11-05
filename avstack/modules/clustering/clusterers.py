@@ -112,6 +112,12 @@ class SampledAssignmentClusterer(_BaseClustering):
                 e.g., object_to_cluster_map = {1:{1:1, 2:2}, 2:{1:1, 2:2}}
 
         """
+        return self.cluster(
+            objects, frame, timestamp, self.assign_radius, check_reference
+        )
+
+    @staticmethod
+    def cluster(objects, frame, timestamp, assign_radius, check_reference):
         assert len(objects) > 0
 
         clusters = ClusterSet(
@@ -132,7 +138,7 @@ class SampledAssignmentClusterer(_BaseClustering):
                     ]
                 )
                 try:
-                    if any(distances <= self.assign_radius):
+                    if any(distances <= assign_radius):
                         idx_min = np.argmin(distances)
                         clusters[idx_min].append((agent_ID, obj))
                     else:

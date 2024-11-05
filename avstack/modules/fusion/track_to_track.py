@@ -23,7 +23,11 @@ from ..base import BaseModule
 from ..clustering.clusterers import Cluster
 
 
-def ci_fusion(x: List[np.ndarray], P: List[np.ndarray], w_method="naive_bayes"):
+def ci_fusion(
+    x: List[np.ndarray],
+    P: List[np.ndarray],
+    weights: Union[str, np.ndarray] = "uniform",
+):
     """Covariance intersection fusion between filter states
     useful if the cross-correlation between the two data elements is not known
 
@@ -40,10 +44,12 @@ def ci_fusion(x: List[np.ndarray], P: List[np.ndarray], w_method="naive_bayes"):
     if len(x) == 1:
         return x[0], P[0]  # no fusion to be done for one
 
-    if w_method == "naive_bayes":
+    if weights == "uniform":
         ws = 1 / len(x) * np.ones((len(x)))
+    elif isinstance(weights, (list, np.ndarray)):
+        ws = np.asarray(weights) / np.sum(weights)
     else:
-        raise NotImplementedError(w_method)
+        raise NotImplementedError(weights)
 
     P_invs = [np.linalg.inv(P_) for P_ in P]
     P_f = np.linalg.inv(sum([w * P_inv for w, P_inv in zip(ws, P_invs)]))
@@ -106,7 +112,11 @@ class CovarianceIntersectionFusion(_BaseFusion):
     """Covariance intersection to build a track from a cluster"""
 
     @apply_hooks
-    def __call__(self, tracks: Union[Cluster, List[TrackBase]]):
+    def __call__(
+        self,
+        tracks: Union[Cluster, List[TrackBase]],
+        weights: Union[np.ndarray, str] = "uniform",
+    ):
         x_fuse = None
         P_fuse = None
 
@@ -114,7 +124,7 @@ class CovarianceIntersectionFusion(_BaseFusion):
             # perform fusion on the array
             xs = [track.x for track in tracks]
             Ps = [track.P for track in tracks]
-            x_fuse, P_fuse = ci_fusion(xs, Ps, w_method="naive_bayes")
+            x_fuse, P_fuse = ci_fusion(xs, Ps, weights=weights)
 
         return x_fuse, P_fuse
 
@@ -125,8 +135,19 @@ class CovarianceIntersectionFusionToBox(_BaseFusion):
 
     @apply_hooks
     def __call__(
-        self, tracks: Union[Cluster, List[BasicBoxTrack3D]]
+        self,
+        tracks: Union[Cluster, List[BasicBoxTrack3D]],
+        weights: Union[np.ndarray, str] = "uniform",
+        force_ID: bool = True,
     ) -> BasicBoxTrack3D:
+        return self.fuse(tracks=tracks, weights=weights, force_ID=force_ID)
+
+    @staticmethod
+    def fuse(
+        tracks: Union[Cluster, List[BasicBoxTrack3D]],
+        weights: Union[np.ndarray, str] = "uniform",
+        force_ID: bool = True,
+    ):
         """Assume that inputs are box tracks
 
         Therefore, the state vector is:
@@ -138,7 +159,7 @@ class CovarianceIntersectionFusionToBox(_BaseFusion):
             # perform fusion on the array
             xs = [track.x for track in tracks]
             Ps = [track.P for track in tracks]
-            x_fuse, P_fuse = ci_fusion(xs, Ps, w_method="naive_bayes")
+            x_fuse, P_fuse = ci_fusion(xs, Ps, weights=weights)
 
             # get other attributes
             t0 = min([track.t0 for track in tracks])
@@ -155,6 +176,9 @@ class CovarianceIntersectionFusionToBox(_BaseFusion):
             box3d = Box3D(position, attitude, hwl)
             v = Velocity(x_fuse[6:9], reference=reference)
 
+            # take the minimum ID of the tracks to maintain consistent ID
+            ID = min([track.ID for track in tracks]) if force_ID else None
+
             return BasicBoxTrack3D(
                 t0=t0,
                 box3d=box3d,
@@ -163,6 +187,7 @@ class CovarianceIntersectionFusionToBox(_BaseFusion):
                 v=v,
                 P=P_fuse,
                 t=t,
+                ID_force=ID,
                 dt_coast=dt_coast,
                 n_updates=n_updates,
             )

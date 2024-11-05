@@ -6,8 +6,8 @@ if TYPE_CHECKING:
     from avstack.sensors import LidarData
 
 import numpy as np
-from scipy.interpolate import make_smoothing_spline
 from concave_hull import concave_hull
+from scipy.interpolate import make_smoothing_spline
 
 from avstack.config import MODELS
 from avstack.geometry import GlobalOrigin3D, Polygon

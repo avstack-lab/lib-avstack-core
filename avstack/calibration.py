@@ -4,7 +4,7 @@ import json
 
 import numpy as np
 
-from avstack.geometry.refchoc import ReferenceDecoder
+from avstack.geometry.refchoc import ReferenceDecoder, ReferenceFrame
 
 
 class CalibrationEncoder(json.JSONEncoder):
@@ -161,7 +161,7 @@ class RadarCalibration(Calibration):
 class CameraCalibration(Calibration):
     def __init__(
         self,
-        reference,
+        reference: ReferenceFrame,
         P: np.ndarray,
         img_shape: tuple,
         fov_horizontal=None,
@@ -223,6 +223,9 @@ class CameraCalibration(Calibration):
 
     def allclose(self, other: CameraCalibration):
         return self.reference.allclose(other.reference) and np.allclose(self.P, other.P)
+
+    def pixel_to_angle(self, point: np.ndarray):
+        raise NotImplementedError
 
 
 _carla_semseg_labels_colors = [

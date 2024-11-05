@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: Spencer H
-# @Date:   2022-07-27
-# @Last Modified by:   Spencer H
-# @Last Modified date: 2022-07-27
-# @Description:
-"""
-
-"""
 from copy import deepcopy
 
 import numpy as np
@@ -44,7 +35,7 @@ def test_ci_fusion_base_naive_bayes():
     P = 20 * np.eye(9) + np.random.rand(n_dim, n_dim)
     xs = [x for _ in range(n_agents)]
     Ps = [P for _ in range(n_agents)]
-    x_f, P_f = fusion.track_to_track.ci_fusion(xs, Ps, w_method="naive_bayes")
+    x_f, P_f = fusion.track_to_track.ci_fusion(xs, Ps, weights="uniform")
     assert np.allclose(x_f, x)
     assert np.allclose(P_f, P)
 

@@ -19,6 +19,9 @@ class ConfusionMatrixArray:
     def recalls(self):
         return [conf.recall for conf in self.confusions]
 
+    def append(self, confusion: "ConfusionMatrix"):
+        self.confusions.append(confusion)
+
     def average_precision(self) -> Tuple[float, float, float]:
         """Average precision computation"""
         prec = self.precisions

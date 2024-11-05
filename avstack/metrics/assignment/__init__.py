@@ -3,11 +3,12 @@ from .instantaneous import (
     SingleFrameMetrics,
     get_instantaneous_metrics,
 )
-from .timeseries import get_timeseries_metrics
+from .timeseries import ConfusionMatrixArray, get_timeseries_metrics
 
 
 __all__ = [
     "ConfusionMatrix",
+    "ConfusionMatrixArray",
     "SingleFrameMetrics",
     "get_instantaneous_metrics",
     "get_timeseries_metrics",

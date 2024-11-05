@@ -166,6 +166,22 @@ def test_segmask_from_2d_box():
     assert len(segmask) > 0
 
 
+def test_upscale_2d_to_3d_box():
+    # reconstruct a 3d box
+    box_3d_cam = box_3d.change_reference(camera_calib.reference, inplace=False)
+
+    # fix attitude in the original frame of reference
+    box_3d_cam.attitude.q = q_stan_to_cam.conjugate()
+
+    # perform projection
+    box_1_2d = box_3d.project_to_2d_bbox(camera_calib)
+    box_1_3d = box_1_2d.upscale_to_3d(z_to_box=box_3d_cam.position[2])
+
+    # check the consistency of the boxes
+    assert np.linalg.norm(box_1_3d.position.x - box_3d_cam.position.x) < 3
+    assert box_1_3d.IoU(box_3d_cam) > 0
+
+
 # ===========================================================
 # TRANSFORMS ON BOXES
 # ===========================================================

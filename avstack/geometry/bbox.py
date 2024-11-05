@@ -318,6 +318,40 @@ class Box2D:
             self.calibration.img_shape[0], self.calibration.img_shape[1], inplace=True
         )
 
+    def upscale_to_3d(self, z_to_box: float, height: float = 2.0) -> "Box3D":
+        """Use the similar triangles principle with focal length"""
+        # get 3d coordinates of the corners
+        corners_center = self.corners - self.calibration.principal_point
+        x = corners_center[:, 0] * z_to_box / self.calibration.f_u
+        y = corners_center[:, 1] * z_to_box / self.calibration.f_v
+        z = z_to_box
+
+        # reconstruct a bounding box
+        dx = abs(max(x) - min(x))
+        dy = abs(max(y) - min(y))
+        width = min(dx, dy)
+        length = max(dx, dy)
+        hwl = [height, width, length]
+
+        # position is of the center of the object
+        position = Position(
+            x=np.array([np.mean(x), np.mean(y), z - height / 2]),
+            reference=self.reference,
+        )
+
+        # for now ignore the yaw angle
+        # attitude is in camera reference frame
+        attitude = Attitude(
+            q=q_cam_to_stan,
+            reference=self.reference,
+        )
+
+        # construct the bounding box
+        box = Box3D(
+            position=position, attitude=attitude, hwl=hwl, obj_type=self.obj_type
+        )
+        return box
+
     def change_reference(self, reference, inplace: bool):
         raise NotImplementedError
 
