@@ -164,6 +164,7 @@ class CameraCalibration(Calibration):
         reference: ReferenceFrame,
         P: np.ndarray,
         img_shape: tuple,
+        focal_length: float=None,
         fov_horizontal=None,
         fov_vertical=None,
         square_pixels=False,
