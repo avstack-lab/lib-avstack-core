@@ -398,7 +398,9 @@ class ObjectState:
 
             # map the fraction viewable to the occlusion designation
             if len(centered_depths) > 0:
-                frac_viewable = sum(np.abs(centered_depths) < d_close) / len(centered_depths)
+                frac_viewable = sum(np.abs(centered_depths) < d_close) / len(
+                    centered_depths
+                )
                 if frac_viewable > 0.5:
                     occ = Occlusion.NONE
                 elif frac_viewable > 0.25:

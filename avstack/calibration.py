@@ -164,7 +164,7 @@ class CameraCalibration(Calibration):
         reference: ReferenceFrame,
         P: np.ndarray,
         img_shape: tuple,
-        focal_length: float=None,
+        focal_length: float = None,
         fov_horizontal=None,
         fov_vertical=None,
         square_pixels=False,
@@ -275,13 +275,13 @@ class SemanticSegmentationCalibration(CameraCalibration):
         channel_order="bgr",
     ):
         super().__init__(
-            reference,
-            P,
-            img_shape,
-            fov_horizontal,
-            fov_vertical,
-            square_pixels,
-            channel_order,
+            reference=reference,
+            P=P,
+            img_shape=img_shape,
+            fov_horizontal=fov_horizontal,
+            fov_vertical=fov_vertical,
+            square_pixels=square_pixels,
+            channel_order=channel_order,
         )
         self.tags = tags
         self.colors = colors
