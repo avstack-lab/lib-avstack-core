@@ -405,7 +405,7 @@ class ObjectState:
                     occ = Occlusion.NONE
                 elif frac_viewable > 0.25:
                     occ = Occlusion.PARTIAL
-                elif frac_viewable > 0.01:
+                elif frac_viewable > 0.08:
                     occ = Occlusion.MOST
                 else:
                     occ = Occlusion.COMPLETE
