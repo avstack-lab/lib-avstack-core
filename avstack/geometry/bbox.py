@@ -260,6 +260,10 @@ class Box2D:
     @property
     def box2d_xywh(self):
         return [self.xmin, self.ymin, self.w, self.h]
+    
+    @property
+    def box2d_xyxy(self):
+        return [self.xmin, self.ymin, self.xmax, self.ymax]
 
     def as_seg_mask(self):
         mask = np.zeros(self.calibration.img_shape[:2], dtype=bool)

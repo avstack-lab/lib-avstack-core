@@ -467,6 +467,26 @@ class OneEdgeBipartiteGraph(BipartiteGraph):
         super().__init__(r2c, nrow, ncol, cost)
         self.assignment_tuples = tuple([(r, list(r2c[r].keys())[0]) for r in r2c])
 
+    @property
+    def tp(self):
+        return len(self.assignment_tuples)
+    
+    @property
+    def fp(self):
+        return len(self.unassigned_cols)
+    
+    @property
+    def fn(self):
+        return len(self.unassigned_rows)
+
+    @property
+    def precision(self):
+        return self.tp / (self.tp + self.fp) if (self.tp + self.fp) > 0 else np.nan
+    
+    @property
+    def recall(self):
+        return self.tp / (self.tp + self.fn) if (self.tp + self.fn) > 0 else np.nan
+
     def rows_and_cols(self):
         return [a[0] for a in self.assignment_tuples], [
             a[1] for a in self.assignment_tuples
