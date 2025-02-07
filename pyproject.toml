@@ -46,10 +46,14 @@ torchvision = [
     {url="https://download.pytorch.org/whl/cu117/torchvision-0.14.1%2Bcu117-cp310-cp310-linux_x86_64.whl", markers="platform_machine == 'x86_64'", optional=true},
     {url="https://download.pytorch.org/whl/torchvision-0.14.1-cp310-cp310-manylinux2014_aarch64.whl#sha256=8a9eb773a2fa8f516e404ac09c059fb14e6882c48fdbb9c946327d2ce5dba6cd", markers="platform_machine == 'aarch64'", optional=true},
 ]
-mmcv = [
-    {url="https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmcv/torch1.13.1_cu11.7/mmcv-2.0.1-cp310-cp310-linux_x86_64.whl", markers="platform_machine == 'x86_64'", optional=true},
-    {url="https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmcv/torch1.13.1_cu11.7/mmcv-2.0.1-cp310-cp310-linux_aarch64.whl", markers="platform_machine == 'aarch64'", optional=true},
-]
+# mmcv = [
+#    {url="https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmcv/torch1.13.1_cu11.7/mmcv-2.0.1-cp310-cp310-linux_x86_64.whl", markers="platform_machine == 'x86_64'", optional=true},
+#    {url="https://g-b0ef78.1d0d8d.03c0.data.globus.org/packages/mmcv/torch1.13.1_cu11.7/mmcv-2.0.1-cp310-cp310-linux_aarch64.whl", markers="platform_machine == 'aarch64'", optional=true},
+#]
+# ----------------
+# OVERRIDE MMCV JUST FOR THIS EXPERIMENT
+mmcv = {path="../../packages/mmcv-2.0.1-cp310-cp310-linux_x86_64.whl", markers="platform_machine == 'x86_64'", optional=true}
+# ----------------
 mmengine = {version="^0.7.3", optional=true}
 mmsegmentation = {path="./third_party/mmsegmentation", develop=true, optional=true}
 mmdet = {path="./third_party/mmdetection/", develop=true, optional=true}
