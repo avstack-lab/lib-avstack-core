@@ -19,7 +19,8 @@ help:
 install: $(INSTALL_STAMP)
 $(INSTALL_STAMP): pyproject.toml poetry.lock
 		@if [ -z $(POETRY) ]; then echo "Poetry could not be found. See https://python-poetry.org/docs/"; exit 2; fi
-		$(POETRY) install --all-extras
+		# $(POETRY) install --all-extras
+		$(POETRY) install
 		touch $(INSTALL_STAMP)
 
 .PHONY: clean

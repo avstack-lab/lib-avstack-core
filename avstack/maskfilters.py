@@ -9,6 +9,7 @@ A collection of slicers, masks, and filtering operations for perception data
 The code is independent of data source so long as format is standard
 """
 
+from copy import deepcopy
 
 import numpy as np
 from numba import jit
@@ -27,11 +28,21 @@ def _get_extents_filter(loc_data, extents):
     """
     Returns the extent filter for data of [N x 3] or [N x 4]
     """
-    # Filter points within certain xyz range
-    x_extents = extents[0]
-    y_extents = extents[1]
-    z_extents = extents[2]
 
+    # replace any None's
+    ex2 = deepcopy(extents)
+    for ex in ex2:
+        if ex[0] is None:
+            ex[0] = -np.inf
+        if ex[1] is None:
+            ex[1] = np.inf
+
+    # filter points within certain xyz range
+    x_extents = ex2[0]
+    y_extents = ex2[1]
+    z_extents = ex2[2]
+
+    # make the extents filter
     extents_filter = (
         (loc_data[:, 0] > x_extents[0])
         & (loc_data[:, 0] < x_extents[1])

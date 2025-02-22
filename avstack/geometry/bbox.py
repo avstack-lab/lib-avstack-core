@@ -22,7 +22,7 @@ from .datastructs import (
     RotationDecoder,
     VectorDecoder,
 )
-from .refchoc import GlobalOrigin3D, Rotation, Vector
+from .refchoc import GlobalOrigin3D, ReferenceFrame, Rotation, Vector
 from .utils import convex_hull_intersection, poly_area
 
 
@@ -260,7 +260,7 @@ class Box2D:
     @property
     def box2d_xywh(self):
         return [self.xmin, self.ymin, self.w, self.h]
-    
+
     @property
     def box2d_xyxy(self):
         return [self.xmin, self.ymin, self.xmax, self.ymax]
@@ -414,6 +414,10 @@ class Box3D:
         return c1 and c2 and c3
 
     @property
+    def box(self):
+        return self
+
+    @property
     def box3d(self):
         return np.array([self.t[0], self.t[1], self.t[2], *self.hwl, *self.euler])
 
@@ -442,6 +446,12 @@ class Box3D:
     @property
     def reference(self):
         return self.position.reference
+
+    def as_reference(self):
+        pos = self.position.x if self.position else np.zeros((3,))
+        att = self.attitude.q if self.attitude else np.quaternion(1)
+        ref = self.reference
+        return ReferenceFrame(x=pos, q=att, reference=ref, timestamp=self.t)
 
     def copy(self):
         return Box3D(

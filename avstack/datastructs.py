@@ -470,11 +470,11 @@ class OneEdgeBipartiteGraph(BipartiteGraph):
     @property
     def tp(self):
         return len(self.assignment_tuples)
-    
+
     @property
     def fp(self):
         return len(self.unassigned_cols)
-    
+
     @property
     def fn(self):
         return len(self.unassigned_rows)
@@ -482,7 +482,7 @@ class OneEdgeBipartiteGraph(BipartiteGraph):
     @property
     def precision(self):
         return self.tp / (self.tp + self.fp) if (self.tp + self.fp) > 0 else np.nan
-    
+
     @property
     def recall(self):
         return self.tp / (self.tp + self.fn) if (self.tp + self.fn) > 0 else np.nan
