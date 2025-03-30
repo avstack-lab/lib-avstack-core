@@ -14,6 +14,8 @@ from avstack.geometry import GlobalOrigin3D, Polygon
 from avstack.modules import BaseModule
 from avstack.sensors import ProjectedLidarData
 from avstack.utils.decorators import apply_hooks
+from collections import defaultdict
+
 
 
 class _LidarFovEstimator(BaseModule):
@@ -131,6 +133,8 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
             range_max=self.range_max,
             centering=centering,
         )
+        
+        self._eliminate_isolated_pts(pc_bev, 10, 30)
 
         # transform to global if desired
         fov = Polygon(
@@ -214,6 +218,24 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
     ) -> np.ndarray:
         """To be implemented in subclass"""
         raise NotImplementedError
+    
+    def _eliminate_isolated_pts(self, pc_bev, m_away, num_pts):
+        ptMap = defaultdict(int)
+        usable_pts = []
+        for p1 in pc_bev.data.x:
+            p1x, p1y = p1[0], p1[1]
+            for p2 in pc_bev.data.x:
+                p2x, p2y = p2[0], p2[1]
+                if p1x == p2x and p1y == p2y: 
+                    continue
+                dis = np.linalg.norm([p1x - p2x, p1y - p2y])    
+                if (dis < m_away):
+                    ptMap[(p1x, p1y)] += 1
+                if (ptMap[(p1x, p1y)] == num_pts):
+                    usable_pts.append([p1x, p1y])
+                    break
+        usable_pts = np.array(usable_pts)
+        pc_bev.data.x = usable_pts 
 
 
 @MODELS.register_module()
