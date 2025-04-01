@@ -10,7 +10,7 @@ from concave_hull import concave_hull
 from scipy.interpolate import make_smoothing_spline
 
 from avstack.config import MODELS
-from avstack.geometry import GlobalOrigin3D, Polygon
+from avstack.geometry import GlobalOrigin3D, PointMatrix2D, Polygon
 from avstack.modules import BaseModule
 from avstack.sensors import ProjectedLidarData
 from avstack.utils.decorators import apply_hooks
@@ -115,7 +115,7 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
     ) -> "Polygon":
         """Common call method for ray trace fov estimators"""
         # project into BEV
-        if not isinstance(pc, ProjectedLidarData):
+        if not isinstance(pc, (PointMatrix2D, ProjectedLidarData)):
             pc_bev = pc.project_to_2d_bev(
                 z_min=self.z_min,
                 z_max=self.z_max,
@@ -125,7 +125,7 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
 
         # get the boundary
         boundary = self._estimate_fov_from_cartesian_lidar(
-            pc_bev=pc_bev.data.x[:, :2],
+            pc_bev=pc_bev.data.x[:, :2] if hasattr(pc_bev, "data") else pc_bev.x[:, :2],
             n_range_bins=self.n_range_bins,
             n_azimuth_bins=self.n_azimuth_bins,
             range_max=self.range_max,
@@ -136,8 +136,8 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
         fov = Polygon(
             boundary=boundary,
             reference=pc_bev.reference,
-            frame=pc.frame,
-            timestamp=pc.timestamp,
+            frame=pc.frame if hasattr(pc, "frame") else None,
+            timestamp=pc.timestamp if hasattr(pc, "timesetamp") else None,
         )
         if in_global:
             fov.change_reference(reference=GlobalOrigin3D, inplace=True)
