@@ -54,7 +54,6 @@ mmengine = {version="^0.7.3", optional=true}
 mmsegmentation = {path="./third_party/mmsegmentation", develop=true, optional=true}
 mmdet = {path="./third_party/mmdetection/", develop=true, optional=true}
 mmdet3d = {path="./third_party/mmdetection3d/", develop=true, optional=true}
-midas = {path="./third_party/MiDaS/", develop=true , optional=true}
 # dependencies of mmsegmentation
 ftfy = "~6.2"
 regex = "~2024.7"
