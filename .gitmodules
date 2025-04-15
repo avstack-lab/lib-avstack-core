@@ -1,6 +1,3 @@
-[submodule "third_party/lanenet"]
-	path = third_party/lanenet
-	url = https://github.com/MaybeShewill-CV/lanenet-lane-detection.git
 [submodule "third_party/mmdetection"]
 	path = third_party/mmdetection
 	url = https://github.com/avstack-lab/mmdetection.git
@@ -10,9 +7,6 @@
 [submodule "third_party/mmsegmentation"]
 	path = third_party/mmsegmentation
 	url = https://github.com/avstack-lab/mmsegmentation.git
-[submodule "third_party/MiDaS"]
-	path = third_party/MiDaS
-	url = https://github.com/avstack-lab/MiDaS.git
 [submodule "third_party/mmdeploy"]
 	path = third_party/mmdeploy
 	url = https://github.com/avstack-lab/mmdeploy.git
