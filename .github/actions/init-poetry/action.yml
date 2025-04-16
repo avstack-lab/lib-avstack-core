@@ -12,12 +12,14 @@ inputs:
     default: 1.6.1
 
 runs:
-  - name: Set up Python ${{ inputs.python-version }}
-    uses: actions/setup-python@v2
-    with:
-        python-version: ${{ inputs.python-version }}
+  using: composite
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v2
+      with:
+          python-version: ${{ inputs.python-version }}
 
-  - name: Set up Poetry ${{ inputs.poetry-version }}
-    uses: abatilo/actions-poetry@v2.0.0
-    with:
-      poetry-version: ${{ inputs.poetry-version }}
+    - name: Set up Poetry ${{ inputs.poetry-version }}
+      uses: abatilo/actions-poetry@v2.0.0
+      with:
+        poetry-version: ${{ inputs.poetry-version }}
