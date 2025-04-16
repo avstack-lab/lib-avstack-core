@@ -1,0 +1,29 @@
+name: Publish a release to PyPI
+
+on:
+  push:
+    tags:
+      - "test-v*.*.*"
+
+jobs:
+  # the tests must pass before release is to be made
+  test:
+    name: Run unit tests on release branch
+    uses: ./.github/workflows/test_on_branch.yml
+    with:
+      branch: release
+      os: ubuntu-22.04
+
+  # then we build to prep for release
+  build:
+    name: Build and publish the package to pypi
+    needs: test
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build and publish to pypi
+        uses: JRubics/poetry-publish@v2.1
+        with:
+          python_version: "3.10"
+          poetry_version: "==1.6.1" # (PIP version specifier syntax)
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
+          repository_name: "testpypi"
