@@ -19,14 +19,10 @@ runs:
       with:
         submodules: recursive
 
-    - name: Set up Python ${{ inputs.python-version }}
-      uses: actions/setup-python@v2
+    -name: Init python and poetry
+      uses: ./.github/actions/init-poetry
       with:
-          python-version: ${{ inputs.python-version }}
-
-    - name: Set up Poetry ${{ inputs.poetry-version }}
-      uses: abatilo/actions-poetry@v2.0.0
-      with:
+        python-version: ${{ inputs.python-version }}
         poetry-version: ${{ inputs.poetry-version }}
 
     - name: Set up cache

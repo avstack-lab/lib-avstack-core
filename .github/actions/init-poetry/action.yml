@@ -1,0 +1,23 @@
+name: Init python and poetry
+description: Installs python and poetry
+
+inputs:
+  python-version:
+    description: Version of python to use
+    required: true
+    default: 3.10
+  poetry-version:
+    description: Version of poetry to install
+    required: true
+    default: 1.6.1
+
+runs:
+  - name: Set up Python ${{ inputs.python-version }}
+    uses: actions/setup-python@v2
+    with:
+        python-version: ${{ inputs.python-version }}
+
+  - name: Set up Poetry ${{ inputs.poetry-version }}
+    uses: abatilo/actions-poetry@v2.0.0
+    with:
+      poetry-version: ${{ inputs.poetry-version }}
