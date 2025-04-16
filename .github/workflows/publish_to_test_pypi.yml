@@ -27,8 +27,8 @@ jobs:
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v2.1
         with:
-          python-version: "3.10"
-          poetry-version: "==1.6.1"
+          python_version: "3.10"
+          poetry_version: "==1.6.1"
           pypi_token: ${{ secrets.TESTPYPI_API_TOKEN }}
           repository_name: "avstack-core"
           repository_url: "https://test.pypi.org/legacy/"
