@@ -25,7 +25,7 @@ To be available soon.
 
 First, clone the repositry and submodules. If you are not running perception, then you may not have to recurse the submodules.
 ```
-git clone --recurse-submodules https://github.com/avstack-lab/lib-avstack-core.git 
+git clone --recurse-submodules https://github.com/avstack-lab/avstack-core.git 
 ```
 
 Dependencies are managed with [`poetry`][poetry]. This uses the `pyproject.toml` file to create a `poetry.lock` file. To install poetry, see [this page](https://python-poetry.org/docs/#installation). 
@@ -117,5 +117,5 @@ AVstack specific code is distributed under the MIT License.
 [cudnn]: https://developer.nvidia.com/rdp/cudnn-archive
 [cuda]: https://developer.nvidia.com/cuda-downloads
 [tensorrt_compat]: https://docs.nvidia.com/deeplearning/tensorrt/support-matrix/index.html
-[contributing]: https://github.com/avstack-lab/lib-avstack-core/blob/main/CONTRIBUTING.md
-[license]: https://github.com/avstack-lab/lib-avstack-core/blob/main/LICENSE.md 
+[contributing]: https://github.com/avstack-lab/avstack-core/blob/main/CONTRIBUTING.md
+[license]: https://github.com/avstack-lab/avstack-core/blob/main/LICENSE.md 

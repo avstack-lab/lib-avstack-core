@@ -1,0 +1,19 @@
+name: Run tests on a branch when pushed or PR'd
+
+env:
+ BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+
+on:
+  push:
+    branches: [ main, workflows ]
+  pull_request:
+    branches: [ main, workflows ]
+
+jobs:
+  call_tester:
+    name: Run unit tests on a branch
+    uses: avstack-lab/workflows/.github/workflows/test_on_branch_with_uv.yml@main
+    with:
+      branch: $BRANCH_NAME
+      os: ubuntu-22.04
+      python-versions: "[ '3.10' ]"

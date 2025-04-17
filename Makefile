@@ -1,6 +1,6 @@
 NAME := avstack
 INSTALL_STAMP := .install.stamp
-POETRY := $(shell command -v poetry 2> /dev/null)
+UV := $(shell command -v uv 2> /dev/null)
 PYFOLDERS := avstack tests third_party/mmdetection/CUSTOM third_party/mmdetection3d/CUSTOM
 .DEFAULT_GOAL := help
 
@@ -17,10 +17,9 @@ help:
 		@echo "Check the Makefile to know exactly what each target is doing."
 
 install: $(INSTALL_STAMP)
-$(INSTALL_STAMP): pyproject.toml poetry.lock
-		@if [ -z $(POETRY) ]; then echo "Poetry could not be found. See https://python-poetry.org/docs/"; exit 2; fi
-		# $(POETRY) install --all-extras
-		$(POETRY) install
+$(INSTALL_STAMP): pyproject.toml uv.lock
+		@if [ -z $(UV) ]; then echo "uv could not be found. See https://docs.astral.sh/uv/"; exit 2; fi
+		# $(UV) sync --all-extras
 		touch $(INSTALL_STAMP)
 
 .PHONY: clean
@@ -30,18 +29,18 @@ clean:
 
 .PHONY: lint
 lint: $(INSTALL_STAMP)
-		$(POETRY) run isort --profile=black --lines-after-imports=2 --check-only $(PYFOLDERS)
-		$(POETRY) run black --check $(PYFOLDERS)  --diff
-		$(POETRY) run flake8 --ignore=W503,E501 $(PYFOLDERS) 
-		$(POETRY) run mypy $(PYFOLDERS)  --ignore-missing-imports
-		$(POETRY) run bandit -r $(NAME) -s B608
+		$(UV) run isort --profile=black --lines-after-imports=2 --check-only $(PYFOLDERS)
+		$(UV) run black --check $(PYFOLDERS)  --diff
+		$(UV) run flake8 --ignore=W503,E501 $(PYFOLDERS) 
+		$(UV) run mypy $(PYFOLDERS)  --ignore-missing-imports
+		$(UV) run bandit -r $(NAME) -s B608
 
 .PHONY: format
 format: $(INSTALL_STAMP)
-		$(POETRY) run autoflake --remove-all-unused-imports -i -r $(PYFOLDERS) --exclude=__init__.py 
-		$(POETRY) run isort --profile=black --lines-after-imports=2 $(PYFOLDERS) 
-		$(POETRY) run black $(PYFOLDERS) 
+		$(UV) run autoflake --remove-all-unused-imports -i -r $(PYFOLDERS) --exclude=__init__.py 
+		$(UV) run isort --profile=black --lines-after-imports=2 $(PYFOLDERS) 
+		$(UV) run black $(PYFOLDERS) 
 
 .PHONY: test
 test: $(INSTALL_STAMP)
-		$(POETRY) run pytest ./tests/ --cov-report term-missing --cov-fail-under 0 --cov $(NAME)
+		$(UV) run pytest ./tests/ --cov-report term-missing --cov-fail-under 0 --cov $(NAME)

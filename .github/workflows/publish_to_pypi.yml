@@ -1,0 +1,33 @@
+name: Publish a release to PyPI
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+
+jobs:
+  # the tests must pass before release is to be made
+  test:
+    name: Run unit tests on a branch
+    uses: avstack-lab/workflows/.github/workflows/test_on_branch_with_uv.yml@main
+    with:
+      branch: $BRANCH_NAME
+      os: ubuntu-22.04
+      python-versions: "[ '3.10' ]"
+      uv-versions: "[ '0.6.14' ]"
+      
+  # now we run the publishing protocol
+  publish:
+    name: Run publishing protocol
+    needs: test
+    uses: avstack-lab/workflows/.github/workflows/publish_to_index.yml@main
+    with:
+      os: ubuntu-22.04
+      python-version: "3.10"
+      uv-version: "0.6.14"
+      index: "pypi"
+    secrets:
+      token: ${{ secrets.PYPI_API_TOKEN }}

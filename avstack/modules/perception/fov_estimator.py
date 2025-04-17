@@ -40,7 +40,7 @@ class ConcaveHullLidarFOVEstimator(_LidarFovEstimator):
         max_height: float = np.inf,
         name: str = "fov_estimator",
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(name=name, *args, **kwargs)
         self.concavity = concavity
@@ -78,7 +78,7 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
         smoothing: float = None,
         name: str = "fov_estimator",
         *args,
-        **kwargs
+        **kwargs,
     ):
         """Uses ray tracing to estimate a field of view from lidar data
 
@@ -111,7 +111,7 @@ class _RayTraceFovEstimator(_LidarFovEstimator):
         in_global: bool = False,
         centering: bool = True,
         *args: Any,
-        **kwds: Any
+        **kwds: Any,
     ) -> "Polygon":
         """Common call method for ray trace fov estimators"""
         # project into BEV
