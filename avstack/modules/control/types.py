@@ -1,6 +1,7 @@
 class VehicleControlSignal:
     def __init__(
         self,
+        timestamp=None,
         throttle=0.0,
         brake=0.0,
         steer=0.0,
@@ -8,6 +9,9 @@ class VehicleControlSignal:
         reverse=False,
         manual_gear_shift=False,
     ):
+        """Define the vehicle control signal"""
+
+        self.timestamp = timestamp
         self.throttle = throttle
         self.brake = brake
         self.steer = steer
@@ -46,4 +50,4 @@ class VehicleControlSignal:
         return self.__str__()
 
     def __str__(self):
-        return f"VehicleControlSignal -- throttle: {self.throttle}, brake: {self.brake}, steer: {self.steer}"
+        return f"VehicleControlSignal at time {self.timestamp:.3f} -- throttle: {self.throttle}, brake: {self.brake}, steer: {self.steer}"
