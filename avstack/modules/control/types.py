@@ -8,9 +8,10 @@ class VehicleControlSignal:
         hand_brake=False,
         reverse=False,
         manual_gear_shift=False,
+        bounded=True,
     ):
         """Define the vehicle control signal"""
-
+        self.bounded = bounded
         self.timestamp = timestamp
         self.throttle = throttle
         self.brake = brake
@@ -25,7 +26,8 @@ class VehicleControlSignal:
 
     @throttle.setter
     def throttle(self, throttle):
-        assert 0 <= throttle <= 1.0, throttle
+        if self.bounded:
+            assert 0 <= throttle <= 1.0, throttle
         self._throttle = throttle
 
     @property
@@ -34,7 +36,8 @@ class VehicleControlSignal:
 
     @brake.setter
     def brake(self, brake):
-        assert 0.0 <= brake <= 1.0, brake
+        if self.bounded:
+            assert 0.0 <= brake <= 1.0, brake
         self._brake = brake
 
     @property
@@ -43,7 +46,8 @@ class VehicleControlSignal:
 
     @steer.setter
     def steer(self, steer):
-        assert -1.0 <= steer <= 1.0, steer
+        if self.bounded:
+            assert -1.0 <= steer <= 1.0, steer
         self._steer = steer
 
     def __repr__(self):
